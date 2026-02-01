@@ -104,6 +104,8 @@ SmallBets.live is a real-time micro-betting platform for friends watching live e
 
 ### Architecture Patterns (from FamilyFeud)
 
+**Note:** See [ARCHITECTURE.md](./ARCHITECTURE.md) for comprehensive architecture documentation, automated review workflow using `/software-architect` skill, and project-specific constraints.
+
 **1. Functional Core, Imperative Shell (FCIS)**
 - Pure game logic in `bet_service.py` (deterministic, testable)
   ```python

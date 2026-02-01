@@ -5,6 +5,8 @@ Real-time micro-betting platform for friends watching live events (Oscars, Super
 
 ## Key Architectural Decisions
 
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for comprehensive architecture documentation, review workflow, and the 9 red flags to avoid.
+
 ### Tech Stack
 - **Frontend**: React + TypeScript, mobile-first design
 - **Backend**: Firebase (Firestore + Cloud Functions + Hosting)
@@ -49,6 +51,7 @@ Real-time micro-betting platform for friends watching live events (Oscars, Super
 microbets/
 ├── SPEC.md                      # Full product specification
 ├── CLAUDE.md                    # This file
+├── ARCHITECTURE.md              # Architecture patterns, review workflow, constraints
 ├── frontend/                    # React app
 │   ├── src/
 │   │   ├── components/          # React components
