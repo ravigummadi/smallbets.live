@@ -12,7 +12,7 @@ from typing import Optional, List, Annotated
 import uvicorn
 
 from firebase_config import initialize_firebase
-from services import room_service, user_service, bet_service
+from services import room_service, user_service, bet_service, transcript_service, automation_service
 from models.room import Room
 from models.user import User
 from models.bet import Bet
@@ -79,6 +79,15 @@ class OpenBetRequest(BaseModel):
 
 class ResolveBetRequest(BaseModel):
     winning_option: str
+
+
+class TranscriptRequest(BaseModel):
+    text: str
+    source: str = "manual"
+
+
+class ToggleAutomationRequest(BaseModel):
+    enabled: bool
 
 
 # ============================================================================
@@ -442,6 +451,86 @@ async def get_bet(code: str, bet_id: str, room: RoomDep):
         raise HTTPException(status_code=400, detail="Bet does not belong to this room")
 
     return bet.to_dict()
+
+
+# ============================================================================
+# Transcript & Automation Endpoints
+# ============================================================================
+
+@app.post("/api/rooms/{code}/transcript")
+async def ingest_transcript(
+    code: str,
+    room: RoomDep,
+    request: TranscriptRequest,
+):
+    """Ingest transcript entry and trigger automation
+
+    Imperative Shell - handles HTTP, delegates to services
+    """
+    try:
+        # Create transcript entry (I/O - delegates to service)
+        entry = await transcript_service.create_transcript_entry(
+            room_code=code,
+            text=request.text,
+            source=request.source,
+        )
+
+        # Process for automation (I/O + pure logic via service)
+        automation_result = await automation_service.process_transcript_for_automation(
+            room_code=code,
+            transcript_text=request.text,
+            current_bet_id=room.current_bet_id,
+            automation_enabled=room.automation_enabled,
+        )
+
+        return {
+            "entry_id": entry.entry_id,
+            "timestamp": entry.timestamp.isoformat(),
+            "automation": automation_result,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to ingest transcript: {str(e)}")
+
+
+@app.get("/api/rooms/{code}/transcript")
+async def get_transcript(code: str, room: RoomDep, limit: int = 100):
+    """Get recent transcript entries
+
+    Imperative Shell - handles HTTP, delegates to services
+    """
+    # Get entries (I/O - delegates to service)
+    entries = await transcript_service.get_transcript_entries(code, limit)
+
+    return {
+        "entries": [entry.to_dict() for entry in entries],
+        "count": len(entries),
+    }
+
+
+@app.post("/api/rooms/{code}/automation/toggle")
+async def toggle_automation(
+    code: str,
+    room: HostRoomDep,
+    request: ToggleAutomationRequest,
+):
+    """Toggle automation on/off (admin only)
+
+    Imperative Shell - handles HTTP, delegates to services
+    """
+    try:
+        # Toggle automation (I/O - delegates to service)
+        await automation_service.toggle_automation(code, request.enabled)
+
+        return {
+            "automation_enabled": request.enabled,
+            "message": f"Automation {'enabled' if request.enabled else 'disabled'}",
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to toggle automation: {str(e)}")
 
 
 # ============================================================================
