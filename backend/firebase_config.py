@@ -5,12 +5,10 @@ IMPERATIVE SHELL: This module handles Firebase Admin SDK initialization
 
 import os
 from typing import Optional
+
+# Import firebase_admin
 import firebase_admin
 from firebase_admin import credentials, firestore
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 # Global Firebase app instance
 _app: Optional[firebase_admin.App] = None
@@ -30,17 +28,30 @@ def initialize_firebase() -> firestore.Client:
     if _db is not None:
         return _db
 
+    # Check if using emulator (set via environment variable)
+    emulator_host = os.getenv("FIRESTORE_EMULATOR_HOST")
+
     # Initialize Firebase Admin SDK
     if not firebase_admin._apps:
-        # Check if running in production (Cloud Run) or local dev
-        credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if emulator_host:
+            # Local development with emulator
+            print(f"🔧 Using Firebase Emulator at {emulator_host}")
 
-        if credentials_path and os.path.exists(credentials_path):
-            # Local development with service account key
-            cred = credentials.Certificate(credentials_path)
-            _app = firebase_admin.initialize_app(cred)
+            # Try to load credentials from file if available
+            cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            if cred_path and os.path.exists(cred_path):
+                cred = credentials.Certificate(cred_path)
+                _app = firebase_admin.initialize_app(cred)
+            else:
+                # No credentials file - will fail
+                # Emulator needs SOME credential to init, even if it doesn't use it
+                raise RuntimeError(
+                    "GOOGLE_APPLICATION_CREDENTIALS must be set when using emulators. "
+                    "Use the dummy file: export GOOGLE_APPLICATION_CREDENTIALS=./emulator-service-account.json"
+                )
         else:
-            # Production (Cloud Run) - use default credentials
+            # Production - credentials required
+            print("🚀 Using production Firebase")
             _app = firebase_admin.initialize_app()
 
     _db = firestore.client()

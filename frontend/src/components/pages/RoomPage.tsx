@@ -10,6 +10,7 @@ import { useUser } from '@/hooks/useUser';
 import { useBet } from '@/hooks/useBet';
 import { useParticipants } from '@/hooks/useParticipants';
 import AdminPanel from '@/components/admin/AdminPanel';
+import { betApi } from '@/services/api';
 import type { Room } from '@/types';
 
 export default function RoomPage() {
@@ -22,6 +23,10 @@ export default function RoomPage() {
   const { participants } = useParticipants(code || null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [localRoom, setLocalRoom] = useState<Room | null>(room);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [placingBet, setPlacingBet] = useState(false);
+  const [betError, setBetError] = useState<string | null>(null);
+  const [betSuccess, setBetSuccess] = useState(false);
 
   // Redirect if no session
   useEffect(() => {
@@ -36,6 +41,36 @@ export default function RoomPage() {
       setLocalRoom(room);
     }
   }, [room]);
+
+  // Reset bet state when current bet changes
+  useEffect(() => {
+    setSelectedOption(null);
+    setBetError(null);
+    setBetSuccess(false);
+  }, [bet?.betId]);
+
+  const handlePlaceBet = async (option: string) => {
+    if (!code || !session?.userId || !bet) return;
+
+    setPlacingBet(true);
+    setBetError(null);
+
+    try {
+      await betApi.placeBet(code, session.userId, {
+        bet_id: bet.betId,
+        selected_option: option,
+      });
+
+      setSelectedOption(option);
+      setBetSuccess(true);
+      setBetError(null);
+    } catch (err: any) {
+      setBetError(err.detail || 'Failed to place bet');
+      console.error('Failed to place bet:', err);
+    } finally {
+      setPlacingBet(false);
+    }
+  };
 
   if (roomLoading || userLoading) {
     return (
@@ -134,18 +169,70 @@ export default function RoomPage() {
           <p className="text-secondary mb-md" style={{ fontSize: '0.875rem' }}>
             Status: {bet.status}
           </p>
+
+          {/* Success message */}
+          {betSuccess && selectedOption && (
+            <div
+              className="mb-md"
+              style={{
+                padding: 'var(--spacing-md)',
+                backgroundColor: 'var(--color-bg-elevated)',
+                borderLeft: '3px solid var(--color-success)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <p className="text-success" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
+                ✓ Bet placed on: {selectedOption}
+              </p>
+            </div>
+          )}
+
+          {/* Error message */}
+          {betError && (
+            <div
+              className="mb-md"
+              style={{
+                padding: 'var(--spacing-md)',
+                backgroundColor: 'var(--color-bg-elevated)',
+                borderLeft: '3px solid var(--color-error)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              <p className="text-error" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
+                {betError}
+              </p>
+            </div>
+          )}
+
           <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {bet.options.map((option) => (
-              <button
-                key={option}
-                className="btn btn-secondary"
-                style={{ textAlign: 'left', padding: '1rem' }}
-                disabled={bet.status !== 'open'}
-              >
-                {option}
-              </button>
-            ))}
+            {bet.options.map((option) => {
+              const isSelected = selectedOption === option;
+              const isDisabled = bet.status !== 'open' || placingBet || selectedOption !== null;
+
+              return (
+                <button
+                  key={option}
+                  className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{
+                    textAlign: 'left',
+                    padding: '1rem',
+                    opacity: isDisabled && !isSelected ? 0.5 : 1,
+                  }}
+                  disabled={isDisabled}
+                  onClick={() => handlePlaceBet(option)}
+                >
+                  {isSelected && '✓ '}
+                  {option}
+                </button>
+              );
+            })}
           </div>
+
+          {placingBet && (
+            <p className="text-secondary mt-md" style={{ fontSize: '0.875rem', textAlign: 'center' }}>
+              Placing bet...
+            </p>
+          )}
         </div>
       )}
 

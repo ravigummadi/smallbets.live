@@ -12,7 +12,7 @@ from typing import Optional, List, Annotated
 import uvicorn
 
 from firebase_config import initialize_firebase
-from services import room_service, user_service, bet_service, transcript_service, automation_service
+from services import room_service, user_service, bet_service, transcript_service, automation_service, template_service
 from models.room import Room
 from models.user import User
 from models.bet import Bet
@@ -187,6 +187,18 @@ async def create_room(request: CreateRoomRequest):
         # Update room with host_id (I/O)
         room = room.model_copy(update={"host_id": host_user.user_id})
         await room_service.update_room(room)
+
+        # Load event template and create bets (I/O)
+        # Skip for "custom" template (host will create bets manually)
+        if request.event_template != "custom":
+            try:
+                await template_service.create_bets_from_template(
+                    room_code=room.code,
+                    template_id=request.event_template,
+                )
+            except ValueError as e:
+                # Template not found - log but don't fail room creation
+                print(f"Warning: Could not load template {request.event_template}: {e}")
 
         return CreateRoomResponse(
             room_code=room.code,

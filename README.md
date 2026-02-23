@@ -60,49 +60,135 @@ See [CLAUDE.md](./CLAUDE.md) for architectural context and [ARCHITECTURE.md](./A
 ## Quick Start
 
 ### Prerequisites
-- Node.js 18+ and npm
-- Python 3.11+ with `uv` installed
-- Firebase project (for production)
+- **Node.js 18+** and npm
+- **Python 3.11+** with `uv` installed ([Install uv](https://github.com/astral-sh/uv))
+- **Java 21+** for Firebase emulators: `brew install openjdk@21` (macOS) or [Download Java 21](https://adoptium.net/)
+- **Firebase CLI** for emulators: `npm install -g firebase-tools`
 
-### Backend
+### Step 1: Clone and Navigate
+```bash
+git clone https://github.com/ravigummadi/smallbets.live.git
+cd smallbets.live
+```
+
+### Step 2: Start Firebase Emulators
+
+**Open terminal #1:**
+```bash
+# Start Firebase emulators (no Firebase account needed!)
+firebase emulators:start --project demo-project
+```
+
+You should see:
+```
+✔  firestore: Emulator started at http://127.0.0.1:8080
+✔  firestore: Emulator UI running at http://127.0.0.1:4000
+```
+
+🎯 **Leave this terminal running** - this is your local Firebase database
+
+### Step 3: Backend Setup
+
+**Open terminal #2:**
 ```bash
 cd backend
 
-# Setup
+# Create virtual environment
 uv venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Activate virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
 uv pip install -r requirements.txt
 
-# Configure
-cp .env.example .env
-# Edit .env with your Firebase project ID
-
-# Run
-uv run uvicorn main:app --reload --port 8000
-# API docs: http://localhost:8000/docs
+# Start the backend (using startup script with correct env vars)
+./start_dev.sh
 ```
 
-### Frontend
+You should see:
+```
+🔧 Using Firebase Emulator for local development
+INFO:     Uvicorn running on http://0.0.0.0:8000
+```
+
+✅ Backend running at http://localhost:8000
+📚 API docs at http://localhost:8000/docs
+
+### Step 4: Frontend Setup
+
+**Open terminal #3:**
 ```bash
 cd frontend
 
-# Setup
+# Install dependencies
 npm install
-cp .env.example .env
-# Edit .env with your Firebase config
 
-# Run
+# Create .env file (uses emulator by default)
+cp .env.example .env
+
+# Start the frontend
 npm run dev
-# App: http://localhost:5173
 ```
 
-### Test Flow
-1. Open http://localhost:5173
-2. Click "Create New Room"
-3. Enter nickname, select event template
-4. Share room code with friends
-5. Join from another browser/device
-6. See real-time participant updates
+You should see:
+```
+🔧 Using Firebase Emulator for local development
+  ➜  Local:   http://localhost:5173/
+```
+
+✅ Frontend running at http://localhost:5173
+
+### Step 5: Test the App
+
+1. Open http://localhost:5173 in your browser
+2. Click **"Create New Room"**
+3. Enter a nickname (e.g., "Alice")
+4. Select **"Grammy Awards 2026"** template
+5. Click **"Create Room"**
+6. You should see the room page with 1000 points
+7. Click **"Show Admin Panel"** to control the event
+
+**Test with multiple users:**
+- Open http://localhost:5173 in an incognito/private window
+- Click **"Join Room"**
+- Enter the room code from step 6
+- Enter a different nickname (e.g., "Bob")
+- Both users should see each other in the participants list
+
+### Common Issues
+
+**"vite: command not found"**
+- Solution: Run `npm install` in the frontend directory first
+
+**"No virtual environment found"**
+- Solution: Run `uv venv` in the backend directory, then activate it with `source .venv/bin/activate`
+
+**"File ./service-account-key.json was not found"**
+- Solution: You forgot to start Firebase emulators! Run `firebase emulators:start --project demo-project` in terminal #1
+- Note: The backend requires `emulator-service-account.json` (included in repo) to initialize Firebase Admin SDK, even when using emulators
+
+**"firebase: command not found"**
+- Solution: Install Firebase CLI: `npm install -g firebase-tools`
+
+**"Java version before 21" or Java-related errors**
+- Solution: Firebase emulators require Java 21+. Install with `brew install openjdk@21` (macOS) or download from [Adoptium](https://adoptium.net/)
+
+**"Module not found" errors**
+- Backend: Run `uv pip install -r requirements.txt` (after activating venv)
+- Frontend: Run `npm install`
+
+**"Connection refused to localhost:8080"**
+- Solution: Firebase emulators are not running. Start them with `firebase emulators:start --project demo-project`
+
+**"Could not reach Cloud Firestore backend" or credential errors**
+- Solution: Environment variables must be set BEFORE Python starts. Always use `./start_dev.sh` script (don't run `uvicorn` directly)
+- The script sets `FIRESTORE_EMULATOR_HOST` and other variables before starting the server
+
+**Port already in use**
+- Firestore emulator (8080): Change port in `firebase.json`
+- Backend (8000): Change `API_PORT` in backend/.env
+- Frontend (5173): Vite will automatically prompt you to use a different port
 
 ## Tech Stack
 
