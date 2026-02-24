@@ -49,7 +49,7 @@ async def process_transcript_for_automation(
         current_bet = await bet_service.get_bet(current_bet_id)
 
     # If no current bet, check for next pending bet to open
-    if not current_bet or current_bet.status.value in ["resolved", "locked"]:
+    if not current_bet or current_bet.status.value == "resolved":
         # Get all bets in room (I/O)
         all_bets = await bet_service.get_bets_in_room(room_code)
 
@@ -96,8 +96,8 @@ async def process_transcript_for_automation(
         result["details"]["open_confidence"] = open_confidence
         return result
 
-    # Current bet exists and is open - check for resolution
-    if current_bet.status.value == "open":
+    # Current bet exists and is open or locked - check for resolution
+    if current_bet.status.value in ["open", "locked"]:
         # Get resolve patterns from bet
         resolve_patterns = getattr(current_bet, 'resolve_patterns', [
             "and the winner is",

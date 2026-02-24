@@ -7,7 +7,11 @@
       "betId": "best-picture",
       "question": "Best Picture?",
       "options": [
-        "TBD - Nominees announced January 2026"
+        "Oppenheimer",
+        "Barbie",
+        "Killers of the Flower Moon",
+        "Past Lives",
+        "The Zone of Interest"
       ],
       "triggerConfig": {
         "open": [
@@ -25,7 +29,11 @@
       "betId": "best-director",
       "question": "Best Director?",
       "options": [
-        "TBD - Nominees announced January 2026"
+        "Christopher Nolan (Oppenheimer)",
+        "Greta Gerwig (Barbie)",
+        "Martin Scorsese (Killers of the Flower Moon)",
+        "Yorgos Lanthimos (Poor Things)",
+        "Jonathan Glazer (The Zone of Interest)"
       ],
       "triggerConfig": {
         "open": [
@@ -43,7 +51,11 @@
       "betId": "best-actor",
       "question": "Best Actor?",
       "options": [
-        "TBD - Nominees announced January 2026"
+        "Cillian Murphy (Oppenheimer)",
+        "Leonardo DiCaprio (Killers of the Flower Moon)",
+        "Paul Giamatti (The Holdovers)",
+        "Bradley Cooper (Maestro)",
+        "Colman Domingo (Rustin)"
       ],
       "triggerConfig": {
         "open": [
@@ -61,7 +73,11 @@
       "betId": "best-actress",
       "question": "Best Actress?",
       "options": [
-        "TBD - Nominees announced January 2026"
+        "Emma Stone (Poor Things)",
+        "Lily Gladstone (Killers of the Flower Moon)",
+        "Margot Robbie (Barbie)",
+        "Carey Mulligan (Maestro)",
+        "Sandra Hüller (Anatomy of a Fall)"
       ],
       "triggerConfig": {
         "open": [

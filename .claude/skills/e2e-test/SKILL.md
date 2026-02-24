@@ -1,7 +1,7 @@
 ---
 name: e2e-test
 description: Run automated end-to-end test of SmallBets.live using Playwright
-disable-model-invocation: true
+disable-model-invocation: false
 context: fork
 allowed-tools:
   - mcp__playwright__browser_navigate
