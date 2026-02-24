@@ -17,6 +17,7 @@ const EVENT_TEMPLATES = [
 export default function CreateRoomPage() {
   const [nickname, setNickname] = useState('');
   const [eventTemplate, setEventTemplate] = useState('grammys-2026');
+  const [eventName, setEventName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -30,6 +31,11 @@ export default function CreateRoomPage() {
       return;
     }
 
+    if (eventTemplate === 'custom' && !eventName.trim()) {
+      setError('Please enter a name for your custom event');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -37,6 +43,7 @@ export default function CreateRoomPage() {
       // Create room via API
       const response = await roomApi.createRoom({
         event_template: eventTemplate,
+        event_name: eventTemplate === 'custom' ? eventName.trim() : undefined,
         host_nickname: nickname.trim(),
       });
 
@@ -94,6 +101,23 @@ export default function CreateRoomPage() {
           </p>
         </div>
 
+        {eventTemplate === 'custom' && (
+          <div className="card mb-lg">
+            <h4 className="mb-md">Event Name</h4>
+            <input
+              type="text"
+              placeholder="Enter your event name"
+              value={eventName}
+              onChange={(e) => setEventName(e.target.value)}
+              maxLength={50}
+              className="mb-md"
+            />
+            <p className="text-muted" style={{ fontSize: '0.875rem' }}>
+              Give your custom event a name (e.g., "Family Game Night", "March Madness 2026")
+            </p>
+          </div>
+        )}
+
         {error && (
           <div className="card mb-lg" style={{ borderColor: 'var(--color-error)' }}>
             <p className="text-error">{error}</p>
@@ -103,7 +127,7 @@ export default function CreateRoomPage() {
         <button
           type="submit"
           className="btn btn-primary btn-full btn-lg"
-          disabled={loading || !nickname.trim()}
+          disabled={loading || !nickname.trim() || (eventTemplate === 'custom' && !eventName.trim())}
         >
           {loading ? 'Creating Room...' : 'Create Room'}
         </button>

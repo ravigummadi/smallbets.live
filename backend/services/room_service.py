@@ -55,13 +55,14 @@ async def generate_room_code() -> str:
     raise RuntimeError("Failed to generate unique room code after 10 attempts")
 
 
-async def create_room(event_template: str, host_id: str) -> Room:
+async def create_room(event_template: str, event_name: Optional[str], host_id: str) -> Room:
     """Create a new room
 
     Imperative Shell - performs Firestore write
 
     Args:
         event_template: Event template ID
+        event_name: Custom event name (for custom events)
         host_id: User ID of room host
 
     Returns:
@@ -76,6 +77,7 @@ async def create_room(event_template: str, host_id: str) -> Room:
     room = Room(
         code=code,
         event_template=event_template,
+        event_name=event_name,
         status="waiting",
         host_id=host_id,
         automation_enabled=True,

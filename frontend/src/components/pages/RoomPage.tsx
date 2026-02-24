@@ -13,6 +13,14 @@ import AdminPanel from '@/components/admin/AdminPanel';
 import { betApi } from '@/services/api';
 import type { Room } from '@/types';
 
+// Map template IDs to friendly names
+const EVENT_TEMPLATE_NAMES: Record<string, string> = {
+  'grammys-2026': 'Grammy Awards 2026',
+  'oscars-2026': 'Oscars 2026',
+  'superbowl-lix': 'Super Bowl LIX',
+  'custom': 'Custom Event',
+};
+
 export default function RoomPage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
@@ -100,13 +108,18 @@ export default function RoomPage() {
   const isHost = user.isAdmin;
   const displayRoom = localRoom;
 
+  // Get event name (custom or from template)
+  const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
+
   return (
     <div className="container-full" style={{ paddingTop: '1rem' }}>
       {/* Room Header */}
       <div className="card mb-md">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h3 style={{ marginBottom: '0.25rem' }}>Room {displayRoom.code}</h3>
+            <h3 style={{ marginBottom: '0.25rem' }}>
+              {eventName} - Room {displayRoom.code}
+            </h3>
             <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 0 }}>
               {displayRoom.status === 'waiting' && 'Waiting to start'}
               {displayRoom.status === 'active' && 'Event in progress'}

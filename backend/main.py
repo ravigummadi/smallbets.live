@@ -49,6 +49,7 @@ async def startup_event():
 
 class CreateRoomRequest(BaseModel):
     event_template: str
+    event_name: Optional[str] = None
     host_nickname: str
 
 
@@ -174,6 +175,7 @@ async def create_room(request: CreateRoomRequest):
         # Create room (I/O - delegates to service)
         room = await room_service.create_room(
             event_template=request.event_template,
+            event_name=request.event_name,
             host_id="",  # Will be set after creating host user
         )
 
