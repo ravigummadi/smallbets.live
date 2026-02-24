@@ -31,10 +31,16 @@ export function useSession() {
   }, [session]);
 
   const saveSession = (data: SessionData) => {
+    // Save synchronously to sessionStorage first
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+    // Then update React state
     setSession(data);
   };
 
   const clearSession = () => {
+    // Remove synchronously from sessionStorage first
+    sessionStorage.removeItem(SESSION_KEY);
+    // Then update React state
     setSession(null);
   };
 
