@@ -131,13 +131,13 @@ async def get_user_or_404(user_id: str) -> User:
 
 
 async def require_host(
-    room_code: str,
+    code: str,
     x_host_id: Annotated[str, Header(alias="X-Host-Id")],
 ) -> Room:
     """Dependency: Verify user is room host
 
     Args:
-        room_code: Room code from path parameter
+        code: Room code from path parameter
         x_host_id: Host ID from X-Host-Id header
 
     Returns:
@@ -146,7 +146,7 @@ async def require_host(
     Raises:
         HTTPException: 403 if not room host, 404 if room not found
     """
-    room = await get_room_or_404(room_code)
+    room = await get_room_or_404(code)
 
     if room.host_id != x_host_id:
         raise HTTPException(status_code=403, detail="Not the room host")

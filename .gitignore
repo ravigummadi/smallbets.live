@@ -48,3 +48,6 @@ Thumbs.db
 frontend/dist/
 frontend/build/
 *.log
+
+# Playwright MCP
+.playwright-mcp/

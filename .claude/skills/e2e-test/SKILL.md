@@ -1,3 +1,23 @@
+---
+name: e2e-test
+description: Run automated end-to-end test of SmallBets.live using Playwright
+disable-model-invocation: true
+context: fork
+allowed-tools:
+  - mcp__playwright__browser_navigate
+  - mcp__playwright__browser_click
+  - mcp__playwright__browser_type
+  - mcp__playwright__browser_fill_form
+  - mcp__playwright__browser_snapshot
+  - mcp__playwright__browser_take_screenshot
+  - mcp__playwright__browser_tabs
+  - mcp__playwright__browser_wait_for
+  - mcp__playwright__browser_console_messages
+  - mcp__playwright__browser_network_requests
+  - Bash
+  - Read
+---
+
 # End-to-End Testing Skill
 
 This skill runs a complete end-to-end test of the SmallBets.live application using Playwright.
