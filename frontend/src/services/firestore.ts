@@ -48,6 +48,7 @@ export function subscribeToRoom(
     const room: Room = {
       code: data.code,
       eventTemplate: data.eventTemplate,
+      eventName: data.eventName ?? null,
       status: data.status,
       currentBetId: data.currentBetId ?? null,
       hostId: data.hostId,

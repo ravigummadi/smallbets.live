@@ -10,6 +10,7 @@ export type BetStatus = 'pending' | 'open' | 'locked' | 'resolved';
 export interface Room {
   code: string;
   eventTemplate: string;
+  eventName?: string | null;
   status: RoomStatus;
   currentBetId: string | null;
   hostId: string;
@@ -68,6 +69,7 @@ export interface TranscriptEntry {
 // API request/response types
 export interface CreateRoomRequest {
   event_template: string;
+  event_name?: string;
   host_nickname: string;
 }
 

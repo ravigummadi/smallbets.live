@@ -13,6 +13,7 @@ class Room(BaseModel):
 
     code: str = Field(..., min_length=4, max_length=4, description="4-character room code")
     event_template: str = Field(..., description="Event template ID (grammys-2026, oscars-2026, etc.)")
+    event_name: Optional[str] = Field(default=None, description="Custom event name (for custom events)")
     status: str = Field(default="waiting", description="Room status: waiting|active|finished")
     current_bet_id: Optional[str] = Field(default=None, description="Currently active bet ID")
     host_id: str = Field(..., description="User ID of room host (for X-Host-Id auth)")
@@ -28,6 +29,7 @@ class Room(BaseModel):
         return {
             "code": self.code,
             "eventTemplate": self.event_template,
+            "eventName": self.event_name,
             "status": self.status,
             "currentBetId": self.current_bet_id,
             "hostId": self.host_id,
@@ -45,6 +47,7 @@ class Room(BaseModel):
         return cls(
             code=data["code"],
             event_template=data["eventTemplate"],
+            event_name=data.get("eventName"),
             status=data["status"],
             current_bet_id=data.get("currentBetId"),
             host_id=data["hostId"],
