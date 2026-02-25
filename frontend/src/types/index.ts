@@ -12,7 +12,6 @@ export interface Room {
   eventTemplate: string;
   eventName?: string | null;
   status: RoomStatus;
-  currentBetId: string | null;
   hostId: string;
   automationEnabled: boolean;
   createdAt: Date;
@@ -38,7 +37,7 @@ export interface Bet {
   lockedAt: Date | null;
   resolvedAt: Date | null;
   winningOption: string | null;
-  timerDuration: number;
+  pointsValue: number;
 }
 
 export interface UserBet {

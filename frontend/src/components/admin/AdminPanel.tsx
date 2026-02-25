@@ -4,23 +4,26 @@
 
 import { useState } from 'react';
 import LiveFeedPanel from './LiveFeedPanel';
-import { roomApi, betApi } from '@/services/api';
-import type { Room, Bet } from '@/types';
+import BetCreationForm from './BetCreationForm';
+import BetListPanel from './BetListPanel';
+import { roomApi } from '@/services/api';
+import { useBets } from '@/hooks/useBets';
+import type { Room } from '@/types';
 
 interface AdminPanelProps {
   room: Room;
   hostId: string;
-  currentBet: Bet | null;
   onRoomUpdate: (room: Room) => void;
 }
 
 export default function AdminPanel({
   room,
   hostId,
-  currentBet,
   onRoomUpdate,
 }: AdminPanelProps) {
   const [automationEnabled, setAutomationEnabled] = useState(room.automationEnabled);
+  const [showBetCreationForm, setShowBetCreationForm] = useState(false);
+  const { bets, loading: betsLoading } = useBets(room.code);
 
   const handleToggleAutomation = (enabled: boolean) => {
     setAutomationEnabled(enabled);
@@ -45,16 +48,6 @@ export default function AdminPanel({
     }
   };
 
-  const handleLockBet = async () => {
-    if (!currentBet) return;
-
-    try {
-      await betApi.lockBet(room.code, hostId);
-    } catch (err) {
-      console.error('Failed to lock bet:', err);
-    }
-  };
-
   return (
     <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
       {/* Room Controls */}
@@ -69,16 +62,9 @@ export default function AdminPanel({
           )}
 
           {room.status === 'active' && (
-            <>
-              {currentBet && currentBet.status === 'open' && (
-                <button className="btn btn-secondary" onClick={handleLockBet}>
-                  Close Betting
-                </button>
-              )}
-              <button className="btn btn-secondary" onClick={handleFinishRoom}>
-                Finish Event
-              </button>
-            </>
+            <button className="btn btn-secondary" onClick={handleFinishRoom}>
+              Finish Event
+            </button>
           )}
 
           {room.status === 'finished' && (
@@ -89,6 +75,48 @@ export default function AdminPanel({
         </div>
       </div>
 
+      {/* Bet Creation */}
+      {(room.status === 'waiting' || room.status === 'active') && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+            <h4 style={{ marginBottom: 0 }}>Create New Bet</h4>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowBetCreationForm(!showBetCreationForm)}
+              style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+            >
+              {showBetCreationForm ? 'Hide Form' : 'Show Form'}
+            </button>
+          </div>
+
+          {showBetCreationForm && (
+            <BetCreationForm
+              roomCode={room.code}
+              hostId={hostId}
+              onSuccess={() => {
+                setShowBetCreationForm(false);
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Bet Management */}
+      <div className="card">
+        <h4 className="mb-md">Bet Management ({betsLoading ? '...' : bets.length})</h4>
+        {betsLoading ? (
+          <p className="text-muted" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
+            Loading bets...
+          </p>
+        ) : (
+          <BetListPanel
+            roomCode={room.code}
+            hostId={hostId}
+            bets={bets}
+          />
+        )}
+      </div>
+
       {/* Live Feed Panel (only show when event is active) */}
       {room.status === 'active' && (
         <LiveFeedPanel
@@ -97,32 +125,6 @@ export default function AdminPanel({
           automationEnabled={automationEnabled}
           onToggleAutomation={handleToggleAutomation}
         />
-      )}
-
-      {/* Current Bet Info */}
-      {currentBet && (
-        <div className="card">
-          <h4 className="mb-md">Current Bet</h4>
-          <p style={{ marginBottom: 'var(--spacing-sm)' }}>
-            <strong>Question:</strong> {currentBet.question}
-          </p>
-          <p style={{ marginBottom: 'var(--spacing-sm)' }}>
-            <strong>Status:</strong>{' '}
-            <span
-              style={{
-                color:
-                  currentBet.status === 'open'
-                    ? 'var(--color-success)'
-                    : 'var(--color-text-secondary)',
-              }}
-            >
-              {currentBet.status}
-            </span>
-          </p>
-          <p style={{ marginBottom: 0 }}>
-            <strong>Options:</strong> {currentBet.options.length}
-          </p>
-        </div>
       )}
     </div>
   );

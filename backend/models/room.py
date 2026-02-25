@@ -15,7 +15,6 @@ class Room(BaseModel):
     event_template: str = Field(..., description="Event template ID (grammys-2026, oscars-2026, etc.)")
     event_name: Optional[str] = Field(default=None, description="Custom event name (for custom events)")
     status: str = Field(default="waiting", description="Room status: waiting|active|finished")
-    current_bet_id: Optional[str] = Field(default=None, description="Currently active bet ID")
     host_id: str = Field(..., description="User ID of room host (for X-Host-Id auth)")
     automation_enabled: bool = Field(default=True, description="Whether automation is enabled")
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -31,7 +30,6 @@ class Room(BaseModel):
             "eventTemplate": self.event_template,
             "eventName": self.event_name,
             "status": self.status,
-            "currentBetId": self.current_bet_id,
             "hostId": self.host_id,
             "automationEnabled": self.automation_enabled,
             "createdAt": self.created_at,
@@ -49,7 +47,6 @@ class Room(BaseModel):
             event_template=data["eventTemplate"],
             event_name=data.get("eventName"),
             status=data["status"],
-            current_bet_id=data.get("currentBetId"),
             host_id=data["hostId"],
             automation_enabled=data.get("automationEnabled", True),
             created_at=data["createdAt"],

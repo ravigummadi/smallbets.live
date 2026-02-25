@@ -78,6 +78,10 @@ class OpenBetRequest(BaseModel):
     bet_id: str
 
 
+class LockBetRequest(BaseModel):
+    bet_id: str
+
+
 class ResolveBetRequest(BaseModel):
     winning_option: str
 
@@ -322,7 +326,7 @@ async def create_bet(code: str, room: HostRoomDep, request: dict):
             room_code=code,
             question=request["question"],
             options=request["options"],
-            timer_duration=request.get("timerDuration", 60),
+            points_value=request.get("pointsValue", 100),
         )
 
         return bet.to_dict()
@@ -343,9 +347,6 @@ async def open_bet(code: str, room: HostRoomDep, request: OpenBetRequest):
         # Open bet (I/O - delegates to service)
         bet = await bet_service.open_bet(request.bet_id)
 
-        # Update room's current bet (I/O)
-        await room_service.set_current_bet(code, bet.bet_id)
-
         return bet.to_dict()
 
     except ValueError as e:
@@ -355,17 +356,14 @@ async def open_bet(code: str, room: HostRoomDep, request: OpenBetRequest):
 
 
 @app.post("/api/rooms/{code}/bets/lock")
-async def lock_bet(code: str, room: HostRoomDep):
-    """Lock current bet (close betting) (admin only)
+async def lock_bet(code: str, room: HostRoomDep, request: LockBetRequest):
+    """Lock a bet (close betting) (admin only)
 
     Imperative Shell - handles HTTP, delegates to services
     """
-    if not room.current_bet_id:
-        raise HTTPException(status_code=400, detail="No active bet")
-
     try:
         # Lock bet (I/O - delegates to service)
-        bet = await bet_service.lock_bet(room.current_bet_id)
+        bet = await bet_service.lock_bet(request.bet_id)
 
         return bet.to_dict()
 
@@ -389,9 +387,6 @@ async def resolve_bet(
     try:
         # Resolve bet and distribute points (I/O - delegates to service)
         await bet_service.resolve_bet(bet_id, request.winning_option)
-
-        # Clear current bet (I/O)
-        await room_service.set_current_bet(code, None)
 
         # Get updated leaderboard
         leaderboard = await user_service.calculate_and_get_leaderboard(code)
@@ -493,7 +488,6 @@ async def ingest_transcript(
         automation_result = await automation_service.process_transcript_for_automation(
             room_code=code,
             transcript_text=request.text,
-            current_bet_id=room.current_bet_id,
             automation_enabled=room.automation_enabled,
         )
 
