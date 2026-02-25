@@ -204,17 +204,3 @@ async def set_room_status(room_code: str, status: str) -> None:
     room_ref.update({"status": status})
 
 
-async def set_current_bet(room_code: str, bet_id: Optional[str]) -> None:
-    """Update room's current bet
-
-    Imperative Shell - performs Firestore update
-
-    Args:
-        room_code: Room code
-        bet_id: Bet ID or None to clear
-    """
-    db = get_db()
-
-    # Update Firestore (I/O)
-    room_ref = db.collection("rooms").document(room_code)
-    room_ref.update({"currentBetId": bet_id})

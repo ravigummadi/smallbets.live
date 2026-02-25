@@ -29,7 +29,7 @@ class Bet(BaseModel):
     locked_at: Optional[datetime] = None
     resolved_at: Optional[datetime] = None
     winning_option: Optional[str] = None
-    timer_duration: int = Field(default=60, ge=10, le=300, description="Timer duration in seconds")
+    points_value: int = Field(..., ge=10, le=1000, description="Points required to place this bet")
 
     def to_dict(self) -> dict:
         """Serialize for Firestore storage
@@ -46,7 +46,7 @@ class Bet(BaseModel):
             "lockedAt": self.locked_at,
             "resolvedAt": self.resolved_at,
             "winningOption": self.winning_option,
-            "timerDuration": self.timer_duration,
+            "pointsValue": self.points_value,
         }
 
     @classmethod
@@ -65,7 +65,7 @@ class Bet(BaseModel):
             locked_at=data.get("lockedAt"),
             resolved_at=data.get("resolvedAt"),
             winning_option=data.get("winningOption"),
-            timer_duration=data.get("timerDuration", 60),
+            points_value=data.get("pointsValue", 100),  # Default for backwards compatibility
         )
 
     def can_accept_bets(self) -> bool:

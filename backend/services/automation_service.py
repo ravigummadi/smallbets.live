@@ -13,7 +13,6 @@ from services import bet_service, room_service
 async def process_transcript_for_automation(
     room_code: str,
     transcript_text: str,
-    current_bet_id: Optional[str],
     automation_enabled: bool
 ) -> Dict[str, any]:
     """Process transcript entry and execute automation actions
@@ -23,18 +22,15 @@ async def process_transcript_for_automation(
     Args:
         room_code: Room code
         transcript_text: New transcript text
-        current_bet_id: Currently active bet ID (if any)
         automation_enabled: Whether automation is enabled for room
 
     Returns:
         Dictionary with:
-        - action_taken: "open_bet" | "resolve_bet" | "ignored" | "disabled"
-        - confidence: confidence score
+        - actions_taken: List of actions performed
         - details: additional information
     """
     result = {
-        "action_taken": "disabled",
-        "confidence": 0.0,
+        "actions_taken": [],
         "details": {}
     }
 
@@ -43,29 +39,18 @@ async def process_transcript_for_automation(
         result["details"]["reason"] = "Automation disabled for room"
         return result
 
-    # Get current bet if exists (I/O)
-    current_bet = None
-    if current_bet_id:
-        current_bet = await bet_service.get_bet(current_bet_id)
+    # Get all bets in room (I/O)
+    all_bets = await bet_service.get_bets_in_room(room_code)
 
-    # If no current bet, check for next pending bet to open
-    if not current_bet or current_bet.status.value == "resolved":
-        # Get all bets in room (I/O)
-        all_bets = await bet_service.get_bets_in_room(room_code)
+    # Find pending and open bets
+    pending_bets = [b for b in all_bets if b.status.value == "pending"]
+    open_bets = [b for b in all_bets if b.status.value == "open"]
+    locked_bets = [b for b in all_bets if b.status.value == "locked"]
 
-        # Find first pending bet
-        pending_bets = [b for b in all_bets if b.status.value == "pending"]
-
-        if not pending_bets:
-            result["action_taken"] = "ignored"
-            result["details"]["reason"] = "No pending bets available"
-            return result
-
-        next_bet = pending_bets[0]
-
-        # Check if transcript triggers bet opening (pure - delegates to transcript_parser)
+    # Check pending bets for opening
+    for bet in pending_bets:
         # Get trigger config from bet (would come from event template in production)
-        open_patterns = getattr(next_bet, 'open_patterns', [
+        open_patterns = getattr(bet, 'open_patterns', [
             "and the nominees are",
             "next category",
             "envelope please"
@@ -79,27 +64,19 @@ async def process_transcript_for_automation(
 
         if should_open:
             # Open the bet (I/O)
-            await bet_service.open_bet(next_bet.bet_id)
-            await room_service.set_current_bet(room_code, next_bet.bet_id)
+            await bet_service.open_bet(bet.bet_id)
 
-            result["action_taken"] = "open_bet"
-            result["confidence"] = open_confidence
-            result["details"] = {
-                "bet_id": next_bet.bet_id,
-                "question": next_bet.question,
-                "trigger_type": "open"
-            }
-            return result
+            result["actions_taken"].append({
+                "action": "open_bet",
+                "confidence": open_confidence,
+                "bet_id": bet.bet_id,
+                "question": bet.question,
+            })
 
-        result["action_taken"] = "ignored"
-        result["details"]["reason"] = "Transcript did not trigger bet opening"
-        result["details"]["open_confidence"] = open_confidence
-        return result
-
-    # Current bet exists and is open or locked - check for resolution
-    if current_bet.status.value in ["open", "locked"]:
+    # Check open/locked bets for resolution
+    for bet in open_bets + locked_bets:
         # Get resolve patterns from bet
-        resolve_patterns = getattr(current_bet, 'resolve_patterns', [
+        resolve_patterns = getattr(bet, 'resolve_patterns', [
             "and the winner is",
             "grammy goes to",
             "oscar goes to"
@@ -108,34 +85,25 @@ async def process_transcript_for_automation(
         # Extract winner (pure - delegates to transcript_parser)
         winner, winner_confidence, is_resolution = transcript_parser.extract_winner_with_patterns(
             transcript_text,
-            current_bet.options,
+            bet.options,
             resolve_patterns,
             threshold=0.85
         )
 
         if is_resolution and winner:
             # Resolve the bet (I/O)
-            await bet_service.resolve_bet(current_bet.bet_id, winner)
-            await room_service.set_current_bet(room_code, None)
+            await bet_service.resolve_bet(bet.bet_id, winner)
 
-            result["action_taken"] = "resolve_bet"
-            result["confidence"] = winner_confidence
-            result["details"] = {
-                "bet_id": current_bet.bet_id,
+            result["actions_taken"].append({
+                "action": "resolve_bet",
+                "confidence": winner_confidence,
+                "bet_id": bet.bet_id,
                 "winner": winner,
-                "trigger_type": "resolve"
-            }
-            return result
+            })
 
-        result["action_taken"] = "ignored"
-        result["details"]["reason"] = "Transcript did not trigger bet resolution"
-        result["details"]["winner_confidence"] = winner_confidence
-        result["details"]["is_resolution"] = is_resolution
-        return result
+    if not result["actions_taken"]:
+        result["details"]["reason"] = "Transcript did not trigger any bet actions"
 
-    # Bet is in another state (locked, etc.)
-    result["action_taken"] = "ignored"
-    result["details"]["reason"] = f"Current bet is in {current_bet.status.value} state"
     return result
 
 

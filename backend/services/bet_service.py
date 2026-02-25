@@ -21,7 +21,7 @@ async def create_bet(
     room_code: str,
     question: str,
     options: List[str],
-    timer_duration: int = 60,
+    points_value: int,
 ) -> Bet:
     """Create a new bet
 
@@ -31,7 +31,7 @@ async def create_bet(
         room_code: Room code
         question: Betting question
         options: List of betting options
-        timer_duration: Timer duration in seconds
+        points_value: Points required to place this bet
 
     Returns:
         Created Bet object
@@ -48,7 +48,7 @@ async def create_bet(
         question=question,
         options=options,
         status=BetStatus.PENDING,
-        timer_duration=timer_duration,
+        points_value=points_value,
     )
 
     # Write to Firestore (I/O)
@@ -200,7 +200,7 @@ async def resolve_bet(bet_id: str, winning_option: str) -> None:
     users = await user_service.get_users_by_ids(user_ids)
 
     # Calculate scores (pure - delegates to game_logic)
-    scores = game_logic.calculate_scores(user_bets, users, winning_option)
+    scores = game_logic.calculate_scores(user_bets, users, winning_option, bet.points_value)
 
     # Update user points and user bets in batch (I/O)
     batch = db.batch()
@@ -208,7 +208,7 @@ async def resolve_bet(bet_id: str, winning_option: str) -> None:
     for user_id, points_won in scores.items():
         # Update user points
         user = users[user_id]
-        new_points = user.points - game_logic.BET_COST + points_won
+        new_points = user.points - bet.points_value + points_won
 
         user_ref = db.collection("users").document(user_id)
         batch.update(user_ref, {"points": new_points})
@@ -264,7 +264,7 @@ async def place_user_bet(
 
     # Validate eligibility (pure - delegates to game_logic)
     is_valid, error = game_logic.validate_bet_eligibility(
-        user, bet, existing_bet, game_logic.BET_COST
+        user, bet, existing_bet, bet.points_value
     )
     if not is_valid:
         raise ValueError(error)
@@ -283,7 +283,7 @@ async def place_user_bet(
     )
 
     # Deduct points from user (pure - immutable update)
-    updated_user = user.subtract_points(game_logic.BET_COST)
+    updated_user = user.subtract_points(bet.points_value)
 
     # Save to Firestore in batch (I/O)
     batch = db.batch()

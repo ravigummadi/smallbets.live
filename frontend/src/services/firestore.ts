@@ -50,7 +50,6 @@ export function subscribeToRoom(
       eventTemplate: data.eventTemplate,
       eventName: data.eventName ?? null,
       status: data.status,
-      currentBetId: data.currentBetId ?? null,
       hostId: data.hostId,
       automationEnabled: data.automationEnabled ?? true,
       createdAt: timestampToDate(data.createdAt),
@@ -116,10 +115,43 @@ export function subscribeToBet(
       lockedAt: data.lockedAt ? timestampToDate(data.lockedAt) : null,
       resolvedAt: data.resolvedAt ? timestampToDate(data.resolvedAt) : null,
       winningOption: data.winningOption ?? null,
-      timerDuration: data.timerDuration ?? 60,
+      pointsValue: data.pointsValue ?? 100,
     };
 
     callback(bet);
+  });
+}
+
+/**
+ * Subscribe to all bets in a room
+ */
+export function subscribeToBets(
+  roomCode: string,
+  callback: (bets: Bet[]) => void
+): Unsubscribe {
+  const betsQuery = query(
+    collection(db, 'bets'),
+    where('roomCode', '==', roomCode)
+  );
+
+  return onSnapshot(betsQuery, (snapshot) => {
+    const bets: Bet[] = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        betId: data.betId,
+        roomCode: data.roomCode,
+        question: data.question,
+        options: data.options,
+        status: data.status,
+        openedAt: data.openedAt ? timestampToDate(data.openedAt) : null,
+        lockedAt: data.lockedAt ? timestampToDate(data.lockedAt) : null,
+        resolvedAt: data.resolvedAt ? timestampToDate(data.resolvedAt) : null,
+        winningOption: data.winningOption ?? null,
+        pointsValue: data.pointsValue ?? 100,
+      };
+    });
+
+    callback(bets);
   });
 }
 
@@ -179,5 +211,36 @@ export function subscribeToUserBet(
     };
 
     callback(userBet);
+  });
+}
+
+/**
+ * Subscribe to all user bets for a user in a room
+ */
+export function subscribeToUserBets(
+  userId: string,
+  roomCode: string,
+  callback: (userBets: UserBet[]) => void
+): Unsubscribe {
+  const userBetsQuery = query(
+    collection(db, 'userBets'),
+    where('userId', '==', userId),
+    where('roomCode', '==', roomCode)
+  );
+
+  return onSnapshot(userBetsQuery, (snapshot) => {
+    const userBets: UserBet[] = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        userId: data.userId,
+        betId: data.betId,
+        roomCode: data.roomCode,
+        selectedOption: data.selectedOption,
+        placedAt: timestampToDate(data.placedAt),
+        pointsWon: data.pointsWon ?? null,
+      };
+    });
+
+    callback(userBets);
   });
 }

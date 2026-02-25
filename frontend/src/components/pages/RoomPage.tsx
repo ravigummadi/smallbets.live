@@ -7,11 +7,12 @@ import { useEffect, useState } from 'react';
 import { useSession } from '@/hooks/useSession';
 import { useRoom } from '@/hooks/useRoom';
 import { useUser } from '@/hooks/useUser';
-import { useBet } from '@/hooks/useBet';
+import { useBets } from '@/hooks/useBets';
+import { useUserBets } from '@/hooks/useUserBets';
 import { useParticipants } from '@/hooks/useParticipants';
 import AdminPanel from '@/components/admin/AdminPanel';
 import { betApi } from '@/services/api';
-import type { Room } from '@/types';
+import type { Room, Bet, UserBet } from '@/types';
 
 // Map template IDs to friendly names
 const EVENT_TEMPLATE_NAMES: Record<string, string> = {
@@ -27,14 +28,14 @@ export default function RoomPage() {
   const { session } = useSession();
   const { room, loading: roomLoading } = useRoom(code || null);
   const { user, loading: userLoading } = useUser(session?.userId || null);
-  const { bet, loading: betLoading } = useBet(room?.currentBetId || null);
+  const { bets, loading: betsLoading } = useBets(code || null);
+  const { userBets } = useUserBets(session?.userId || null, code || null);
   const { participants } = useParticipants(code || null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [localRoom, setLocalRoom] = useState<Room | null>(room);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [placingBet, setPlacingBet] = useState(false);
-  const [betError, setBetError] = useState<string | null>(null);
-  const [betSuccess, setBetSuccess] = useState(false);
+  const [expandedBets, setExpandedBets] = useState<Set<string>>(new Set());
+  const [placingBets, setPlacingBets] = useState<Set<string>>(new Set());
+  const [betErrors, setBetErrors] = useState<Record<string, string>>({});
 
   // Redirect if no session
   useEffect(() => {
@@ -50,33 +51,39 @@ export default function RoomPage() {
     }
   }, [room]);
 
-  // Reset bet state when current bet changes
-  useEffect(() => {
-    setSelectedOption(null);
-    setBetError(null);
-    setBetSuccess(false);
-  }, [bet?.betId]);
+  const toggleBetExpanded = (betId: string) => {
+    const newExpanded = new Set(expandedBets);
+    if (newExpanded.has(betId)) {
+      newExpanded.delete(betId);
+    } else {
+      newExpanded.add(betId);
+    }
+    setExpandedBets(newExpanded);
+  };
 
-  const handlePlaceBet = async (option: string) => {
-    if (!code || !session?.userId || !bet) return;
+  const handlePlaceBet = async (betId: string, option: string) => {
+    if (!code || !session?.userId) return;
 
-    setPlacingBet(true);
-    setBetError(null);
+    setPlacingBets(new Set(placingBets).add(betId));
+    setBetErrors({ ...betErrors, [betId]: '' });
 
     try {
       await betApi.placeBet(code, session.userId, {
-        bet_id: bet.betId,
+        bet_id: betId,
         selected_option: option,
       });
 
-      setSelectedOption(option);
-      setBetSuccess(true);
-      setBetError(null);
+      // Clear error on success
+      const newErrors = { ...betErrors };
+      delete newErrors[betId];
+      setBetErrors(newErrors);
     } catch (err: any) {
-      setBetError(err.detail || 'Failed to place bet');
+      setBetErrors({ ...betErrors, [betId]: err.detail || 'Failed to place bet' });
       console.error('Failed to place bet:', err);
     } finally {
-      setPlacingBet(false);
+      const newPlacing = new Set(placingBets);
+      newPlacing.delete(betId);
+      setPlacingBets(newPlacing);
     }
   };
 
@@ -110,6 +117,13 @@ export default function RoomPage() {
 
   // Get event name (custom or from template)
   const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
+
+  // Filter open bets
+  const openBets = bets.filter(bet => bet.status === 'open');
+
+  // Create a map of user bets by betId for quick lookup
+  const userBetMap = new Map<string, UserBet>();
+  userBets.forEach(ub => userBetMap.set(ub.betId, ub));
 
   return (
     <div className="container-full" style={{ paddingTop: '1rem' }}>
@@ -154,7 +168,6 @@ export default function RoomPage() {
           <AdminPanel
             room={displayRoom}
             hostId={session.hostId}
-            currentBet={bet}
             onRoomUpdate={setLocalRoom}
           />
         </div>
@@ -170,82 +183,139 @@ export default function RoomPage() {
         </div>
       )}
 
-      {displayRoom.status === 'active' && !bet && (
-        <div className="card mb-md text-center">
-          <p className="text-secondary">Waiting for next bet...</p>
-        </div>
+      {displayRoom.status === 'active' && (
+        <>
+          {betsLoading ? (
+            <div className="card mb-md text-center">
+              <p className="text-secondary">Loading bets...</p>
+            </div>
+          ) : openBets.length === 0 ? (
+            <div className="card mb-md text-center">
+              <p className="text-secondary">No open bets. Waiting for next bet...</p>
+            </div>
+          ) : (
+            <div className="card mb-md">
+              <h4 className="mb-md">Open Bets ({openBets.length})</h4>
+              <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
+                {openBets.map((bet) => {
+                  const isExpanded = expandedBets.has(bet.betId);
+                  const userBet = userBetMap.get(bet.betId);
+                  const hasPlacedBet = !!userBet;
+                  const isPlacing = placingBets.has(bet.betId);
+                  const error = betErrors[bet.betId];
+
+                  return (
+                    <div
+                      key={bet.betId}
+                      style={{
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius-md)',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {/* Bet Header */}
+                      <div
+                        style={{
+                          padding: 'var(--spacing-md)',
+                          cursor: 'pointer',
+                          backgroundColor: isExpanded ? 'var(--color-bg-elevated)' : 'transparent',
+                        }}
+                        onClick={() => toggleBetExpanded(bet.betId)}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontWeight: '600', marginBottom: 'var(--spacing-xs)' }}>
+                              {bet.question}
+                            </p>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: 0 }}>
+                              {bet.options.length} options • {bet.pointsValue} points
+                              {hasPlacedBet && (
+                                <span style={{ marginLeft: '0.5rem', color: 'var(--color-success)', fontWeight: '600' }}>
+                                  • ✓ Bet placed
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <span style={{ fontSize: '1.25rem', color: 'var(--color-text-secondary)' }}>
+                            {isExpanded ? '−' : '+'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Bet Content (collapsible) */}
+                      {isExpanded && (
+                        <div style={{ padding: 'var(--spacing-md)', paddingTop: 0 }}>
+                          {hasPlacedBet ? (
+                            <div
+                              style={{
+                                padding: 'var(--spacing-md)',
+                                backgroundColor: 'var(--color-bg-elevated)',
+                                borderLeft: '3px solid var(--color-success)',
+                                borderRadius: 'var(--radius-sm)',
+                                marginBottom: 'var(--spacing-md)',
+                              }}
+                            >
+                              <p className="text-success" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
+                                ✓ Your bet: <strong>{userBet.selectedOption}</strong>
+                              </p>
+                            </div>
+                          ) : (
+                            <>
+                              {error && (
+                                <div
+                                  style={{
+                                    padding: 'var(--spacing-md)',
+                                    backgroundColor: 'var(--color-bg-elevated)',
+                                    borderLeft: '3px solid var(--color-error)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    marginBottom: 'var(--spacing-md)',
+                                  }}
+                                >
+                                  <p className="text-error" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
+                                    {error}
+                                  </p>
+                                </div>
+                              )}
+
+                              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                                {bet.options.map((option) => (
+                                  <button
+                                    key={option}
+                                    className="btn btn-secondary"
+                                    style={{
+                                      textAlign: 'left',
+                                      padding: '1rem',
+                                    }}
+                                    disabled={isPlacing}
+                                    onClick={() => handlePlaceBet(bet.betId, option)}
+                                  >
+                                    {option}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {isPlacing && (
+                                <p className="text-secondary mt-md" style={{ fontSize: '0.875rem', textAlign: 'center' }}>
+                                  Placing bet...
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {displayRoom.status === 'active' && bet && (
-        <div className="card mb-md">
-          <h3 className="mb-md">{bet.question}</h3>
-          <p className="text-secondary mb-md" style={{ fontSize: '0.875rem' }}>
-            Status: {bet.status}
-          </p>
-
-          {/* Success message */}
-          {betSuccess && selectedOption && (
-            <div
-              className="mb-md"
-              style={{
-                padding: 'var(--spacing-md)',
-                backgroundColor: 'var(--color-bg-elevated)',
-                borderLeft: '3px solid var(--color-success)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <p className="text-success" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
-                ✓ Bet placed on: {selectedOption}
-              </p>
-            </div>
-          )}
-
-          {/* Error message */}
-          {betError && (
-            <div
-              className="mb-md"
-              style={{
-                padding: 'var(--spacing-md)',
-                backgroundColor: 'var(--color-bg-elevated)',
-                borderLeft: '3px solid var(--color-error)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              <p className="text-error" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
-                {betError}
-              </p>
-            </div>
-          )}
-
-          <div style={{ display: 'grid', gap: '0.75rem' }}>
-            {bet.options.map((option) => {
-              const isSelected = selectedOption === option;
-              const isDisabled = bet.status !== 'open' || placingBet || selectedOption !== null;
-
-              return (
-                <button
-                  key={option}
-                  className={`btn ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{
-                    textAlign: 'left',
-                    padding: '1rem',
-                    opacity: isDisabled && !isSelected ? 0.5 : 1,
-                  }}
-                  disabled={isDisabled}
-                  onClick={() => handlePlaceBet(option)}
-                >
-                  {isSelected && '✓ '}
-                  {option}
-                </button>
-              );
-            })}
-          </div>
-
-          {placingBet && (
-            <p className="text-secondary mt-md" style={{ fontSize: '0.875rem', textAlign: 'center' }}>
-              Placing bet...
-            </p>
-          )}
+      {displayRoom.status === 'finished' && (
+        <div className="card mb-md text-center">
+          <h4 className="mb-md">Event Finished</h4>
+          <p className="text-secondary">Check the leaderboard below to see final standings</p>
         </div>
       )}
 

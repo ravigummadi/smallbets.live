@@ -17,15 +17,13 @@ from models.user_bet import UserBet
 
 # Constants
 INITIAL_POINTS = 1000
-BET_COST = 100
-MIN_POINTS_TO_BET = 100
 
 
 def calculate_scores(
     user_bets: List[UserBet],
     users: Dict[str, User],
     winning_option: str,
-    bet_cost: int = BET_COST,
+    bet_cost: int,
 ) -> Dict[str, int]:
     """Calculate point changes for all users after bet resolution
 
@@ -35,7 +33,7 @@ def calculate_scores(
         user_bets: List of all bets placed for this bet
         users: Map of user_id to User objects
         winning_option: The winning option
-        bet_cost: Points cost per bet (default 100)
+        bet_cost: Points cost per bet (from bet.points_value)
 
     Returns:
         Dictionary mapping user_id to points_won
@@ -82,7 +80,7 @@ def validate_bet_eligibility(
     user: User,
     bet: Bet,
     existing_user_bet: Optional[UserBet],
-    bet_cost: int = BET_COST,
+    bet_cost: int,
 ) -> tuple[bool, Optional[str]]:
     """Validate if user can place a bet
 
@@ -119,7 +117,7 @@ def validate_bet_eligibility(
     return True, None
 
 
-def calculate_pot_total(num_participants: int, bet_cost: int = BET_COST) -> int:
+def calculate_pot_total(num_participants: int, bet_cost: int) -> int:
     """Calculate total pot for a bet
 
     Pure function
