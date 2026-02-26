@@ -9,13 +9,15 @@
 
 import '@testing-library/jest-dom';
 import { expect } from 'vitest';
-import { toHaveNoViolations } from 'vitest-axe';
+import * as axeMatchers from 'vitest-axe';
 
 // Extend Vitest matchers with jest-dom matchers
 // This gives us assertions like toBeInTheDocument(), toHaveTextContent(), etc.
 
 // Add vitest-axe matchers for accessibility testing
-expect.extend(toHaveNoViolations);
+if (axeMatchers && axeMatchers.toHaveNoViolations) {
+  expect.extend(axeMatchers);
+}
 
 // Mock window.matchMedia (used by responsive components)
 Object.defineProperty(window, 'matchMedia', {
