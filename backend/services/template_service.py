@@ -70,7 +70,7 @@ async def create_bets_from_template(room_code: str, template_id: str) -> List[Be
             room_code=room_code,
             question=bet_config["question"],
             options=bet_config["options"],
-            timer_duration=bet_config.get("timerDuration", 60),
+            points_value=bet_config.get("pointsValue", 100),
         )
 
         # Store trigger config if present (for automation)
