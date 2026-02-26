@@ -1,0 +1,50 @@
+# Coverage.py configuration for SmallBets.live backend
+
+[run]
+source = .
+omit =
+    tests/*
+    .venv/*
+    */__pycache__/*
+    */site-packages/*
+    __init__.py
+    conftest.py
+
+branch = True
+parallel = False
+
+[report]
+# Fail if coverage is below 80%
+fail_under = 80
+
+precision = 2
+show_missing = True
+skip_covered = False
+skip_empty = True
+
+# Exclude specific lines from coverage
+exclude_lines =
+    # Standard pragma
+    pragma: no cover
+
+    # Don't complain about missing debug code
+    def __repr__
+    def __str__
+
+    # Don't complain if tests don't hit defensive assertion code
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if non-runnable code isn't run
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+
+    # Don't complain about abstract methods
+    @abstractmethod
+
+[html]
+directory = htmlcov
+title = SmallBets.live Backend Coverage Report
+
+[xml]
+output = coverage.xml

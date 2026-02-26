@@ -81,7 +81,7 @@ coverage: {
 }
 ```
 
-## 1. Backend Testing (Python/FastAPI) - Priority: CRITICAL FIRST
+## Phase 1. Backend Testing (Python/FastAPI) - Priority: CRITICAL FIRST
 
 ### 1.1 Security & Authorization Tests (HIGHEST PRIORITY)
 **Create `backend/tests/test_security.py` FIRST**
@@ -177,7 +177,7 @@ Test real Firestore behavior:
 - `test_automation_service.py` - trigger matching, winner extraction
 - `test_transcript_parser.py` - pure parsing functions (keyword matching, fuzzy match, confidence scoring)
 
-## 2. Frontend Testing (React/TypeScript)
+## Phase 2. Frontend Testing (React/TypeScript)
 
 ### 2.1 Unit Tests - Services (`services/*.test.ts`)
 Test API and Firestore services:
@@ -242,7 +242,7 @@ test('CreateRoomPage has no accessibility violations', async () => {
 
 **Approach**: Render with mock contexts, test user interactions, @testing-library/user-event
 
-## 3. Integration/E2E Tests
+## Phase 3. Integration/E2E Tests
 
 ### 3.1 Setup E2E Infrastructure
 - **Tool**: Playwright (use existing e2e-test skill)
@@ -264,7 +264,7 @@ Focus on highest-value user journeys:
 
 **Approach**: Use Playwright multi-context, Firebase Emulator, focus on critical paths only
 
-## 4. Implementation Order (Risk-Based Pyramid)
+## Phase 4. Implementation Order (Risk-Based Pyramid)
 
 ### Phase 1: Critical Security & Correctness (Week 1)
 1. **Bootstrap** - Install all dependencies, setup emulator, config files
@@ -287,7 +287,7 @@ Focus on highest-value user journeys:
 12. **Component tests** - `components/**/*.test.tsx` (user interactions, accessibility)
 13. **E2E smoke tests** - 2-3 critical flows with Playwright
 
-## 5. Additional Test Scenarios (From Review)
+## Phase 5. Additional Test Scenarios (From Review)
 
 ### 5.1 Concurrency & Race Conditions
 - Same user double-submits bet (should reject duplicate)
@@ -326,7 +326,7 @@ Focus on highest-value user journeys:
 
 **Test file**: `backend/tests/test_cors_config.py`
 
-## 6. Success Metrics
+## Phase 6. Success Metrics
 
 ### Coverage Targets:
 - **Backend game_logic.py**: 95%+ (pure functions, easy to test)
@@ -503,7 +503,7 @@ jobs:
 - Backend: `backend/.coveragerc` or inline `--cov-fail-under`
 - Frontend: `frontend/vitest.config.ts` → `coverage.lines`, `coverage.functions`, etc.
 
-## 7. Known Issues to Fix During Testing
+## Phase 7. Known Issues to Fix During Testing
 
 1. **Cross-room authorization** - Add `verify_bet_belongs_to_room()` helper to bet_service
 2. **State transitions** - Add `can_transition_to()` method to Bet model
