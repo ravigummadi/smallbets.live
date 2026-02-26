@@ -264,48 +264,25 @@ Focus on highest-value user journeys:
 
 **Approach**: Use Playwright multi-context, Firebase Emulator, focus on critical paths only
 
-## Phase 4. Implementation Order (Risk-Based Pyramid)
+## Phase 4. Additional Test Scenarios (From Review)
 
-### Phase 1: Critical Security & Correctness (Week 1)
-1. **Bootstrap** - Install all dependencies, setup emulator, config files
-2. **Security tests** - `test_security.py` (cross-room auth, unauthorized actions)
-3. **State machine tests** - `test_bet_state_machine.py` (transitions, idempotency)
-4. **Contract bug fix** - `test_template_service.py` (fix timer_duration bug)
-5. **Pure logic tests** - `test_game_logic.py` (easiest, highest value)
-
-### Phase 2: API & Service Layer (Week 2)
-6. **Model tests** - `test_models/` (Pydantic validation)
-7. **API contract tests** - `test_api/` (mocked services, fast feedback)
-8. **Service tests** - `test_services/` (business logic with mocks)
-
-### Phase 3: Integration & Frontend (Week 3)
-9. **Firestore integration** - `test_firestore_integration/` (emulator-backed, real behavior)
-10. **Frontend services** - `api.test.ts`, `firestore.test.ts`
-11. **Frontend hooks** - `hooks/*.test.ts` (including resilience tests)
-
-### Phase 4: Components & E2E (Week 4)
-12. **Component tests** - `components/**/*.test.tsx` (user interactions, accessibility)
-13. **E2E smoke tests** - 2-3 critical flows with Playwright
-
-## Phase 5. Additional Test Scenarios (From Review)
-
-### 5.1 Concurrency & Race Conditions
+### 4.1 Concurrency & Race Conditions
 - Same user double-submits bet (should reject duplicate)
 - Concurrent bet placement and resolution (transaction safety)
 - Multiple hosts trying to resolve same bet
 
-### 5.2 Data Integrity & Limits
+### 4.2 Data Integrity & Limits
 - Large rooms (>500 users) - batch operation limits
 - Firestore write limits (500 ops/batch)
 - Safe chunked deletion strategy for `delete_room()`
 
-### 5.3 Frontend Resilience
+### 4.3 Frontend Resilience
 - Corrupted sessionStorage (invalid JSON, missing fields)
 - Network failures during API calls
 - Firestore listener disconnects
 - Stale session data (user removed from room)
 
-### 5.4 CORS & Security Config (Environment-Specific)
+### 4.4 CORS & Security Config (Environment-Specific)
 
 **Development/Testing (localhost, emulator):**
 - `allow_origins=["http://localhost:5173", "http://localhost:3000"]` (Vite/React dev servers)
@@ -326,7 +303,7 @@ Focus on highest-value user journeys:
 
 **Test file**: `backend/tests/test_cors_config.py`
 
-## Phase 6. Success Metrics
+## Success Metrics
 
 ### Coverage Targets:
 - **Backend game_logic.py**: 95%+ (pure functions, easy to test)
@@ -343,7 +320,7 @@ Focus on highest-value user journeys:
 - ✅ No accessibility violations (vitest-axe passes)
 - ✅ No regressions when running full suite
 
-### CI/CD Integration - Explicit Job Matrix
+### Phase 6 CI/CD Integration - Explicit Job Matrix
 
 **GitHub Actions Workflow** (`.github/workflows/test.yml`):
 
