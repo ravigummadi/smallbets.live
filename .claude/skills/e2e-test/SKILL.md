@@ -140,12 +140,32 @@ Execute the following steps using Playwright MCP tools:
 - In second tab: Select different option and place bet
 - Verify both bets are recorded
 
-### 7. Resolve Bet
-- Use backend API or Firestore to resolve the bet with a winner
-- Verify bet resolves in both tabs
+### 7. Resolve Bet via Transcription (NEW - Tests Automation Feature)
+- Navigate to admin panel or room admin view in first tab
+- Locate the "Live Transcript Feed" panel (should be visible to admin/room creator)
+- Take snapshot showing transcript input area
+- Submit a transcript entry that matches the winner announcement pattern
+  - Example for Grammy template: "And the Grammy goes to... [Winner Name]!"
+  - The winner name should match one of the bet options exactly
+  - This tests the automated bet resolution via transcript parsing
+- Wait for automation to process (should be immediate)
+- Verify automation feedback is displayed:
+  - Action taken: "resolve_bet" (or "ignored" if no match)
+  - Confidence score (should be > 0.8 for valid matches)
+  - Winner extracted from transcript
+- Verify bet resolves in both tabs automatically
 - Take snapshot showing resolved bet
-- Verify winner(s) receive points
+- Verify winner(s) receive points correctly
 - Check leaderboard updates with new scores
+- Verify console shows no errors related to automation
+
+**Alternative (Fallback)**: If Live Transcript Feed is not accessible via UI, use backend API:
+```bash
+curl -X POST http://localhost:8000/api/rooms/{roomCode}/transcript \
+  -H "Content-Type: application/json" \
+  -d '{"text": "And the Grammy goes to... [Winner]!", "source": "manual"}'
+```
+Then verify the automation result in the response JSON.
 
 ### 8. Test Second Bet (Optional)
 - Trigger second bet opening
@@ -171,6 +191,11 @@ The test passes if:
 - ✓ Multiple users can join the same room
 - ✓ Real-time sync works (both users see same state)
 - ✓ Bets can be placed and points are deducted correctly
+- ✓ **Transcription-based bet resolution works correctly** (NEW)
+  - Transcript with winner announcement triggers automation
+  - Correct winner is extracted from transcript
+  - Confidence score is calculated accurately
+  - Automation feedback is displayed to admin
 - ✓ Bet resolution works and winners receive points
 - ✓ Leaderboard calculates and displays correct scores
 - ✓ No console errors or network failures
@@ -180,10 +205,16 @@ The test passes if:
 
 At the end of the test, provide:
 1. Summary of steps completed
-2. Screenshots of key states (home, room lobby, active bet, resolved bet, leaderboard)
-3. Any errors or failures encountered
-4. Performance observations (load times, real-time sync delays)
-5. Recommendations for improvements
+2. Screenshots of key states (home, room lobby, active bet, **transcript submission**, resolved bet, leaderboard)
+3. **Transcription automation results**:
+   - Transcript text submitted
+   - Action taken by automation (resolve_bet or ignored)
+   - Confidence score
+   - Winner extracted
+   - Time to process
+4. Any errors or failures encountered
+5. Performance observations (load times, real-time sync delays, automation processing time)
+6. Recommendations for improvements
 
 ## Notes
 

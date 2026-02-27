@@ -83,18 +83,25 @@ def match_trigger_patterns(
 
     Returns:
         Tuple of (matched, confidence, matched_pattern)
+        Returns the most specific (longest) matching pattern
     """
     if not patterns:
         return False, 0.0, None
 
     text_normalized = normalize_text(text)
+
+    # Sort patterns by length (descending) to prioritize more specific patterns
+    sorted_patterns = sorted(patterns, key=len, reverse=True)
+
     best_score = 0.0
     best_pattern = None
 
-    for pattern in patterns:
+    for pattern in sorted_patterns:
         # Try regex match first
         try:
             if re.search(pattern, text_normalized, re.IGNORECASE):
+                # Found exact regex match - return immediately
+                # Since patterns are sorted by length, this is the most specific match
                 return True, 1.0, pattern
         except re.error:
             # Invalid regex, fall back to fuzzy match

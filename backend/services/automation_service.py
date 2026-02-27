@@ -5,7 +5,7 @@ IMPERATIVE SHELL: Orchestrates transcript parsing and bet actions
 - Performs I/O via other services
 """
 
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 import transcript_parser
 from services import bet_service, room_service
 
@@ -14,23 +14,28 @@ async def process_transcript_for_automation(
     room_code: str,
     transcript_text: str,
     automation_enabled: bool
-) -> Dict[str, any]:
-    """Process transcript entry and execute automation actions
+) -> Dict[str, Any]:
+    """Process transcript entry and resolve bets automatically
 
     Imperative Shell - orchestrates I/O and delegates logic
 
+    NOTE: This only RESOLVES bets based on winner announcements.
+    Bet opening is done manually by the admin.
+
     Args:
         room_code: Room code
-        transcript_text: New transcript text
+        transcript_text: New transcript text (e.g., "And the Grammy goes to Beyoncé!")
         automation_enabled: Whether automation is enabled for room
 
     Returns:
         Dictionary with:
-        - actions_taken: List of actions performed
-        - details: additional information
+        - action_taken: Action performed ("resolve_bet" or "ignored")
+        - confidence: Confidence score (0.0 - 1.0)
+        - details: Additional information (reason, winner, bet_id)
     """
     result = {
-        "actions_taken": [],
+        "action_taken": "ignored",
+        "confidence": 0.0,
         "details": {}
     }
 
@@ -42,45 +47,18 @@ async def process_transcript_for_automation(
     # Get all bets in room (I/O)
     all_bets = await bet_service.get_bets_in_room(room_code)
 
-    # Find pending and open bets
-    pending_bets = [b for b in all_bets if b.status.value == "pending"]
+    # Find open and locked bets (only these can be resolved)
     open_bets = [b for b in all_bets if b.status.value == "open"]
     locked_bets = [b for b in all_bets if b.status.value == "locked"]
 
-    # Check pending bets for opening
-    for bet in pending_bets:
-        # Get trigger config from bet (would come from event template in production)
-        open_patterns = getattr(bet, 'open_patterns', [
-            "and the nominees are",
-            "next category",
-            "envelope please"
-        ])
-
-        should_open, open_confidence = transcript_parser.should_open_bet(
-            transcript_text,
-            open_patterns,
-            threshold=0.7
-        )
-
-        if should_open:
-            # Open the bet (I/O)
-            await bet_service.open_bet(bet.bet_id)
-
-            result["actions_taken"].append({
-                "action": "open_bet",
-                "confidence": open_confidence,
-                "bet_id": bet.bet_id,
-                "question": bet.question,
-            })
-
     # Check open/locked bets for resolution
     for bet in open_bets + locked_bets:
-        # Get resolve patterns from bet
-        resolve_patterns = getattr(bet, 'resolve_patterns', [
+        # Get resolve patterns from bet (now stored from template!)
+        resolve_patterns = bet.resolve_patterns if bet.resolve_patterns else [
             "and the winner is",
             "grammy goes to",
             "oscar goes to"
-        ])
+        ]
 
         # Extract winner (pure - delegates to transcript_parser)
         winner, winner_confidence, is_resolution = transcript_parser.extract_winner_with_patterns(
@@ -94,16 +72,17 @@ async def process_transcript_for_automation(
             # Resolve the bet (I/O)
             await bet_service.resolve_bet(bet.bet_id, winner)
 
-            result["actions_taken"].append({
-                "action": "resolve_bet",
-                "confidence": winner_confidence,
+            # Return immediately with first action (frontend expects single action)
+            result["action_taken"] = "resolve_bet"
+            result["confidence"] = winner_confidence
+            result["details"] = {
                 "bet_id": bet.bet_id,
                 "winner": winner,
-            })
+            }
+            return result
 
-    if not result["actions_taken"]:
-        result["details"]["reason"] = "Transcript did not trigger any bet actions"
-
+    # No action taken
+    result["details"]["reason"] = "Transcript did not trigger any bet actions"
     return result
 
 

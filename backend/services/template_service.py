@@ -65,17 +65,18 @@ async def create_bets_from_template(room_code: str, template_id: str) -> List[Be
     created_bets = []
 
     for bet_config in template.bets:
+        # Extract resolve patterns if present (for automation)
+        trigger_config = bet_config.get("triggerConfig", {})
+        resolve_patterns = trigger_config.get("resolve")
+
         # Create bet (I/O)
         bet = await bet_service.create_bet(
             room_code=room_code,
             question=bet_config["question"],
             options=bet_config["options"],
             points_value=bet_config.get("pointsValue", 100),
+            resolve_patterns=resolve_patterns,
         )
-
-        # Store trigger config if present (for automation)
-        # Note: Current Bet model doesn't have trigger_config field
-        # This would need to be added to the Bet model in future iteration
 
         created_bets.append(bet)
 

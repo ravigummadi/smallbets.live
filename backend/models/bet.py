@@ -1,7 +1,7 @@
 """Bet model - represents a betting question"""
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 from pydantic import BaseModel, Field
 
@@ -31,6 +31,12 @@ class Bet(BaseModel):
     winning_option: Optional[str] = None
     points_value: int = Field(..., ge=10, le=1000, description="Points required to place this bet")
 
+    # Automation: Winner resolution patterns (from event templates)
+    resolve_patterns: Optional[List[str]] = Field(
+        default=None,
+        description="Patterns that indicate winner announcement (e.g., 'grammy goes to', 'and the winner is')"
+    )
+
     def to_dict(self) -> dict:
         """Serialize for Firestore storage
 
@@ -47,6 +53,7 @@ class Bet(BaseModel):
             "resolvedAt": self.resolved_at,
             "winningOption": self.winning_option,
             "pointsValue": self.points_value,
+            "resolvePatterns": self.resolve_patterns,
         }
 
     @classmethod
@@ -66,6 +73,7 @@ class Bet(BaseModel):
             resolved_at=data.get("resolvedAt"),
             winning_option=data.get("winningOption"),
             points_value=data.get("pointsValue", 100),  # Default for backwards compatibility
+            resolve_patterns=data.get("resolvePatterns"),
         )
 
     def can_accept_bets(self) -> bool:

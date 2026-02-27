@@ -22,6 +22,7 @@ async def create_bet(
     question: str,
     options: List[str],
     points_value: int,
+    resolve_patterns: Optional[List[str]] = None,
 ) -> Bet:
     """Create a new bet
 
@@ -32,6 +33,7 @@ async def create_bet(
         question: Betting question
         options: List of betting options
         points_value: Points required to place this bet
+        resolve_patterns: Patterns that indicate winner announcement (for automation)
 
     Returns:
         Created Bet object
@@ -49,6 +51,7 @@ async def create_bet(
         options=options,
         status=BetStatus.PENDING,
         points_value=points_value,
+        resolve_patterns=resolve_patterns,
     )
 
     # Write to Firestore (I/O)
