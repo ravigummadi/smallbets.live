@@ -198,3 +198,47 @@ async def test_place_user_bet_invalid_option():
                 bet_id="bet1",
                 selected_option="C",  # Invalid!
             )
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_resolve_bet_does_not_double_deduct_points():
+    """Resolve bet should not subtract bet cost again (already deducted at placement)."""
+    bet = Bet(
+        bet_id="bet1",
+        room_code="AAAA",
+        question="Test?",
+        options=["A", "B"],
+        status=BetStatus.LOCKED,
+        points_value=100,
+    )
+
+    user_bets = [
+        UserBet(user_id="u1", bet_id="bet1", room_code="AAAA", selected_option="A"),
+        UserBet(user_id="u2", bet_id="bet1", room_code="AAAA", selected_option="B"),
+    ]
+
+    # Users already paid 100 points at placement (1000 -> 900)
+    users = {
+        "u1": User(user_id="u1", room_code="AAAA", nickname="U1", points=900),
+        "u2": User(user_id="u2", room_code="AAAA", nickname="U2", points=900),
+    }
+
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+    mock_collection = MagicMock()
+    mock_collection.document.return_value = MagicMock()
+    mock_db.collection.return_value = mock_collection
+
+    with patch("services.bet_service.get_db", return_value=mock_db), \
+         patch("services.bet_service.get_bet", return_value=bet), \
+         patch("services.bet_service.get_user_bets_for_bet", return_value=user_bets), \
+         patch("services.user_service.get_users_by_ids", return_value=users):
+
+        await bet_service.resolve_bet("bet1", "A")
+
+    # Expect winner to get pot (200) added to already-deducted balance
+    # Loser should remain at 900 (no extra deduction)
+    updated_points = sorted(call.args[1]["points"] for call in mock_batch.update.call_args_list)
+    assert updated_points == [900, 1100]

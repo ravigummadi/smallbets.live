@@ -211,7 +211,8 @@ async def resolve_bet(bet_id: str, winning_option: str) -> None:
     for user_id, points_won in scores.items():
         # Update user points
         user = users[user_id]
-        new_points = user.points - bet.points_value + points_won
+        # Points were already deducted at bet placement; only add winnings/refund here.
+        new_points = user.points + points_won
 
         user_ref = db.collection("users").document(user_id)
         batch.update(user_ref, {"points": new_points})
