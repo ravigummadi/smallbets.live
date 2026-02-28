@@ -64,7 +64,7 @@ export default function JoinRoomPage() {
 
   return (
     <div className="container" style={{ paddingTop: '2rem' }}>
-      <h2 className="mb-lg">Join a Room</h2>
+      <h2 className="mb-lg" style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>Join a Room</h2>
 
       <form onSubmit={handleSubmit}>
         <div className="card mb-lg">
