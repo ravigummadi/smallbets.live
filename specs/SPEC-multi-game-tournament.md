@@ -67,7 +67,7 @@ Adapt SmallBets.live from single-event ceremonies to multi-room tournament betti
 
 **Abuse prevention**: 5 room creates/user/day. 10 join attempts/IP/min, 5-min lockout after 20 failures. No bet placement limit.
 
-**Scale targets**: 1 tournament, up to 74 match rooms, up to 50 users/room, up to 50 bets/match room.
+**Scale targets**: 1 tournament, up to 150 match rooms, up to 50 users/room, up to 50 bets/match room.
 
 ---
 
@@ -237,7 +237,7 @@ Scoped to user+operation to prevent cross-user cache pollution. Uses transaction
 ### Tournament Aggregation
 1. Verify caller is tournament participant
 2. Query child rooms: `rooms.where(parentRoomCode==code, roomType=='match')`
-3. Batch query `roomUsers` (Firestore `in` limit = 10 per query, so 74 rooms = 8 batches)
+3. Batch query `roomUsers` (Firestore `in` limit = 10 per query, so 150 rooms = 15 batches)
 4. Server-side sum of points per user, sort descending
 
 ### Room Code Generation
@@ -257,7 +257,7 @@ def generate_room_code_v2():
 | Timer countdown | 60fps | Client-side only, no server calls |
 | Leaderboard | < 100ms | `roomUsers` ordered by points desc, paginated at 50 |
 | Room linking | < 100ms | `rooms.where(parentRoomCode==code)` ordered by matchDateTime |
-| Tournament aggregation | < 200ms | Batched `roomUsers` queries (8 batches * ~25ms) |
+| Tournament aggregation | < 400ms | Batched `roomUsers` queries (15 batches * ~25ms) |
 
 ## Implementation Phases
 
