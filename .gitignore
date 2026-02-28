@@ -52,6 +52,9 @@ frontend/build/
 # Playwright MCP
 .playwright-mcp/
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # E2E Test Artifacts
 e2e-screenshots/
 e2e-final-*.png
