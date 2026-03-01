@@ -44,7 +44,7 @@ export function useSession() {
     setSession(null);
   };
 
-  const isHost = session?.hostId === session?.userId;
+  const isHost = !!(session && session.hostId && session.hostId === session.userId);
 
   return {
     session,

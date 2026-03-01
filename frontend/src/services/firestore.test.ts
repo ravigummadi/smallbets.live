@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, onSnapshot } from 'firebase/firestore';
 import * as firestoreService from './firestore';
 
 // Mock firebase config
@@ -23,21 +23,18 @@ vi.mock('firebase/firestore', async () => {
     query: vi.fn(),
     where: vi.fn(),
     onSnapshot: vi.fn(),
-    Timestamp: actual.Timestamp,
+    Timestamp: (actual as any).Timestamp,
   };
 });
 
+const onSnapshotMock = vi.mocked(onSnapshot);
+
 describe('Firestore Service', () => {
   let mockUnsubscribe: ReturnType<typeof vi.fn>;
-  let onSnapshotMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockUnsubscribe = vi.fn();
-    onSnapshotMock = vi.fn().mockReturnValue(mockUnsubscribe);
-
-    // Reset module to get fresh mock
-    const { onSnapshot } = require('firebase/firestore');
-    onSnapshot.mockImplementation(onSnapshotMock);
+    onSnapshotMock.mockReturnValue(mockUnsubscribe as any);
   });
 
   afterEach(() => {

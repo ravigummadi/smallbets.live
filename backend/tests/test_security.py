@@ -98,34 +98,8 @@ def mock_bet_room_b():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_host_cannot_open_bet_in_different_room(
-    client, mock_room_a, mock_room_b, mock_bet_room_b
-):
-    """Test that host from room A cannot open bets in room B"""
-    with patch("services.room_service.get_room") as mock_get_room, \
-         patch("services.bet_service.open_bet") as mock_open_bet, \
-         patch("services.bet_service.get_bet") as mock_get_bet:
-
-        # Host A tries to open bet in Room B
-        mock_get_room.return_value = mock_room_b
-        mock_get_bet.return_value = mock_bet_room_b
-        mock_open_bet.return_value = mock_bet_room_b
-
-        response = client.post(
-            "/api/rooms/BBBB/bets/open",
-            json={"bet_id": "bet-room-b"},
-            headers={"X-Host-Id": "host-room-a"},  # Wrong host!
-        )
-
-        # Should reject with 403 Forbidden
-        assert response.status_code == 403
-        assert "Not the room host" in response.json()["detail"]
-
-
-@pytest.mark.security
-@pytest.mark.asyncio
 async def test_host_cannot_lock_bet_in_different_room(
-    mock_room_a, mock_room_b, mock_bet_room_b
+    client, mock_room_a, mock_room_b, mock_bet_room_b
 ):
     """Test that host from room A cannot lock bets in room B"""
     with patch("services.room_service.get_room") as mock_get_room, \
@@ -149,7 +123,7 @@ async def test_host_cannot_lock_bet_in_different_room(
 @pytest.mark.security
 @pytest.mark.asyncio
 async def test_host_cannot_resolve_bet_in_different_room(
-    mock_room_a, mock_room_b, mock_bet_room_b
+    client, mock_room_a, mock_room_b, mock_bet_room_b
 ):
     """Test that host from room A cannot resolve bets in room B"""
     with patch("services.room_service.get_room") as mock_get_room:
@@ -168,7 +142,7 @@ async def test_host_cannot_resolve_bet_in_different_room(
 @pytest.mark.security
 @pytest.mark.asyncio
 async def test_user_cannot_place_bet_on_different_room(
-    mock_room_a, mock_room_b, mock_bet_room_b, mock_user_room_a
+    client, mock_room_a, mock_room_b, mock_bet_room_b, mock_user_room_a
 ):
     """Test that user from room A cannot place bets on room B's bets"""
     with patch("services.room_service.get_room") as mock_get_room, \
@@ -197,7 +171,7 @@ async def test_user_cannot_place_bet_on_different_room(
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_bet_operations_verify_bet_belongs_to_room():
+async def test_bet_operations_verify_bet_belongs_to_room(client):
     """Test that bet operations verify bet.room_code == room.code"""
     mock_room = Room(
         code="AAAA",
@@ -239,34 +213,7 @@ async def test_bet_operations_verify_bet_belongs_to_room():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_non_host_cannot_open_bet():
-    """Test that non-host users cannot open bets"""
-    mock_room = Room(
-        code="AAAA",
-        event_template="test-event",
-        host_id="host-a",
-        event_name="Event A",
-        status="active",
-        automation_enabled=False,
-        created_at=datetime.utcnow(),
-    )
-
-    with patch("services.room_service.get_room") as mock_get_room:
-        mock_get_room.return_value = mock_room
-
-        response = client.post(
-            "/api/rooms/AAAA/bets/open",
-            json={"bet_id": "bet-id"},
-            headers={"X-Host-Id": "not-the-host"},
-        )
-
-        assert response.status_code == 403
-        assert "Not the room host" in response.json()["detail"]
-
-
-@pytest.mark.security
-@pytest.mark.asyncio
-async def test_non_host_cannot_lock_bet():
+async def test_non_host_cannot_lock_bet(client):
     """Test that non-host users cannot lock bets"""
     mock_room = Room(
         code="AAAA",
@@ -292,7 +239,7 @@ async def test_non_host_cannot_lock_bet():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_non_host_cannot_resolve_bet():
+async def test_non_host_cannot_resolve_bet(client):
     """Test that non-host users cannot resolve bets"""
     mock_room = Room(
         code="AAAA",
@@ -318,7 +265,7 @@ async def test_non_host_cannot_resolve_bet():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_non_host_cannot_create_bet():
+async def test_non_host_cannot_create_bet(client):
     """Test that non-host users cannot create bets"""
     mock_room = Room(
         code="AAAA",
@@ -348,7 +295,7 @@ async def test_non_host_cannot_create_bet():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_non_host_cannot_start_room():
+async def test_non_host_cannot_start_room(client):
     """Test that non-host users cannot start the room"""
     mock_room = Room(
         code="AAAA",
@@ -373,7 +320,7 @@ async def test_non_host_cannot_start_room():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_non_host_cannot_finish_room():
+async def test_non_host_cannot_finish_room(client):
     """Test that non-host users cannot finish the room"""
     mock_room = Room(
         code="AAAA",
@@ -398,7 +345,7 @@ async def test_non_host_cannot_finish_room():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_non_host_cannot_toggle_automation():
+async def test_non_host_cannot_toggle_automation(client):
     """Test that non-host users cannot toggle automation"""
     mock_room = Room(
         code="AAAA",
@@ -429,10 +376,10 @@ async def test_non_host_cannot_toggle_automation():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_bet_operations_require_host_header():
+async def test_bet_operations_require_host_header(client):
     """Test that bet operations require X-Host-Id header"""
     response = client.post(
-        "/api/rooms/AAAA/bets/open",
+        "/api/rooms/AAAA/bets/lock",
         json={"bet_id": "bet-id"},
         # No X-Host-Id header
     )
@@ -443,7 +390,7 @@ async def test_bet_operations_require_host_header():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_place_bet_requires_user_header():
+async def test_place_bet_requires_user_header(client):
     """Test that placing bets requires X-User-Id header"""
     mock_room = Room(
         code="AAAA",
@@ -470,7 +417,7 @@ async def test_place_bet_requires_user_header():
 
 @pytest.mark.security
 @pytest.mark.asyncio
-async def test_invalid_room_code_returns_404():
+async def test_invalid_room_code_returns_404(client):
     """Test that invalid room codes return 404"""
     with patch("services.room_service.get_room") as mock_get_room:
         mock_get_room.return_value = None

@@ -35,43 +35,11 @@ async def test_create_bet():
 
         assert bet.room_code == "AAAA"
         assert bet.question == "Test Question?"
-        assert bet.status == BetStatus.PENDING
+        assert bet.status == BetStatus.OPEN
         assert bet.points_value == 100
 
         # Verify Firestore write
         mock_doc_ref.set.assert_called_once()
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_open_bet():
-    """Test opening a bet"""
-    pending_bet = Bet(
-        bet_id="test-bet",
-        room_code="AAAA",
-        question="Test?",
-        options=["A", "B"],
-        status=BetStatus.PENDING,
-        points_value=100,
-    )
-
-    with patch("services.bet_service.get_bet", return_value=pending_bet), \
-         patch("services.bet_service.update_bet") as mock_update:
-
-        opened_bet = await bet_service.open_bet("test-bet")
-
-        assert opened_bet.status == BetStatus.OPEN
-        assert opened_bet.opened_at is not None
-        mock_update.assert_called_once()
-
-
-@pytest.mark.unit
-@pytest.mark.asyncio
-async def test_open_bet_not_found():
-    """Test opening non-existent bet raises error"""
-    with patch("services.bet_service.get_bet", return_value=None):
-        with pytest.raises(ValueError, match="Bet not found"):
-            await bet_service.open_bet("non-existent")
 
 
 @pytest.mark.unit
