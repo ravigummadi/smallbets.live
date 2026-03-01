@@ -134,14 +134,19 @@ export default function RoomPage() {
             <h3 style={{ marginBottom: '0.25rem' }}>
               {eventName} - Room {displayRoom.code}
             </h3>
-            <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 0 }}>
-              {displayRoom.status === 'waiting' && 'Waiting to start'}
-              {displayRoom.status === 'active' && 'Event in progress'}
-              {displayRoom.status === 'finished' && 'Event finished'}
-            </p>
+            <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {displayRoom.status === 'waiting' && <span>Waiting to start</span>}
+              {displayRoom.status === 'active' && (
+                <>
+                  <span>Event in progress</span>
+                  <span className="badge-live">LIVE</span>
+                </>
+              )}
+              {displayRoom.status === 'finished' && <span>Event finished</span>}
+            </div>
           </div>
           <div className="text-right">
-            <p style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.25rem' }}>
+            <p className="points-display" style={{ marginBottom: '0.25rem' }}>
               {user.points}
             </p>
             <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 0 }}>
@@ -195,7 +200,7 @@ export default function RoomPage() {
             </div>
           ) : (
             <div className="card mb-md">
-              <h4 className="mb-md">Open Bets ({openBets.length})</h4>
+              <h4 className="mb-md">Open Bets <span style={{ background: 'var(--color-primary)', color: '#000', padding: '0.125rem 0.5rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, marginLeft: '0.5rem' }}>{openBets.length}</span></h4>
               <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
                 {openBets.map((bet) => {
                   const isExpanded = expandedBets.has(bet.betId);
@@ -285,6 +290,7 @@ export default function RoomPage() {
                                     style={{
                                       textAlign: 'left',
                                       padding: '1rem',
+                                      borderLeft: '3px solid var(--color-primary)',
                                     }}
                                     disabled={isPlacing}
                                     onClick={() => handlePlaceBet(bet.betId, option)}
@@ -325,18 +331,24 @@ export default function RoomPage() {
         <div style={{ display: 'grid', gap: '0.5rem' }}>
           {participants
             .sort((a, b) => b.points - a.points)
-            .map((participant) => (
+            .map((participant, index) => (
               <div
                 key={participant.userId}
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
+                  alignItems: 'center',
                   padding: '0.75rem',
                   backgroundColor: 'var(--color-bg-elevated)',
                   borderRadius: 'var(--radius-md)',
                 }}
               >
-                <span>
+                <span style={{ display: 'flex', alignItems: 'center' }}>
+                  {index < 3 ? (
+                    <span className={`rank-badge rank-${index + 1}`}>{index + 1}</span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', marginRight: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>{index + 1}</span>
+                  )}
                   {participant.nickname}
                   {participant.isAdmin && (
                     <span className="text-muted" style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>

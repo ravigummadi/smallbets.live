@@ -22,7 +22,8 @@ export default function AdminPanel({
   onRoomUpdate,
 }: AdminPanelProps) {
   const [automationEnabled, setAutomationEnabled] = useState(room.automationEnabled);
-  const [showBetCreationForm, setShowBetCreationForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showFeedModal, setShowFeedModal] = useState(false);
   const { bets, loading: betsLoading } = useBets(room.code);
 
   const handleToggleAutomation = (enabled: boolean) => {
@@ -50,54 +51,70 @@ export default function AdminPanel({
 
   return (
     <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
-      {/* Room Controls */}
-      <div className="card">
-        <h4 className="mb-md">Room Controls</h4>
-
-        <div style={{ display: 'grid', gap: 'var(--spacing-sm)' }}>
+      {/* Toolbar Row */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 'var(--spacing-sm)',
+      }}>
+        <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
           {room.status === 'waiting' && (
-            <button className="btn btn-primary" onClick={handleStartRoom}>
+            <button className="btn btn-primary" onClick={handleStartRoom}
+              style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}>
               Start Event
             </button>
           )}
-
           {room.status === 'active' && (
-            <button className="btn btn-secondary" onClick={handleFinishRoom}>
-              Finish Event
-            </button>
+            <>
+              <button className="btn btn-secondary" onClick={handleFinishRoom}
+                style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}>
+                Finish Event
+              </button>
+              <button className="btn btn-primary" onClick={() => setShowFeedModal(true)}
+                style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}>
+                Live Feed
+              </button>
+            </>
           )}
-
           {room.status === 'finished' && (
-            <p className="text-secondary" style={{ marginBottom: 0 }}>
+            <span className="text-secondary" style={{ fontSize: '0.875rem' }}>
               Event finished
-            </p>
+            </span>
           )}
         </div>
+
+        {(room.status === 'waiting' || room.status === 'active') && (
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowModal(true)}
+            style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+          >
+            + Create New Bet
+          </button>
+        )}
       </div>
 
-      {/* Bet Creation */}
-      {(room.status === 'waiting' || room.status === 'active') && (
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-            <h4 style={{ marginBottom: 0 }}>Create New Bet</h4>
-            <button
-              className="btn btn-secondary"
-              onClick={() => setShowBetCreationForm(!showBetCreationForm)}
-              style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-            >
-              {showBetCreationForm ? 'Hide Form' : 'Show Form'}
-            </button>
-          </div>
-
-          {showBetCreationForm && (
+      {/* Create Bet Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+              <h4 style={{ marginBottom: 0 }}>Create New Bet</h4>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowModal(false)}
+                style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', minHeight: 'auto' }}
+              >
+                ✕
+              </button>
+            </div>
             <BetCreationForm
               roomCode={room.code}
               hostId={hostId}
-              onSuccess={() => {
-                setShowBetCreationForm(false);
-              }}
+              onSuccess={() => setShowModal(false)}
             />
-          )}
+          </div>
         </div>
       )}
 
@@ -117,14 +134,28 @@ export default function AdminPanel({
         )}
       </div>
 
-      {/* Live Feed Panel (only show when event is active) */}
-      {room.status === 'active' && (
-        <LiveFeedPanel
-          roomCode={room.code}
-          hostId={hostId}
-          automationEnabled={automationEnabled}
-          onToggleAutomation={handleToggleAutomation}
-        />
+      {/* Live Feed Modal */}
+      {showFeedModal && (
+        <div className="modal-overlay" onClick={() => setShowFeedModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+              <h4 style={{ marginBottom: 0 }}>Live Transcript Feed</h4>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowFeedModal(false)}
+                style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', minHeight: 'auto' }}
+              >
+                ✕
+              </button>
+            </div>
+            <LiveFeedPanel
+              roomCode={room.code}
+              hostId={hostId}
+              automationEnabled={automationEnabled}
+              onToggleAutomation={handleToggleAutomation}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

@@ -24,25 +24,10 @@ export default function BetListPanel({
   hostId,
   bets,
 }: BetListPanelProps) {
-  const [openingBet, setOpeningBet] = useState<string | null>(null);
   const [closingBet, setClosingBet] = useState<string | null>(null);
   const [resolvingBet, setResolvingBet] = useState<string | null>(null);
   const [showResolveOptions, setShowResolveOptions] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const handleOpenBet = async (betId: string) => {
-    setOpeningBet(betId);
-    setError(null);
-
-    try {
-      await betApi.openBet(roomCode, hostId, betId);
-    } catch (err: any) {
-      setError(err.detail || 'Failed to open bet');
-      console.error('Failed to open bet:', err);
-    } finally {
-      setOpeningBet(null);
-    }
-  };
 
   const handleCloseBet = async (betId: string) => {
     setClosingBet(betId);
@@ -115,7 +100,6 @@ export default function BetListPanel({
 
       <div style={{ display: 'grid', gap: 'var(--spacing-sm)' }}>
         {sortedBets.map((bet) => {
-          const canOpen = bet.status === 'pending';
           const canClose = bet.status === 'open';
           const canResolve = bet.status === 'locked';
           const isResolvingThis = resolvingBet === bet.betId;
@@ -181,17 +165,6 @@ export default function BetListPanel({
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
-                  {canOpen && (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => handleOpenBet(bet.betId)}
-                      disabled={openingBet === bet.betId}
-                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1 }}
-                    >
-                      {openingBet === bet.betId ? 'Opening...' : 'Open Bet'}
-                    </button>
-                  )}
-
                   {canClose && (
                     <button
                       className="btn btn-secondary"

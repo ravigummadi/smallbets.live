@@ -113,14 +113,6 @@ export const betApi = {
     });
   },
 
-  async openBet(roomCode: string, hostId: string, betId: string): Promise<Bet> {
-    return fetchApi(`/api/rooms/${roomCode}/bets/open`, {
-      method: 'POST',
-      headers: { 'X-Host-Id': hostId },
-      body: JSON.stringify({ bet_id: betId }),
-    });
-  },
-
   async lockBet(roomCode: string, hostId: string, betId: string): Promise<Bet> {
     return fetchApi(`/api/rooms/${roomCode}/bets/lock`, {
       method: 'POST',

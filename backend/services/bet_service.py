@@ -49,7 +49,7 @@ async def create_bet(
         room_code=room_code,
         question=question,
         options=options,
-        status=BetStatus.PENDING,
+        status=BetStatus.OPEN,
         points_value=points_value,
         resolve_patterns=resolve_patterns,
     )
@@ -121,31 +121,6 @@ async def update_bet(bet: Bet) -> None:
     # Write to Firestore (I/O)
     bet_ref = db.collection("bets").document(bet.bet_id)
     bet_ref.set(bet.to_dict())
-
-
-async def open_bet(bet_id: str) -> Bet:
-    """Open a bet for betting
-
-    Imperative Shell - performs Firestore read/write
-
-    Args:
-        bet_id: Bet ID
-
-    Returns:
-        Updated Bet object
-    """
-    # Get bet (I/O)
-    bet = await get_bet(bet_id)
-    if not bet:
-        raise ValueError(f"Bet not found: {bet_id}")
-
-    # Open bet (pure - immutable update)
-    opened_bet = bet.open_bet()
-
-    # Save to Firestore (I/O)
-    await update_bet(opened_bet)
-
-    return opened_bet
 
 
 async def lock_bet(bet_id: str) -> Bet:

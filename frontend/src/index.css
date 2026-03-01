@@ -1,25 +1,27 @@
 /**
  * Global styles for SmallBets.live
- * Mobile-first, high contrast, minimal design
+ * UI Variation C: Bold Sports/Gaming Energy
+ * Dark background with neon accents, bold typography, and visual energy
  */
 
 :root {
-  /* Colors */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-success: #10b981;
-  --color-error: #ef4444;
-  --color-warning: #f59e0b;
+  /* Colors - Bold Sports/Gaming Energy */
+  --color-primary: #34d399;
+  --color-primary-hover: #10b981;
+  --color-accent-blue: #3b82f6;
+  --color-success: #34d399;
+  --color-error: #f43f5e;
+  --color-warning: #eab308;
 
-  --color-bg: #0f172a;
-  --color-bg-secondary: #1e293b;
-  --color-bg-elevated: #334155;
+  --color-bg: #0a0a0f;
+  --color-bg-secondary: #141420;
+  --color-bg-elevated: #1e1e2e;
 
-  --color-text: #f1f5f9;
-  --color-text-secondary: #cbd5e1;
-  --color-text-muted: #94a3b8;
+  --color-text: #ffffff;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
 
-  --color-border: #475569;
+  --color-border: #27272a;
 
   /* Spacing */
   --spacing-xs: 0.5rem;
@@ -39,8 +41,8 @@
   --font-size-base: 1rem;
   --font-size-lg: 1.125rem;
   --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 2rem;
+  --font-size-2xl: 1.375rem;
+  --font-size-3xl: 1.75rem;
   --font-size-4xl: 2.5rem;
 
   /* Border Radius */
@@ -85,17 +87,30 @@ body {
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 700;
   line-height: 1.2;
   margin-bottom: var(--spacing-md);
 }
 
-h1 { font-size: var(--font-size-4xl); }
-h2 { font-size: var(--font-size-3xl); }
-h3 { font-size: var(--font-size-2xl); }
-h4 { font-size: var(--font-size-xl); }
-h5 { font-size: var(--font-size-lg); }
-h6 { font-size: var(--font-size-base); }
+h1 {
+  font-size: var(--font-size-4xl);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+h2 {
+  font-size: var(--font-size-3xl);
+  font-weight: 800;
+}
+
+h3 {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+}
+
+h4 { font-size: var(--font-size-xl); font-weight: 700; }
+h5 { font-size: var(--font-size-lg); font-weight: 700; }
+h6 { font-size: var(--font-size-base); font-weight: 700; }
 
 p {
   margin-bottom: var(--spacing-md);
@@ -117,8 +132,8 @@ button {
   justify-content: center;
   padding: var(--spacing-md) var(--spacing-lg);
   font-weight: 600;
-  border-radius: var(--radius-lg);
-  transition: all 0.2s;
+  border-radius: 8px;
+  transition: all 0.15s ease;
   min-height: 44px; /* iOS touch target size */
   min-width: 44px;
   text-decoration: none;
@@ -126,21 +141,27 @@ button {
 
 .btn-primary {
   background-color: var(--color-primary);
-  color: white;
+  color: #000;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3);
 }
 
 .btn-secondary {
-  background-color: var(--color-bg-secondary);
+  background-color: rgba(255, 255, 255, 0.05);
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-bg-elevated);
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-primary);
 }
 
 .btn:disabled {
@@ -164,9 +185,9 @@ select {
   font-family: inherit;
   font-size: inherit;
   padding: var(--spacing-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-bg-secondary);
+  border: 1.5px solid var(--color-border);
+  border-radius: 8px;
+  background-color: #0a0a0f;
   color: var(--color-text);
   width: 100%;
   min-height: 44px; /* iOS touch target size */
@@ -175,16 +196,19 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15);
 }
 
 /* Cards */
 .card {
   background-color: var(--color-bg-secondary);
-  border-radius: var(--radius-xl);
+  border-radius: 12px;
   padding: var(--spacing-lg);
   border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-primary);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
 }
 
 /* Containers */
@@ -226,11 +250,104 @@ select:focus {
   height: 40px;
   animation: spin 1s linear infinite;
   margin: var(--spacing-xl) auto;
+  box-shadow: 0 0 15px rgba(52, 211, 153, 0.2);
 }
 
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Badge - Live indicator */
+.badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-live::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Points display */
+.points-display {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--color-primary);
+  text-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
+}
+
+/* Rank badges */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.75rem;
+  margin-right: 0.5rem;
+}
+
+.rank-1 {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000;
+}
+
+.rank-2 {
+  background: linear-gradient(135deg, #d1d5db, #9ca3af);
+  color: #000;
+}
+
+.rank-3 {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-md);
+}
+
+.modal-content {
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: var(--spacing-lg);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 /* Responsive */
