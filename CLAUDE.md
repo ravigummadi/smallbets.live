@@ -118,7 +118,11 @@ smallbets.live/
 - For complex problems, throw more compute at it via subagents
 - One tack per subagent for focused execution
 
-### 3. Self-Improvement Loop
+### 3. Push Gate
+- A `PreToolUse` hook (`.claude/hooks/test-gate-push.sh`) gates `git push` — frontend and backend unit tests must pass before pushing
+- If tests fail, fix them before pushing. Don't skip the hook.
+
+### 4. Self-Improvement Loop
 - After ANY correction from the user: update `tasks/lessons.md` with the pattern
 - Write rules for yourself that prevent the same mistake
 - Ruthlessly iterate on these lessons until mistake rate drops
