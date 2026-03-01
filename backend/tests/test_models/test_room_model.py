@@ -57,14 +57,22 @@ def test_room_default_values():
 
 @pytest.mark.unit
 def test_room_code_validation():
-    """Test room code validation (must be exactly 4 chars)"""
-    # Valid
+    """Test room code validation (must be 4-6 chars)"""
+    # Valid 4-char (legacy event rooms)
     room = Room(
         code="AAAA",
         event_template="grammys-2026",
         host_id="host-user-id",
     )
     assert room.code == "AAAA"
+
+    # Valid 6-char (tournament/match rooms)
+    room = Room(
+        code="AAAAAA",
+        event_template="grammys-2026",
+        host_id="host-user-id",
+    )
+    assert room.code == "AAAAAA"
 
     # Invalid: too short
     with pytest.raises(ValidationError):
@@ -77,7 +85,7 @@ def test_room_code_validation():
     # Invalid: too long
     with pytest.raises(ValidationError):
         Room(
-            code="AAAAA",
+            code="AAAAAAA",  # 7 chars
             event_template="grammys-2026",
             host_id="host-user-id",
         )

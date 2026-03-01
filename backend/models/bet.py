@@ -1,6 +1,6 @@
 """Bet model - represents a betting question"""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -21,7 +21,7 @@ class Bet(BaseModel):
     """
 
     bet_id: str = Field(..., description="Unique bet identifier")
-    room_code: str = Field(..., min_length=4, max_length=4)
+    room_code: str = Field(..., min_length=4, max_length=6)
     question: str = Field(..., min_length=1, description="Betting question")
     options: list[str] = Field(..., min_items=2, description="Betting options")
     status: BetStatus = Field(default=BetStatus.PENDING)
@@ -34,14 +34,19 @@ class Bet(BaseModel):
     # Automation: Winner resolution patterns (from event templates)
     resolve_patterns: Optional[List[str]] = Field(
         default=None,
-        description="Patterns that indicate winner announcement (e.g., 'grammy goes to', 'and the winner is')"
+        description="Patterns that indicate winner announcement"
     )
 
-    def to_dict(self) -> dict:
-        """Serialize for Firestore storage
+    # Tournament fields
+    bet_type: str = Field(default="in-game", description="Bet type: pre-match|in-game|tournament")
+    created_from: str = Field(default="custom", description="Source: template|custom")
+    template_id: Optional[str] = Field(default=None, description="Source template ID if created from template")
+    timer_duration: int = Field(default=60, description="Timer duration in seconds")
+    can_undo_until: Optional[datetime] = Field(default=None, description="Undo window expiry (10s after resolution)")
+    version: int = Field(default=1, description="Optimistic locking version")
 
-        Pure function - no I/O operations
-        """
+    def to_dict(self) -> dict:
+        """Serialize for Firestore storage"""
         return {
             "betId": self.bet_id,
             "roomCode": self.room_code,
@@ -54,14 +59,17 @@ class Bet(BaseModel):
             "winningOption": self.winning_option,
             "pointsValue": self.points_value,
             "resolvePatterns": self.resolve_patterns,
+            "betType": self.bet_type,
+            "createdFrom": self.created_from,
+            "templateId": self.template_id,
+            "timerDuration": self.timer_duration,
+            "canUndoUntil": self.can_undo_until,
+            "version": self.version,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "Bet":
-        """Deserialize from Firestore
-
-        Pure function - no I/O operations
-        """
+        """Deserialize from Firestore"""
         return cls(
             bet_id=data["betId"],
             room_code=data["roomCode"],
@@ -72,54 +80,65 @@ class Bet(BaseModel):
             locked_at=data.get("lockedAt"),
             resolved_at=data.get("resolvedAt"),
             winning_option=data.get("winningOption"),
-            points_value=data.get("pointsValue", 100),  # Default for backwards compatibility
+            points_value=data.get("pointsValue", 100),
             resolve_patterns=data.get("resolvePatterns"),
+            bet_type=data.get("betType", "in-game"),
+            created_from=data.get("createdFrom", "custom"),
+            template_id=data.get("templateId"),
+            timer_duration=data.get("timerDuration", 60),
+            can_undo_until=data.get("canUndoUntil"),
+            version=data.get("version", 1),
         )
 
     def can_accept_bets(self) -> bool:
-        """Check if bet is accepting user bets
-
-        Pure function
-        """
+        """Check if bet is accepting user bets"""
         return self.status == BetStatus.OPEN
 
     def is_resolved(self) -> bool:
-        """Check if bet has been resolved
-
-        Pure function
-        """
+        """Check if bet has been resolved"""
         return self.status == BetStatus.RESOLVED
 
-    def open_bet(self) -> "Bet":
-        """Return new Bet instance with opened status
+    def can_undo(self) -> bool:
+        """Check if bet resolution can be undone (within 10s window)"""
+        if self.status != BetStatus.RESOLVED or self.can_undo_until is None:
+            return False
+        return datetime.utcnow() < self.can_undo_until
 
-        Pure function - immutable update
-        """
+    def open_bet(self) -> "Bet":
+        """Return new Bet instance with opened status"""
         return self.model_copy(update={
             "status": BetStatus.OPEN,
             "opened_at": datetime.utcnow(),
         })
 
     def lock_bet(self) -> "Bet":
-        """Return new Bet instance with locked status
-
-        Pure function - immutable update
-        """
+        """Return new Bet instance with locked status"""
         return self.model_copy(update={
             "status": BetStatus.LOCKED,
             "locked_at": datetime.utcnow(),
         })
 
     def resolve_bet(self, winning_option: str) -> "Bet":
-        """Return new Bet instance with resolved status
-
-        Pure function - immutable update
-        """
+        """Return new Bet instance with resolved status and 10s undo window"""
         if winning_option not in self.options:
             raise ValueError(f"Invalid winning option: {winning_option}")
 
+        now = datetime.utcnow()
         return self.model_copy(update={
             "status": BetStatus.RESOLVED,
-            "resolved_at": datetime.utcnow(),
+            "resolved_at": now,
             "winning_option": winning_option,
+            "can_undo_until": now + timedelta(seconds=10),
+        })
+
+    def undo_resolve(self) -> "Bet":
+        """Return new Bet instance with resolution undone (back to locked)"""
+        if not self.can_undo():
+            raise ValueError("Cannot undo: undo window has expired or bet is not resolved")
+
+        return self.model_copy(update={
+            "status": BetStatus.LOCKED,
+            "resolved_at": None,
+            "winning_option": None,
+            "can_undo_until": None,
         })

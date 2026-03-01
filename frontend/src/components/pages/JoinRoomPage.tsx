@@ -30,8 +30,8 @@ export default function JoinRoomPage() {
       return;
     }
 
-    if (roomCode.length !== 4) {
-      setError('Room code must be 4 characters');
+    if (roomCode.length < 4 || roomCode.length > 6) {
+      setError('Room code must be 4-6 characters');
       return;
     }
 
@@ -71,10 +71,10 @@ export default function JoinRoomPage() {
           <h4 className="mb-md">Room Code</h4>
           <input
             type="text"
-            placeholder="Enter 4-character code"
+            placeholder="Enter room code"
             value={roomCode}
             onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-            maxLength={4}
+            maxLength={6}
             className="mb-md"
             autoFocus={!code}
           />
@@ -105,7 +105,7 @@ export default function JoinRoomPage() {
         <button
           type="submit"
           className="btn btn-primary btn-full btn-lg"
-          disabled={loading || !nickname.trim() || roomCode.length !== 4}
+          disabled={loading || !nickname.trim() || roomCode.length < 4}
         >
           {loading ? 'Joining Room...' : 'Join Room'}
         </button>

@@ -31,17 +31,17 @@ export default function HomePage() {
         <form onSubmit={handleJoinRoom}>
           <input
             type="text"
-            placeholder="Enter room code (e.g., BLUE42)"
+            placeholder="Enter room code (e.g. BLUE42)"
             value={roomCode}
             onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-            maxLength={4}
+            maxLength={6}
             className="mb-md"
             autoFocus
           />
           <button
             type="submit"
             className="btn btn-primary btn-full"
-            disabled={roomCode.length !== 4}
+            disabled={roomCode.length < 4}
           >
             Join Room
           </button>

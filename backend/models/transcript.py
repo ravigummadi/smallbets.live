@@ -11,7 +11,7 @@ class TranscriptEntry(BaseModel):
     """
 
     entry_id: str = Field(..., description="Unique entry identifier")
-    room_code: str = Field(..., min_length=4, max_length=4)
+    room_code: str = Field(..., min_length=4, max_length=6)
     text: str = Field(..., min_length=1, description="Raw transcript text")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     source: str = Field(default="manual", description="Source of transcript (youtube|manual|webhook)")

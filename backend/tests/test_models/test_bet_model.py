@@ -34,8 +34,8 @@ def test_bet_creation_valid():
 
 @pytest.mark.unit
 def test_bet_room_code_validation():
-    """Test room code validation (must be 4 chars)"""
-    # Valid 4-char room code
+    """Test room code validation (must be 4-6 chars)"""
+    # Valid 4-char room code (legacy event rooms)
     bet = Bet(
         bet_id="test-id",
         room_code="AAAA",
@@ -44,6 +44,16 @@ def test_bet_room_code_validation():
         points_value=100,
     )
     assert bet.room_code == "AAAA"
+
+    # Valid 6-char room code (tournament/match rooms)
+    bet = Bet(
+        bet_id="test-id",
+        room_code="AAAAAA",
+        question="Q?",
+        options=["A", "B"],
+        points_value=100,
+    )
+    assert bet.room_code == "AAAAAA"
 
     # Invalid: too short
     with pytest.raises(ValidationError):
@@ -59,7 +69,7 @@ def test_bet_room_code_validation():
     with pytest.raises(ValidationError):
         Bet(
             bet_id="test-id",
-            room_code="AAAAA",  # 5 chars
+            room_code="AAAAAAA",  # 7 chars
             question="Q?",
             options=["A", "B"],
             points_value=100,

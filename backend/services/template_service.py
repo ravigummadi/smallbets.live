@@ -40,7 +40,12 @@ def load_template(template_id: str) -> Optional[EventTemplate]:
     return EventTemplate.from_dict(data)
 
 
-async def create_bets_from_template(room_code: str, template_id: str) -> List[Bet]:
+async def create_bets_from_template(
+    room_code: str,
+    template_id: str,
+    bet_type: str = "in-game",
+    timer_duration: int = 60,
+) -> List[Bet]:
     """Load template and create all bets for a room
 
     Imperative Shell - orchestrates I/O operations
@@ -48,6 +53,8 @@ async def create_bets_from_template(room_code: str, template_id: str) -> List[Be
     Args:
         room_code: Room code
         template_id: Template ID
+        bet_type: Bet type override (e.g., "tournament" for tournament-level bets)
+        timer_duration: Timer duration override
 
     Returns:
         List of created Bet objects
@@ -69,6 +76,9 @@ async def create_bets_from_template(room_code: str, template_id: str) -> List[Be
         trigger_config = bet_config.get("triggerConfig", {})
         resolve_patterns = trigger_config.get("resolve")
 
+        # Use bet_config timer if available, else use override
+        config_timer = bet_config.get("timerSeconds", timer_duration)
+
         # Create bet (I/O)
         bet = await bet_service.create_bet(
             room_code=room_code,
@@ -76,6 +86,10 @@ async def create_bets_from_template(room_code: str, template_id: str) -> List[Be
             options=bet_config["options"],
             points_value=bet_config.get("pointsValue", 100),
             resolve_patterns=resolve_patterns,
+            bet_type=bet_type,
+            created_from="template",
+            template_id=template_id,
+            timer_duration=config_timer,
         )
 
         created_bets.append(bet)

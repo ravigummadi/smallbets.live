@@ -25,6 +25,12 @@ service cloud.firestore {
       allow write: if false; // Backend only
     }
 
+    // RoomUsers - readable by all, backend writes
+    match /roomUsers/{roomUserId} {
+      allow read: if true;
+      allow write: if false; // Backend only
+    }
+
     // TranscriptEntries - readable by all, backend writes
     match /transcripts/{roomCode}/{entryId} {
       allow read: if true;

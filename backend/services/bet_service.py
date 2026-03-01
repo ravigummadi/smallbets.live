@@ -12,9 +12,10 @@ from google.cloud import firestore
 from models.bet import Bet, BetStatus
 from models.user_bet import UserBet
 from models.user import User
+from models.room_user import RoomUser
 import game_logic
 from firebase_config import get_db
-from services import user_service
+from services import user_service, room_service
 
 
 async def create_bet(
@@ -23,27 +24,15 @@ async def create_bet(
     options: List[str],
     points_value: int,
     resolve_patterns: Optional[List[str]] = None,
+    bet_type: str = "in-game",
+    created_from: str = "custom",
+    template_id: Optional[str] = None,
+    timer_duration: int = 60,
 ) -> Bet:
-    """Create a new bet
-
-    Imperative Shell - performs Firestore write
-
-    Args:
-        room_code: Room code
-        question: Betting question
-        options: List of betting options
-        points_value: Points required to place this bet
-        resolve_patterns: Patterns that indicate winner announcement (for automation)
-
-    Returns:
-        Created Bet object
-    """
+    """Create a new bet"""
     db = get_db()
-
-    # Generate unique bet ID
     bet_id = str(uuid.uuid4())
 
-    # Create bet object (pure)
     bet = Bet(
         bet_id=bet_id,
         room_code=room_code,
@@ -52,145 +41,99 @@ async def create_bet(
         status=BetStatus.OPEN,
         points_value=points_value,
         resolve_patterns=resolve_patterns,
+        bet_type=bet_type,
+        created_from=created_from,
+        template_id=template_id,
+        timer_duration=timer_duration,
     )
 
-    # Write to Firestore (I/O)
     bet_ref = db.collection("bets").document(bet_id)
     bet_ref.set(bet.to_dict())
-
     return bet
 
 
 async def get_bet(bet_id: str) -> Optional[Bet]:
-    """Get bet by ID
-
-    Imperative Shell - performs Firestore read
-
-    Args:
-        bet_id: Bet ID
-
-    Returns:
-        Bet object or None if not found
-    """
+    """Get bet by ID"""
     db = get_db()
-
-    # Read from Firestore (I/O)
     bet_ref = db.collection("bets").document(bet_id)
     bet_doc = bet_ref.get()
 
     if not bet_doc.exists:
         return None
 
-    # Deserialize (pure)
     bet = Bet.from_dict(bet_doc.to_dict())
     return bet
 
 
 async def get_bets_in_room(room_code: str) -> List[Bet]:
-    """Get all bets in a room
-
-    Imperative Shell - performs Firestore query
-
-    Args:
-        room_code: Room code
-
-    Returns:
-        List of Bet objects
-    """
+    """Get all bets in a room"""
     db = get_db()
-
-    # Query Firestore (I/O)
     bets_ref = db.collection("bets").where("roomCode", "==", room_code)
     bets_docs = bets_ref.stream()
-
-    # Deserialize (pure)
     bets = [Bet.from_dict(doc.to_dict()) for doc in bets_docs]
     return bets
 
 
 async def update_bet(bet: Bet) -> None:
-    """Update bet in Firestore
-
-    Imperative Shell - performs Firestore write
-
-    Args:
-        bet: Bet object to update
-    """
+    """Update bet in Firestore"""
     db = get_db()
-
-    # Write to Firestore (I/O)
     bet_ref = db.collection("bets").document(bet.bet_id)
     bet_ref.set(bet.to_dict())
 
 
 async def lock_bet(bet_id: str) -> Bet:
-    """Lock a bet (close betting)
-
-    Imperative Shell - performs Firestore read/write
-
-    Args:
-        bet_id: Bet ID
-
-    Returns:
-        Updated Bet object
-    """
-    # Get bet (I/O)
+    """Lock a bet (close betting)"""
     bet = await get_bet(bet_id)
     if not bet:
         raise ValueError(f"Bet not found: {bet_id}")
 
-    # Lock bet (pure - immutable update)
     locked_bet = bet.lock_bet()
-
-    # Save to Firestore (I/O)
     await update_bet(locked_bet)
-
     return locked_bet
 
 
 async def resolve_bet(bet_id: str, winning_option: str) -> None:
     """Resolve a bet and distribute points
 
-    Imperative Shell - orchestrates I/O operations, delegates logic to game_logic
-
-    Args:
-        bet_id: Bet ID
-        winning_option: The winning option
-
-    Raises:
-        ValueError: If bet not found or invalid winning option
+    Uses RoomUser for point updates if they exist, falls back to legacy User collection.
     """
     db = get_db()
 
-    # Get bet (I/O)
     bet = await get_bet(bet_id)
     if not bet:
         raise ValueError(f"Bet not found: {bet_id}")
 
-    # Resolve bet (pure - immutable update)
+    # Resolve bet with 10s undo window
     resolved_bet = bet.resolve_bet(winning_option)
 
-    # Get all user bets for this bet (I/O)
+    # Get all user bets for this bet
     user_bets = await get_user_bets_for_bet(bet_id)
 
-    # Get all users who bet (I/O)
+    # Get all users who bet
     user_ids = [ub.user_id for ub in user_bets]
     users = await user_service.get_users_by_ids(user_ids)
 
     # Calculate scores (pure - delegates to game_logic)
     scores = game_logic.calculate_scores(user_bets, users, winning_option, bet.points_value)
 
-    # Update user points and user bets in batch (I/O)
+    # Update user points and user bets in batch
     batch = db.batch()
 
     for user_id, points_won in scores.items():
-        # Update user points
         user = users[user_id]
-        # Points were already deducted at bet placement; only add winnings/refund here.
         new_points = user.points + points_won
 
         user_ref = db.collection("users").document(user_id)
         batch.update(user_ref, {"points": new_points})
+
+        # Also update roomUsers if exists
+        room_user_doc_id = f"{bet.room_code}_{user_id}"
+        room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+        room_user_doc = room_user_ref.get()
+        if room_user_doc.exists:
+            ru_data = room_user_doc.to_dict()
+            ru_new_points = ru_data["points"] + points_won
+            batch.update(room_user_ref, {"points": ru_new_points})
 
         # Update user bet with points won
         user_bet = next(ub for ub in user_bets if ub.user_id == user_id)
@@ -203,8 +146,58 @@ async def resolve_bet(bet_id: str, winning_option: str) -> None:
     bet_ref = db.collection("bets").document(bet_id)
     batch.set(bet_ref, resolved_bet.to_dict())
 
-    # Commit batch
     batch.commit()
+
+
+async def undo_resolve_bet(bet_id: str) -> Bet:
+    """Undo a bet resolution (within 10s window)
+
+    Reverts bet to locked status and reverses point changes.
+    """
+    db = get_db()
+
+    bet = await get_bet(bet_id)
+    if not bet:
+        raise ValueError(f"Bet not found: {bet_id}")
+
+    if not bet.can_undo():
+        raise ValueError("Cannot undo: undo window has expired or bet is not resolved")
+
+    # Get user bets to reverse point changes
+    user_bets = await get_user_bets_for_bet(bet_id)
+
+    batch = db.batch()
+
+    for ub in user_bets:
+        if ub.points_won is not None:
+            # Reverse the points: subtract what was won, add back the bet cost
+            user = await user_service.get_user(ub.user_id)
+            if user:
+                new_points = user.points - ub.points_won + bet.points_value
+                user_ref = db.collection("users").document(ub.user_id)
+                batch.update(user_ref, {"points": new_points})
+
+                # Also update roomUsers if exists
+                room_user_doc_id = f"{bet.room_code}_{ub.user_id}"
+                room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+                room_user_doc = room_user_ref.get()
+                if room_user_doc.exists:
+                    ru_data = room_user_doc.to_dict()
+                    ru_new_points = ru_data["points"] - ub.points_won + bet.points_value
+                    batch.update(room_user_ref, {"points": ru_new_points})
+
+            # Reset user bet points_won
+            updated_ub = ub.with_points_won(None)
+            ub_ref = db.collection("userBets").document(f"{bet_id}_{ub.user_id}")
+            batch.set(ub_ref, updated_ub.to_dict())
+
+    # Revert bet to locked
+    undone_bet = bet.undo_resolve()
+    bet_ref = db.collection("bets").document(bet_id)
+    batch.set(bet_ref, undone_bet.to_dict())
+
+    batch.commit()
+    return undone_bet
 
 
 async def place_user_bet(
@@ -212,24 +205,9 @@ async def place_user_bet(
     bet_id: str,
     selected_option: str,
 ) -> UserBet:
-    """Place a user's bet
-
-    Imperative Shell - orchestrates I/O and validation
-
-    Args:
-        user_id: User ID
-        bet_id: Bet ID
-        selected_option: User's selected option
-
-    Returns:
-        Created UserBet object
-
-    Raises:
-        ValueError: If validation fails
-    """
+    """Place a user's bet"""
     db = get_db()
 
-    # Get user and bet (I/O)
     user = await user_service.get_user(user_id)
     if not user:
         raise ValueError(f"User not found: {user_id}")
@@ -238,21 +216,18 @@ async def place_user_bet(
     if not bet:
         raise ValueError(f"Bet not found: {bet_id}")
 
-    # Check if user already bet (I/O)
     existing_bet = await get_user_bet(user_id, bet_id)
 
-    # Validate eligibility (pure - delegates to game_logic)
+    # Validate eligibility
     is_valid, error = game_logic.validate_bet_eligibility(
         user, bet, existing_bet, bet.points_value
     )
     if not is_valid:
         raise ValueError(error)
 
-    # Validate selected option
     if selected_option not in bet.options:
         raise ValueError(f"Invalid option: {selected_option}")
 
-    # Create user bet (pure)
     user_bet = UserBet(
         user_id=user_id,
         bet_id=bet_id,
@@ -261,68 +236,46 @@ async def place_user_bet(
         placed_at=datetime.utcnow(),
     )
 
-    # Deduct points from user (pure - immutable update)
     updated_user = user.subtract_points(bet.points_value)
 
-    # Save to Firestore in batch (I/O)
     batch = db.batch()
 
-    # Save user bet
     user_bet_ref = db.collection("userBets").document(f"{bet_id}_{user_id}")
     batch.set(user_bet_ref, user_bet.to_dict())
 
-    # Update user points
     user_ref = db.collection("users").document(user_id)
     batch.set(user_ref, updated_user.to_dict())
 
-    batch.commit()
+    # Also update roomUsers if exists
+    room_user_doc_id = f"{bet.room_code}_{user_id}"
+    room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+    room_user_doc = room_user_ref.get()
+    if room_user_doc.exists:
+        ru = RoomUser.from_dict(room_user_doc.to_dict())
+        updated_ru = ru.subtract_points(bet.points_value)
+        batch.set(room_user_ref, updated_ru.to_dict())
 
+    batch.commit()
     return user_bet
 
 
 async def get_user_bet(user_id: str, bet_id: str) -> Optional[UserBet]:
-    """Get user's bet for a specific bet
-
-    Imperative Shell - performs Firestore read
-
-    Args:
-        user_id: User ID
-        bet_id: Bet ID
-
-    Returns:
-        UserBet object or None if not found
-    """
+    """Get user's bet for a specific bet"""
     db = get_db()
-
-    # Read from Firestore (I/O)
     user_bet_ref = db.collection("userBets").document(f"{bet_id}_{user_id}")
     user_bet_doc = user_bet_ref.get()
 
     if not user_bet_doc.exists:
         return None
 
-    # Deserialize (pure)
     user_bet = UserBet.from_dict(user_bet_doc.to_dict())
     return user_bet
 
 
 async def get_user_bets_for_bet(bet_id: str) -> List[UserBet]:
-    """Get all user bets for a specific bet
-
-    Imperative Shell - performs Firestore query
-
-    Args:
-        bet_id: Bet ID
-
-    Returns:
-        List of UserBet objects
-    """
+    """Get all user bets for a specific bet"""
     db = get_db()
-
-    # Query Firestore (I/O)
     user_bets_ref = db.collection("userBets").where("betId", "==", bet_id)
     user_bets_docs = user_bets_ref.stream()
-
-    # Deserialize (pure)
     user_bets = [UserBet.from_dict(doc.to_dict()) for doc in user_bets_docs]
     return user_bets

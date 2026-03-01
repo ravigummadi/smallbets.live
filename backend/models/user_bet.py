@@ -13,7 +13,7 @@ class UserBet(BaseModel):
 
     user_id: str = Field(..., description="User who placed the bet")
     bet_id: str = Field(..., description="Bet being placed on")
-    room_code: str = Field(..., min_length=4, max_length=4)
+    room_code: str = Field(..., min_length=4, max_length=6)
     selected_option: str = Field(..., description="User's selected option")
     placed_at: datetime = Field(default_factory=datetime.utcnow)
     points_won: Optional[int] = Field(default=None, description="Points won (null until resolved)")
