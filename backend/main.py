@@ -74,10 +74,6 @@ class PlaceBetRequest(BaseModel):
     selected_option: str
 
 
-class OpenBetRequest(BaseModel):
-    bet_id: str
-
-
 class LockBetRequest(BaseModel):
     bet_id: str
 
@@ -335,24 +331,6 @@ async def create_bet(code: str, room: HostRoomDep, request: dict):
         raise HTTPException(status_code=400, detail=f"Missing field: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create bet: {str(e)}")
-
-
-@app.post("/api/rooms/{code}/bets/open")
-async def open_bet(code: str, room: HostRoomDep, request: OpenBetRequest):
-    """Open a bet for betting (admin only)
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
-    try:
-        # Open bet (I/O - delegates to service)
-        bet = await bet_service.open_bet(request.bet_id)
-
-        return bet.to_dict()
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to open bet: {str(e)}")
 
 
 @app.post("/api/rooms/{code}/bets/lock")

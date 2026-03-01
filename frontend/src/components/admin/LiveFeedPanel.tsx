@@ -4,14 +4,30 @@
  * Allows admin to input key moments in real-time during live events
  */
 
-import { useState } from 'react';
-import { roomApi } from '@/services/api';
+import { useState, useEffect } from 'react';
+
+interface TranscriptEntry {
+  text: string;
+  source: string;
+  timestamp: string;
+}
 
 interface LiveFeedPanelProps {
   roomCode: string;
   hostId: string;
   automationEnabled: boolean;
   onToggleAutomation: (enabled: boolean) => void;
+}
+
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffSec = Math.floor((now - then) / 1000);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  return `${diffHr}h ago`;
 }
 
 export default function LiveFeedPanel({
@@ -24,6 +40,14 @@ export default function LiveFeedPanel({
   const [submitting, setSubmitting] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<TranscriptEntry[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/rooms/${roomCode}/transcript`)
+      .then((res) => res.ok ? res.json() : Promise.reject('Failed to fetch'))
+      .then((data) => setHistory(data.entries || []))
+      .catch(() => {/* ignore – history is best-effort */});
+  }, [roomCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,26 +61,23 @@ export default function LiveFeedPanel({
     setError(null);
 
     try {
-      // Send transcript to API
       const response = await fetch(`/api/rooms/${roomCode}/transcript`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: transcriptText,
-          source: 'manual',
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: transcriptText, source: 'manual' }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit transcript');
-      }
+      if (!response.ok) throw new Error('Failed to submit transcript');
 
       const result = await response.json();
       setLastResult(result);
 
-      // Clear input after successful submit
+      // Optimistic prepend to history
+      setHistory((prev) => [
+        { text: transcriptText, source: 'manual', timestamp: new Date().toISOString() },
+        ...prev,
+      ]);
+
       setTranscriptText('');
     } catch (err: any) {
       setError(err.message || 'Failed to submit transcript');
@@ -73,21 +94,17 @@ export default function LiveFeedPanel({
           'Content-Type': 'application/json',
           'X-Host-Id': hostId,
         },
-        body: JSON.stringify({
-          enabled: !automationEnabled,
-        }),
+        body: JSON.stringify({ enabled: !automationEnabled }),
       });
-
       onToggleAutomation(!automationEnabled);
-    } catch (err) {
+    } catch {
       setError('Failed to toggle automation');
     }
   };
 
   return (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-        <h4 style={{ marginBottom: 0 }}>Live Transcript Feed</h4>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--spacing-md)' }}>
         <button
           className={`btn ${automationEnabled ? 'btn-primary' : 'btn-secondary'}`}
           onClick={handleToggleAutomation}
@@ -110,7 +127,6 @@ export default function LiveFeedPanel({
           style={{ marginBottom: 'var(--spacing-md)', resize: 'vertical' }}
           disabled={submitting}
         />
-
         <button
           type="submit"
           className="btn btn-primary btn-full"
@@ -156,9 +172,8 @@ export default function LiveFeedPanel({
               <span
                 style={{
                   color:
-                    lastResult.automation.action_taken === 'open_bet'
-                      ? 'var(--color-success)'
-                      : lastResult.automation.action_taken === 'resolve_bet'
+                    lastResult.automation.action_taken === 'open_bet' ||
+                    lastResult.automation.action_taken === 'resolve_bet'
                       ? 'var(--color-success)'
                       : 'var(--color-text-muted)',
                 }}
@@ -190,22 +205,52 @@ export default function LiveFeedPanel({
         </div>
       )}
 
-      <div className="mt-lg" style={{ paddingTop: 'var(--spacing-md)', borderTop: '1px solid var(--color-border)' }}>
-        <h5 style={{ fontSize: 'var(--font-size-sm)', marginBottom: 'var(--spacing-sm)' }}>
-          Quick Examples:
-        </h5>
-        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-          <p style={{ marginBottom: 'var(--spacing-xs)' }}>
-            • "Next category: Album of the Year"
-          </p>
-          <p style={{ marginBottom: 'var(--spacing-xs)' }}>
-            • "And the Grammy goes to... Taylor Swift!"
-          </p>
-          <p style={{ marginBottom: 0 }}>
-            • "The winner is Oppenheimer"
-          </p>
+      {/* Transcript History */}
+      {history.length > 0 && (
+        <div
+          className="mt-md"
+          style={{
+            maxHeight: '200px',
+            overflowY: 'auto',
+            borderTop: '1px solid var(--color-border)',
+            paddingTop: 'var(--spacing-md)',
+          }}
+        >
+          <h5 style={{ fontSize: 'var(--font-size-sm)', marginBottom: 'var(--spacing-sm)' }}>
+            History ({history.length})
+          </h5>
+          {history.map((entry, i) => (
+            <div
+              key={i}
+              style={{
+                padding: 'var(--spacing-sm)',
+                fontSize: 'var(--font-size-xs)',
+                borderBottom: i < history.length - 1 ? '1px solid var(--color-border)' : undefined,
+                display: 'flex',
+                gap: 'var(--spacing-sm)',
+                alignItems: 'baseline',
+              }}
+            >
+              <span style={{ color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+                {timeAgo(entry.timestamp)}
+              </span>
+              <span style={{ flex: 1 }}>{entry.text}</span>
+              <span
+                style={{
+                  fontSize: '0.625rem',
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  color: 'var(--color-text-muted)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {entry.source}
+              </span>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -129,11 +129,11 @@ Execute the following steps using Playwright MCP tools:
 - Take snapshot showing second user in room
 - Switch back to first tab to verify both users appear in participants list
 
-### 5. Start Event and Open First Bet
-- Use backend API or Firestore to trigger the first bet opening
+### 5. Start Event and Verify Bets Are Open
+- Click "Start Event" in the admin toolbar
+- Verify bets are already in "open" status (bets open immediately on creation)
 - Verify bet appears in both browser tabs
 - Take snapshot showing active bet with options
-- Verify countdown timer is running (if applicable)
 
 ### 6. Place Bets
 - In first tab: Select an option and place bet
@@ -142,8 +142,9 @@ Execute the following steps using Playwright MCP tools:
 - In second tab: Select different option and place bet
 - Verify both bets are recorded
 
-### 7. Resolve Bet via Transcription (NEW - Tests Automation Feature)
+### 7. Resolve Bet via Transcription (Tests Automation Feature)
 - Navigate to admin panel or room admin view in first tab
+- Bets should already be open — use "Close Bet" to lock one, then resolve it
 - Locate the "Live Transcript Feed" panel (should be visible to admin/room creator)
 - Take snapshot showing transcript input area
 - Submit a transcript entry that matches the winner announcement pattern
