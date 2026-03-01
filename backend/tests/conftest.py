@@ -2,18 +2,75 @@
 Pytest configuration and fixtures for SmallBets.live tests
 
 This file provides shared fixtures for:
-- Firebase Emulator lifecycle management
+- Automatic Firebase mocking for unit tests
+- Firebase Emulator lifecycle management (integration tests)
 - Test database cleanup
 - Mock data generation
 """
 
 import os
+import shutil
 import pytest
+from unittest.mock import MagicMock
 from typing import Generator
 import subprocess
 import time
 import socket
 
+
+# ---------------------------------------------------------------------------
+# Environment defaults (set before any Firebase imports)
+# ---------------------------------------------------------------------------
+os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "demo-test")
+
+
+# ---------------------------------------------------------------------------
+# Auto-mock Firebase for all tests
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _mock_firebase(request):
+    """Auto-mock Firebase DB for all tests.
+
+    This prevents initialize_firebase() and get_db() from making real
+    connections. Unit/API tests get a MagicMock DB so startup events
+    and service calls don't hit the network.
+
+    Integration tests that use the ``firebase_emulator`` or
+    ``clean_firestore`` fixtures bypass this mock so they can talk to
+    a real emulator.
+    """
+    needs_real_firebase = (
+        "clean_firestore" in request.fixturenames
+        or "firebase_emulator" in request.fixturenames
+    )
+    if needs_real_firebase:
+        yield
+        return
+
+    import firebase_config
+
+    mock_db = MagicMock()
+
+    # Save originals
+    orig_db = firebase_config._db
+    orig_app = firebase_config._app
+
+    # Install mocks – initialize_firebase() checks ``_db is not None``
+    # and returns immediately, so the startup event becomes a no-op.
+    firebase_config._db = mock_db
+    firebase_config._app = MagicMock()
+
+    yield mock_db
+
+    # Restore
+    firebase_config._db = orig_db
+    firebase_config._app = orig_app
+
+
+# ---------------------------------------------------------------------------
+# Firebase Emulator (integration tests only)
+# ---------------------------------------------------------------------------
 
 def is_port_open(host: str, port: int) -> bool:
     """Check if a port is open"""
@@ -30,7 +87,13 @@ def firebase_emulator() -> Generator[None, None, None]:
 
     This fixture starts the emulators once at the beginning of the test session
     and stops them at the end. All tests share the same emulator instance.
+
+    Skips automatically if the ``firebase`` CLI is not installed.
     """
+    # Guard: skip if firebase CLI is not available
+    if not shutil.which("firebase"):
+        pytest.skip("Firebase CLI not available – skipping integration tests")
+
     # Set emulator host before starting
     os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(
@@ -98,6 +161,10 @@ def clean_firestore(firebase_emulator):
 
     yield db
 
+
+# ---------------------------------------------------------------------------
+# Test data fixtures
+# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def sample_room_data():
