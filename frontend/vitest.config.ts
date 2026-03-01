@@ -42,6 +42,9 @@ export default defineConfig({
     mockReset: true,
     restoreMocks: true,
     clearMocks: true,
+
+    // Use forks pool for better memory isolation between test files
+    pool: 'forks',
   },
   resolve: {
     alias: {
