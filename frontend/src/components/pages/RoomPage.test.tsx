@@ -6,10 +6,11 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@/test-utils';
-import { axe, toHaveNoViolations } from 'vitest-axe';
+import { axe } from 'vitest-axe';
+import { toHaveNoViolations } from 'vitest-axe/matchers';
 import RoomPage from './RoomPage';
 
-expect.extend(toHaveNoViolations);
+expect.extend({ toHaveNoViolations });
 
 // Mock hooks
 vi.mock('@/hooks/useSession', () => ({

@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useRoom } from './useRoom';
+import { subscribeToRoom } from '@/services/firestore';
 import type { Room } from '@/types';
 
 // Mock firestore service
@@ -14,15 +15,14 @@ vi.mock('@/services/firestore', () => ({
   subscribeToRoom: vi.fn(),
 }));
 
+const subscribeToRoomMock = vi.mocked(subscribeToRoom);
+
 describe('useRoom', () => {
   let mockUnsubscribe: ReturnType<typeof vi.fn>;
-  let subscribeToRoomMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockUnsubscribe = vi.fn();
-    const { subscribeToRoom } = require('@/services/firestore');
-    subscribeToRoomMock = subscribeToRoom;
-    subscribeToRoomMock.mockReturnValue(mockUnsubscribe);
+    subscribeToRoomMock.mockReturnValue(mockUnsubscribe as any);
   });
 
   afterEach(() => {

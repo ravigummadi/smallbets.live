@@ -4,17 +4,18 @@
  * Tests transcript feed and auto-scroll functionality
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@/test-utils';
-import { axe, toHaveNoViolations } from 'vitest-axe';
+import { axe } from 'vitest-axe';
+import { toHaveNoViolations } from 'vitest-axe/matchers';
 import LiveFeedPanel from './LiveFeedPanel';
 
-expect.extend(toHaveNoViolations);
+expect.extend({ toHaveNoViolations });
 
 describe('LiveFeedPanel', () => {
   describe('Accessibility (a11y)', () => {
     it('should have no accessibility violations', async () => {
-      const { container } = render(<LiveFeedPanel roomCode="ABC123" />);
+      const { container } = render(<LiveFeedPanel roomCode="ABC123" hostId="host-123" automationEnabled={false} onToggleAutomation={vi.fn()} />);
       const results = await axe(container);
       expect(results).toHaveNoViolations();
     });

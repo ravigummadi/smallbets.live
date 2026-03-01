@@ -35,7 +35,7 @@ async def test_create_and_get_bet(clean_firestore):
     )
 
     assert bet.bet_id is not None
-    assert bet.status == BetStatus.PENDING
+    assert bet.status == BetStatus.OPEN
     assert bet.room_code == room.code
 
     # Retrieve bet
@@ -49,7 +49,7 @@ async def test_create_and_get_bet(clean_firestore):
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_bet_lifecycle(clean_firestore):
-    """Test full bet lifecycle: PENDING → OPEN → LOCKED → RESOLVED"""
+    """Test full bet lifecycle: OPEN → LOCKED → RESOLVED"""
     # Create room
     room = await room_service.create_room(
         event_template="grammys-2026",
@@ -57,7 +57,7 @@ async def test_bet_lifecycle(clean_firestore):
         host_id="test-host-id",
     )
 
-    # Create bet
+    # Create bet (starts as OPEN)
     bet = await bet_service.create_bet(
         room_code=room.code,
         question="Test Question?",
@@ -65,10 +65,6 @@ async def test_bet_lifecycle(clean_firestore):
         points_value=100,
     )
 
-    assert bet.status == BetStatus.PENDING
-
-    # Open bet
-    bet = await bet_service.open_bet(bet.bet_id)
     assert bet.status == BetStatus.OPEN
 
     # Lock bet
@@ -98,14 +94,13 @@ async def test_place_user_bet(clean_firestore):
     # Create user
     user = await user_service.create_user(room.code, "TestUser", is_admin=False)
 
-    # Create and open bet
+    # Create bet (starts as OPEN)
     bet = await bet_service.create_bet(
         room_code=room.code,
         question="Test Question?",
         options=["Option A", "Option B"],
         points_value=100,
     )
-    await bet_service.open_bet(bet.bet_id)
 
     # Place user bet
     user_bet = await bet_service.place_user_bet(

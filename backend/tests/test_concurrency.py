@@ -20,7 +20,7 @@ from models.bet import BetStatus
 # ---------------------------------------------------------------------------
 
 async def _create_room_and_open_bet(db):
-    """Helper: create a room, a user, a bet, and open the bet."""
+    """Helper: create a room, a user, and a bet (starts as OPEN)."""
     room = await room_service.create_room(
         event_template="custom",
         event_name="Concurrency Test",
@@ -33,8 +33,7 @@ async def _create_room_and_open_bet(db):
         options=["Alpha", "Beta"],
         points_value=100,
     )
-    opened_bet = await bet_service.open_bet(bet.bet_id)
-    return room, user, opened_bet
+    return room, user, bet
 
 
 # ---------------------------------------------------------------------------
@@ -242,25 +241,35 @@ async def test_place_bet_on_locked_bet_rejected(clean_firestore):
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_place_bet_on_pending_bet_rejected(clean_firestore):
-    """Placing a bet on a pending (not yet opened) bet should be rejected."""
+async def test_place_bet_on_resolved_bet_rejected(clean_firestore):
+    """Placing a bet on a resolved bet should be rejected."""
     room = await room_service.create_room(
         event_template="custom",
-        event_name="Pending Test",
+        event_name="Resolved Test",
         host_id="host-id",
     )
-    user = await user_service.create_user(room.code, "EarlyPlayer", is_admin=False)
+    user1 = await user_service.create_user(room.code, "Player1", is_admin=False)
+    user2 = await user_service.create_user(room.code, "LatePlayer", is_admin=False)
     bet = await bet_service.create_bet(
         room_code=room.code,
-        question="Too early?",
+        question="Too late?",
         options=["Yes", "No"],
         points_value=100,
     )
 
-    # Bet is still PENDING – should not accept bets
+    # Place bet, lock, and resolve
+    await bet_service.place_user_bet(
+        user_id=user1.user_id,
+        bet_id=bet.bet_id,
+        selected_option="Yes",
+    )
+    await bet_service.lock_bet(bet.bet_id)
+    await bet_service.resolve_bet(bet.bet_id, "Yes")
+
+    # Bet is RESOLVED – should not accept bets
     with pytest.raises(ValueError):
         await bet_service.place_user_bet(
-            user_id=user.user_id,
+            user_id=user2.user_id,
             bet_id=bet.bet_id,
             selected_option="Yes",
         )

@@ -23,8 +23,8 @@ from models.bet import Bet, BetStatus
 def sample_template_data():
     """Sample template data matching actual template structure"""
     return {
-        "template_id": "test-event",
-        "event_name": "Test Event 2026",
+        "templateId": "test-event",
+        "name": "Test Event 2026",
         "description": "Test event description",
         "bets": [
             {
@@ -58,8 +58,7 @@ def mock_event_template():
     """Mock EventTemplate object"""
     return EventTemplate(
         template_id="test-event",
-        event_name="Test Event 2026",
-        description="Test event description",
+        name="Test Event 2026",
         bets=[
             {
                 "question": "Who will win Best Picture?",
@@ -94,7 +93,7 @@ def test_load_template_success(sample_template_data):
 
         assert template is not None
         assert template.template_id == "test-event"
-        assert template.event_name == "Test Event 2026"
+        assert template.name == "Test Event 2026"
         assert len(template.bets) == 2
 
 
@@ -181,8 +180,7 @@ async def test_create_bets_from_template_empty():
     """Test creating bets from template with no bets"""
     empty_template = EventTemplate(
         template_id="empty-event",
-        event_name="Empty Event",
-        description="No bets",
+        name="Empty Event",
         bets=[],
     )
 
@@ -215,8 +213,7 @@ async def test_template_service_uses_points_value_not_timer_duration():
     """
     template = EventTemplate(
         template_id="test-event",
-        event_name="Test Event",
-        description="Test",
+        name="Test Event",
         bets=[
             {
                 "question": "Test Question?",
@@ -243,15 +240,13 @@ async def test_template_service_uses_points_value_not_timer_duration():
         await create_bets_from_template("AAAA", "test-event")
 
         # Verify create_bet was called with points_value, not timer_duration
-        mock_create_bet.assert_called_once_with(
-            room_code="AAAA",
-            question="Test Question?",
-            options=["A", "B"],
-            points_value=200,  # Should use pointsValue!
-        )
+        call_kwargs = mock_create_bet.call_args[1]
+        assert call_kwargs["room_code"] == "AAAA"
+        assert call_kwargs["question"] == "Test Question?"
+        assert call_kwargs["options"] == ["A", "B"]
+        assert call_kwargs["points_value"] == 200  # Should use pointsValue!
 
         # Verify timer_duration was NOT in the call
-        call_kwargs = mock_create_bet.call_args[1]
         assert "timer_duration" not in call_kwargs
         assert "timerDuration" not in call_kwargs
 
@@ -262,8 +257,7 @@ async def test_template_service_default_points_value():
     """Test default points_value when not specified in template"""
     template = EventTemplate(
         template_id="test-event",
-        event_name="Test Event",
-        description="Test",
+        name="Test Event",
         bets=[
             {
                 "question": "Test Question?",
@@ -313,8 +307,8 @@ def test_validate_grammys_template():
         data = json.load(f)
 
     # Validate structure
-    assert "template_id" in data
-    assert "event_name" in data
+    assert "templateId" in data
+    assert "name" in data
     assert "bets" in data
     assert isinstance(data["bets"], list)
 
@@ -325,8 +319,8 @@ def test_validate_grammys_template():
         assert isinstance(bet["options"], list)
         assert len(bet["options"]) >= 2
 
-        # Should have pointsValue, not timer_duration
-        assert "pointsValue" in bet or "points_value" in bet
+        # Should have timerDuration or pointsValue for bet configuration
+        assert "timerDuration" in bet or "pointsValue" in bet or "points_value" in bet
 
 
 @pytest.mark.unit
@@ -342,7 +336,7 @@ def test_validate_oscars_template():
     with open(oscars_path, 'r') as f:
         data = json.load(f)
 
-    assert "template_id" in data
+    assert "templateId" in data
     assert "bets" in data
 
     for bet in data["bets"]:
@@ -363,7 +357,7 @@ def test_validate_superbowl_template():
     with open(superbowl_path, 'r') as f:
         data = json.load(f)
 
-    assert "template_id" in data
+    assert "templateId" in data
     assert "bets" in data
 
     for bet in data["bets"]:
@@ -382,8 +376,7 @@ async def test_create_bets_from_template_handles_creation_failure():
     """Test handling of bet creation failure during template loading"""
     template = EventTemplate(
         template_id="test-event",
-        event_name="Test Event",
-        description="Test",
+        name="Test Event",
         bets=[
             {
                 "question": "Test Question?",

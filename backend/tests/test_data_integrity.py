@@ -77,10 +77,7 @@ async def test_delete_room_with_many_documents(clean_firestore):
         )
         bets.append(b)
 
-    # Open bets and have users place bets (creates userBet documents)
-    for bet in bets[:3]:
-        await bet_service.open_bet(bet.bet_id)
-
+    # Bets start as OPEN, have users place bets (creates userBet documents)
     for user in users[:5]:
         for bet in bets[:3]:
             try:
@@ -136,14 +133,13 @@ async def test_batch_point_updates_during_resolution(clean_firestore):
         u = await user_service.create_user(room.code, f"Batch{i:02d}", is_admin=False)
         users.append(u)
 
-    # Create and open bet
+    # Create bet (starts as OPEN)
     bet = await bet_service.create_bet(
         room_code=room.code,
         question="Batch test?",
         options=["Winner", "Loser"],
         points_value=100,
     )
-    await bet_service.open_bet(bet.bet_id)
 
     # Half pick "Winner", half pick "Loser"
     for i, user in enumerate(users):
@@ -246,7 +242,6 @@ async def test_user_points_never_go_negative(clean_firestore):
             options=["A", "B"],
             points_value=100,
         )
-        await bet_service.open_bet(bet.bet_id)
 
         try:
             await bet_service.place_user_bet(

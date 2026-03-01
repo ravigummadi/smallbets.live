@@ -264,11 +264,9 @@ describe('useSession', () => {
     it('should handle empty string in sessionStorage', () => {
       sessionStorage.setItem(SESSION_KEY, '');
 
-      expect(() => {
-        renderHook(() => useSession());
-      }).toThrow();
-
-      // TODO: Should recover gracefully once error handling is added
+      // Empty string is falsy, so the hook returns null without parsing
+      const { result } = renderHook(() => useSession());
+      expect(result.current.session).toBeNull();
     });
 
     it('should handle null value stored as string', () => {

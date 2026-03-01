@@ -7,6 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useUserBets } from './useUserBets';
+import { subscribeToUserBets } from '@/services/firestore';
 import type { UserBet } from '@/types';
 
 // Mock firestore service
@@ -14,15 +15,14 @@ vi.mock('@/services/firestore', () => ({
   subscribeToUserBets: vi.fn(),
 }));
 
+const subscribeToUserBetsMock = vi.mocked(subscribeToUserBets);
+
 describe('useUserBets', () => {
   let mockUnsubscribe: ReturnType<typeof vi.fn>;
-  let subscribeToUserBetsMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockUnsubscribe = vi.fn();
-    const { subscribeToUserBets } = require('@/services/firestore');
-    subscribeToUserBetsMock = subscribeToUserBets;
-    subscribeToUserBetsMock.mockReturnValue(mockUnsubscribe);
+    subscribeToUserBetsMock.mockReturnValue(mockUnsubscribe as any);
   });
 
   afterEach(() => {

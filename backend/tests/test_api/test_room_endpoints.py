@@ -32,7 +32,7 @@ def client():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_create_room_success():
+async def test_create_room_success(client):
     """Test successful room creation"""
     mock_room = Room(
         code="AAAA",
@@ -81,7 +81,7 @@ async def test_create_room_success():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_create_room_custom_template():
+async def test_create_room_custom_template(client):
     """Test room creation with custom template (no bets created)"""
     mock_room = Room(
         code="AAAA",
@@ -121,7 +121,7 @@ async def test_create_room_custom_template():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_get_room_success():
+async def test_get_room_success(client):
     """Test getting room details"""
     mock_room = Room(
         code="AAAA",
@@ -144,7 +144,7 @@ async def test_get_room_success():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_get_room_not_found():
+async def test_get_room_not_found(client):
     """Test getting non-existent room"""
     with patch("services.room_service.get_room", return_value=None):
         response = client.get("/api/rooms/ZZZZ")
@@ -155,7 +155,7 @@ async def test_get_room_not_found():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_join_room_success():
+async def test_join_room_success(client):
     """Test joining a room"""
     mock_room = Room(
         code="AAAA",
@@ -192,7 +192,7 @@ async def test_join_room_success():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_get_participants():
+async def test_get_participants(client):
     """Test getting room participants"""
     mock_room = Room(
         code="AAAA",
@@ -221,7 +221,7 @@ async def test_get_participants():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_get_leaderboard():
+async def test_get_leaderboard(client):
     """Test getting room leaderboard"""
     mock_room = Room(
         code="AAAA",
@@ -250,7 +250,7 @@ async def test_get_leaderboard():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_start_room():
+async def test_start_room(client):
     """Test starting a room (host only)"""
     mock_room = Room(
         code="AAAA",
@@ -276,7 +276,7 @@ async def test_start_room():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_finish_room():
+async def test_finish_room(client):
     """Test finishing a room (host only)"""
     mock_room = Room(
         code="AAAA",

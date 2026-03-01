@@ -341,38 +341,6 @@ describe('API Service', () => {
       });
     });
 
-    describe('openBet', () => {
-      it('should open bet successfully', async () => {
-        const mockResponse = {
-          id: 'bet-123',
-          status: 'OPEN',
-        };
-
-        (global.fetch as any).mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await betApi.openBet('ABC123', 'host-123', 'bet-123');
-
-        expect(result).toEqual(mockResponse);
-        expect(result.status).toBe('OPEN');
-      });
-
-      it('should reject invalid state transition', async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-          ok: false,
-          status: 400,
-          statusText: 'Bad Request',
-          json: async () => ({ detail: 'Invalid state transition' }),
-        });
-
-        await expect(
-          betApi.openBet('ABC123', 'host-123', 'bet-123')
-        ).rejects.toThrow('API request failed: 400');
-      });
-    });
-
     describe('lockBet', () => {
       it('should lock bet successfully', async () => {
         const mockResponse = {
