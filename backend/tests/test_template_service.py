@@ -239,16 +239,14 @@ async def test_template_service_uses_points_value_not_timer_duration():
 
         await create_bets_from_template("AAAA", "test-event")
 
-        # Verify create_bet was called with points_value, not timer_duration
+        # Verify create_bet was called with correct parameters
         call_kwargs = mock_create_bet.call_args[1]
         assert call_kwargs["room_code"] == "AAAA"
         assert call_kwargs["question"] == "Test Question?"
         assert call_kwargs["options"] == ["A", "B"]
         assert call_kwargs["points_value"] == 200  # Should use pointsValue!
-
-        # Verify timer_duration was NOT in the call
-        assert "timer_duration" not in call_kwargs
-        assert "timerDuration" not in call_kwargs
+        assert call_kwargs["timer_duration"] == 60  # Timer duration is now passed through
+        assert call_kwargs["created_from"] == "template"
 
 
 @pytest.mark.unit

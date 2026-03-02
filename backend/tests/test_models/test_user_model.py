@@ -52,14 +52,22 @@ def test_user_default_values():
 
 @pytest.mark.unit
 def test_user_room_code_validation():
-    """Test room code validation (must be 4 chars)"""
-    # Valid
+    """Test room code validation (must be 4-6 chars)"""
+    # Valid 4-char (legacy event rooms)
     user = User(
         user_id="test-user",
         room_code="AAAA",
         nickname="TestUser",
     )
     assert user.room_code == "AAAA"
+
+    # Valid 6-char (tournament/match rooms)
+    user = User(
+        user_id="test-user",
+        room_code="AAAAAA",
+        nickname="TestUser",
+    )
+    assert user.room_code == "AAAAAA"
 
     # Invalid: too short
     with pytest.raises(ValidationError):
@@ -73,7 +81,7 @@ def test_user_room_code_validation():
     with pytest.raises(ValidationError):
         User(
             user_id="test-user",
-            room_code="AAAAA",
+            room_code="AAAAAAA",  # 7 chars
             nickname="TestUser",
         )
 

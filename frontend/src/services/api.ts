@@ -7,6 +7,9 @@
 import type {
   CreateRoomRequest,
   CreateRoomResponse,
+  CreateMatchRoomRequest,
+  CreateMatchRoomResponse,
+  CreateBetRequest,
   JoinRoomRequest,
   JoinRoomResponse,
   PlaceBetRequest,
@@ -65,6 +68,25 @@ export const roomApi = {
     });
   },
 
+  async createTournament(request: CreateRoomRequest): Promise<CreateRoomResponse> {
+    return fetchApi('/api/tournaments', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  async createMatchRoom(
+    tournamentCode: string,
+    hostId: string,
+    request: CreateMatchRoomRequest,
+  ): Promise<CreateMatchRoomResponse> {
+    return fetchApi(`/api/rooms/${tournamentCode}/matches`, {
+      method: 'POST',
+      headers: { 'X-Host-Id': hostId },
+      body: JSON.stringify(request),
+    });
+  },
+
   async getRoom(code: string): Promise<Room> {
     return fetchApi(`/api/rooms/${code}`);
   },
@@ -82,6 +104,10 @@ export const roomApi = {
 
   async getLeaderboard(code: string): Promise<{ leaderboard: LeaderboardEntry[] }> {
     return fetchApi(`/api/rooms/${code}/leaderboard`);
+  },
+
+  async getMatchRooms(tournamentCode: string): Promise<{ matches: Room[]; count: number }> {
+    return fetchApi(`/api/rooms/${tournamentCode}/matches`);
   },
 
   async startRoom(code: string, hostId: string): Promise<{ status: string }> {
@@ -104,7 +130,7 @@ export const betApi = {
   async createBet(
     roomCode: string,
     hostId: string,
-    bet: { question: string; options: string[]; timerDuration?: number }
+    bet: CreateBetRequest
   ): Promise<Bet> {
     return fetchApi(`/api/rooms/${roomCode}/bets`, {
       method: 'POST',
@@ -131,6 +157,17 @@ export const betApi = {
       method: 'POST',
       headers: { 'X-Host-Id': hostId },
       body: JSON.stringify({ winning_option: winningOption }),
+    });
+  },
+
+  async undoResolveBet(
+    roomCode: string,
+    hostId: string,
+    betId: string
+  ): Promise<Bet> {
+    return fetchApi(`/api/rooms/${roomCode}/bets/${betId}/undo`, {
+      method: 'POST',
+      headers: { 'X-Host-Id': hostId },
     });
   },
 

@@ -88,16 +88,16 @@ describe('HomePage', () => {
       expect(input.value).toBe('BLUE');
     });
 
-    it('should limit input to 4 characters', async () => {
+    it('should limit input to 6 characters', async () => {
       const user = userEvent.setup();
       render(<HomePage />);
 
       const input = screen.getByPlaceholderText(/enter room code/i) as HTMLInputElement;
 
-      await user.type(input, 'BLUE42');
+      await user.type(input, 'BLUE42X');
 
-      expect(input.value).toBe('BLUE');
-      expect(input.maxLength).toBe(4);
+      expect(input.value).toBe('BLUE42');
+      expect(input.maxLength).toBe(6);
     });
 
     it('should disable submit button when room code is empty', () => {
@@ -263,7 +263,7 @@ describe('HomePage', () => {
 
       expect(input).toHaveAttribute(
         'placeholder',
-        expect.stringContaining('BLUE42')
+        expect.stringContaining('e.g.')
       );
     });
   });

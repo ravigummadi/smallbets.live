@@ -93,7 +93,7 @@ describe('useRoom', () => {
       });
     });
 
-    it('should handle room not found (null callback)', async () => {
+    it('should handle room not found (null callback) after grace period', async () => {
       subscribeToRoomMock.mockImplementation((code, callback) => {
         setTimeout(() => callback(null), 0);
         return mockUnsubscribe;
@@ -101,10 +101,16 @@ describe('useRoom', () => {
 
       const { result } = renderHook(() => useRoom('INVALID'));
 
+      // Should still be loading during the 2s grace period
+      await waitFor(() => {
+        expect(result.current.loading).toBe(true);
+      });
+
+      // After 2s grace period, should show not found
       await waitFor(() => {
         expect(result.current.room).toBeNull();
         expect(result.current.loading).toBe(false);
-      });
+      }, { timeout: 3000 });
     });
 
     it('should unsubscribe on unmount', () => {

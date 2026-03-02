@@ -3,14 +3,22 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { roomApi } from '@/services/api';
 import { useSession } from '@/hooks/useSession';
 
+interface LocationState {
+  fromTournament?: string;
+  parentUserId?: string;
+  nickname?: string;
+}
+
 export default function JoinRoomPage() {
   const { code } = useParams<{ code?: string }>();
+  const location = useLocation();
+  const locationState = location.state as LocationState | null;
   const [roomCode, setRoomCode] = useState(code?.toUpperCase() || '');
-  const [nickname, setNickname] = useState('');
+  const [nickname, setNickname] = useState(locationState?.nickname || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -30,8 +38,8 @@ export default function JoinRoomPage() {
       return;
     }
 
-    if (roomCode.length !== 4) {
-      setError('Room code must be 4 characters');
+    if (roomCode.length < 4 || roomCode.length > 6) {
+      setError('Room code must be 4-6 characters');
       return;
     }
 
@@ -39,16 +47,26 @@ export default function JoinRoomPage() {
     setError(null);
 
     try {
-      // Join room via API
-      const response = await roomApi.joinRoom(roomCode, {
+      // Join room via API, passing parent context if navigating from tournament
+      const joinRequest: { nickname: string; parent_user_id?: string } = {
         nickname: nickname.trim(),
-      });
+      };
+      if (locationState?.parentUserId) {
+        joinRequest.parent_user_id = locationState.parentUserId;
+      }
 
-      // Save session
-      saveSession({
+      const response = await roomApi.joinRoom(roomCode, joinRequest);
+
+      // Save session - include hostId if the backend recognized us as host
+      const sessionData: { userId: string; roomCode: string; hostId?: string; nickname?: string } = {
         userId: response.user_id,
         roomCode: roomCode,
-      });
+        nickname: nickname.trim(),
+      };
+      if (response.host_id) {
+        sessionData.hostId = response.host_id;
+      }
+      saveSession(sessionData);
 
       // Navigate to room
       navigate(`/room/${roomCode}`);
@@ -71,10 +89,10 @@ export default function JoinRoomPage() {
           <h4 className="mb-md">Room Code</h4>
           <input
             type="text"
-            placeholder="Enter 4-character code"
+            placeholder="Enter room code"
             value={roomCode}
             onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-            maxLength={4}
+            maxLength={6}
             className="mb-md"
             autoFocus={!code}
           />
@@ -105,7 +123,7 @@ export default function JoinRoomPage() {
         <button
           type="submit"
           className="btn btn-primary btn-full btn-lg"
-          disabled={loading || !nickname.trim() || roomCode.length !== 4}
+          disabled={loading || !nickname.trim() || roomCode.length < 4}
         >
           {loading ? 'Joining Room...' : 'Join Room'}
         </button>

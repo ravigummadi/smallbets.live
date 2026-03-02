@@ -11,7 +11,7 @@ class User(BaseModel):
     """
 
     user_id: str = Field(..., description="Auto-generated user ID")
-    room_code: str = Field(..., min_length=4, max_length=4)
+    room_code: str = Field(..., min_length=4, max_length=6)
     nickname: str = Field(..., min_length=1, max_length=20, description="Display name")
     points: int = Field(default=1000, description="Current point balance")
     is_admin: bool = Field(default=False, description="Whether user is room admin")

@@ -23,7 +23,7 @@ import game_logic
 app = FastAPI(
     title="SmallBets.live API",
     description="Real-time micro-betting platform API",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 # CORS middleware
@@ -59,12 +59,33 @@ class CreateRoomResponse(BaseModel):
     user_id: str
 
 
+class CreateTournamentRequest(BaseModel):
+    event_template: str
+    event_name: Optional[str] = None
+    host_nickname: str
+
+
+class CreateMatchRoomRequest(BaseModel):
+    team1: str
+    team2: str
+    match_date_time: str
+    venue: Optional[str] = None
+
+
+class CreateMatchRoomResponse(BaseModel):
+    room_code: str
+    match_room_code: str
+    parent_room_code: str
+
+
 class JoinRoomRequest(BaseModel):
     nickname: str
+    parent_user_id: Optional[str] = None
 
 
 class JoinRoomResponse(BaseModel):
     user_id: str
+    host_id: Optional[str] = None
     room: dict
     user: dict
 
@@ -91,22 +112,22 @@ class ToggleAutomationRequest(BaseModel):
     enabled: bool
 
 
+class CreateBetRequest(BaseModel):
+    question: str
+    options: List[str]
+    pointsValue: int = 100
+    betType: str = "in-game"
+    createdFrom: str = "custom"
+    templateId: Optional[str] = None
+    timerDuration: int = 60
+
+
 # ============================================================================
 # Dependency Injection
 # ============================================================================
 
 async def get_room_or_404(code: str) -> Room:
-    """Dependency: Get room or raise 404
-
-    Args:
-        code: Room code from path parameter
-
-    Returns:
-        Room object
-
-    Raises:
-        HTTPException: 404 if room not found
-    """
+    """Dependency: Get room or raise 404"""
     room = await room_service.get_room(code)
     if not room:
         raise HTTPException(status_code=404, detail=f"Room not found: {code}")
@@ -114,17 +135,7 @@ async def get_room_or_404(code: str) -> Room:
 
 
 async def get_user_or_404(user_id: str) -> User:
-    """Dependency: Get user or raise 404
-
-    Args:
-        user_id: User ID from path parameter or header
-
-    Returns:
-        User object
-
-    Raises:
-        HTTPException: 404 if user not found
-    """
+    """Dependency: Get user or raise 404"""
     user = await user_service.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail=f"User not found: {user_id}")
@@ -135,18 +146,7 @@ async def require_host(
     code: str,
     x_host_id: Annotated[str, Header(alias="X-Host-Id")],
 ) -> Room:
-    """Dependency: Verify user is room host
-
-    Args:
-        code: Room code from path parameter
-        x_host_id: Host ID from X-Host-Id header
-
-    Returns:
-        Room object
-
-    Raises:
-        HTTPException: 403 if not room host, 404 if room not found
-    """
+    """Dependency: Verify user is room host"""
     room = await get_room_or_404(code)
 
     if room.host_id != x_host_id:
@@ -167,31 +167,23 @@ HostRoomDep = Annotated[Room, Depends(require_host)]
 
 @app.post("/api/rooms", response_model=CreateRoomResponse)
 async def create_room(request: CreateRoomRequest):
-    """Create a new room
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
+    """Create a new room"""
     try:
-        # Create room (I/O - delegates to service)
         room = await room_service.create_room(
             event_template=request.event_template,
             event_name=request.event_name,
-            host_id="",  # Will be set after creating host user
+            host_id="",
         )
 
-        # Create host user (I/O - delegates to service)
         host_user = await user_service.create_user(
             room_code=room.code,
             nickname=request.host_nickname,
             is_admin=True,
         )
 
-        # Update room with host_id (I/O)
         room = room.model_copy(update={"host_id": host_user.user_id})
         await room_service.update_room(room)
 
-        # Load event template and create bets (I/O)
-        # Skip for "custom" template (host will create bets manually)
         if request.event_template != "custom":
             try:
                 await template_service.create_bets_from_template(
@@ -199,7 +191,6 @@ async def create_room(request: CreateRoomRequest):
                     template_id=request.event_template,
                 )
             except ValueError as e:
-                # Template not found - log but don't fail room creation
                 print(f"Warning: Could not load template {request.event_template}: {e}")
 
         return CreateRoomResponse(
@@ -214,12 +205,97 @@ async def create_room(request: CreateRoomRequest):
         raise HTTPException(status_code=500, detail=f"Failed to create room: {str(e)}")
 
 
+@app.post("/api/tournaments", response_model=CreateRoomResponse)
+async def create_tournament(request: CreateTournamentRequest):
+    """Create a new tournament room (6-char code, no expiry)"""
+    try:
+        room = await room_service.create_tournament_room(
+            event_template=request.event_template,
+            event_name=request.event_name,
+            host_id="",
+        )
+
+        host_user = await user_service.create_user(
+            room_code=room.code,
+            nickname=request.host_nickname,
+            is_admin=True,
+        )
+
+        room = room.model_copy(update={
+            "host_id": host_user.user_id,
+            "participants": [host_user.user_id],
+        })
+        await room_service.update_room(room)
+
+        # Create RoomUser for host
+        await room_service.create_room_user(
+            room_code=room.code,
+            user_id=host_user.user_id,
+            nickname=request.host_nickname,
+            is_host=True,
+        )
+
+        # Load tournament template bets
+        if request.event_template != "custom":
+            try:
+                await template_service.create_bets_from_template(
+                    room_code=room.code,
+                    template_id=request.event_template,
+                    bet_type="tournament",
+                    timer_duration=120,
+                )
+            except ValueError as e:
+                print(f"Warning: Could not load template {request.event_template}: {e}")
+
+        return CreateRoomResponse(
+            room_code=room.code,
+            host_id=host_user.user_id,
+            user_id=host_user.user_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create tournament: {str(e)}")
+
+
+@app.post("/api/rooms/{code}/matches", response_model=CreateMatchRoomResponse)
+async def create_match_room(code: str, room: HostRoomDep, request: CreateMatchRoomRequest):
+    """Create a match room linked to a tournament"""
+    try:
+        if not room.is_tournament():
+            raise HTTPException(status_code=400, detail="Can only create match rooms from tournament rooms")
+
+        match_room = await room_service.create_match_room(
+            parent_room_code=code,
+            host_id=room.host_id,
+            team1=request.team1,
+            team2=request.team2,
+            match_date_time=request.match_date_time,
+            venue=request.venue,
+        )
+
+        # Note: Don't pre-create RoomUser for host here.
+        # The host will join via join_room with parent_user_id,
+        # which will create their RoomUser and set them as admin.
+
+        return CreateMatchRoomResponse(
+            room_code=match_room.code,
+            match_room_code=match_room.code,
+            parent_room_code=code,
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create match room: {str(e)}")
+
+
 @app.get("/api/rooms/{code}")
 async def get_room(room: RoomDep):
-    """Get room details
-
-    Imperative Shell - handles HTTP, uses dependency injection
-    """
+    """Get room details"""
     return room.to_dict()
 
 
@@ -227,18 +303,75 @@ async def get_room(room: RoomDep):
 async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
     """Join a room
 
-    Imperative Shell - handles HTTP, delegates to services
+    For tournament/match rooms, pass parent_user_id to preserve identity.
+    If the parent_user_id is the host of the parent tournament, the joining
+    user will be set as admin in this room.
     """
     try:
-        # Create user (I/O - delegates to service)
+        # Determine if this user should be admin based on parent room context
+        is_admin = False
+        if request.parent_user_id and room.room_type in ("tournament", "match"):
+            # Check if user was host in parent tournament
+            parent_code = room.parent_room_code if room.room_type == "match" else None
+            if parent_code:
+                parent_room = await room_service.get_room(parent_code)
+                if parent_room and parent_room.host_id == request.parent_user_id:
+                    is_admin = True
+            # Also check if user is host of this room directly (tournament join)
+            if room.host_id == request.parent_user_id:
+                is_admin = True
+
+        # Check if a user with this nickname already exists in the room
+        # to prevent duplicate participants on re-join
+        existing_user = await user_service.find_user_by_nickname(code, request.nickname)
+        if existing_user:
+            # Return existing user — update admin status if needed
+            if is_admin and not existing_user.is_admin:
+                existing_user = existing_user.model_copy(update={"is_admin": True})
+                await user_service.update_user(existing_user)
+
+            # Update room host_id if this returning user is the host
+            if is_admin and room.host_id != existing_user.user_id:
+                updated_room = room.model_copy(update={"host_id": existing_user.user_id})
+                await room_service.update_room(updated_room)
+                room = updated_room
+
+            host_id = existing_user.user_id if existing_user.is_admin else None
+
+            return JoinRoomResponse(
+                user_id=existing_user.user_id,
+                host_id=host_id,
+                room=room.to_dict(),
+                user=existing_user.to_dict(),
+            )
+
         user = await user_service.create_user(
             room_code=code,
             nickname=request.nickname,
-            is_admin=False,
+            is_admin=is_admin,
         )
+
+        # For tournament/match rooms, also create RoomUser and add to participants
+        if room.room_type in ("tournament", "match"):
+            await room_service.create_room_user(
+                room_code=code,
+                user_id=user.user_id,
+                nickname=request.nickname,
+                is_host=is_admin,
+            )
+            await room_service.add_participant(code, user.user_id)
+
+            # If this user is the host, update the room's host_id to the new user id
+            if is_admin:
+                updated_room = room.model_copy(update={"host_id": user.user_id})
+                await room_service.update_room(updated_room)
+                room = updated_room
+
+        host_id = user.user_id if is_admin else None
 
         return JoinRoomResponse(
             user_id=user.user_id,
+            host_id=host_id,
             room=room.to_dict(),
             user=user.to_dict(),
         )
@@ -251,11 +384,7 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
 
 @app.get("/api/rooms/{code}/participants")
 async def get_participants(code: str, room: RoomDep):
-    """Get all participants in a room
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
-    # Get participants (I/O - delegates to service)
+    """Get all participants in a room"""
     users = await room_service.get_room_participants(code)
 
     return {
@@ -266,38 +395,44 @@ async def get_participants(code: str, room: RoomDep):
 
 @app.get("/api/rooms/{code}/leaderboard")
 async def get_leaderboard(code: str, room: RoomDep):
-    """Get room leaderboard
+    """Get room leaderboard"""
+    if room.is_tournament():
+        leaderboard = await get_tournament_aggregated_leaderboard(code)
+        return {"leaderboard": leaderboard}
 
-    Imperative Shell - handles HTTP, delegates to services
-    """
-    # Calculate leaderboard (I/O + pure calculation via service)
+    room_users = await room_service.get_room_users(code)
+    if room_users:
+        leaderboard = game_logic.calculate_room_user_leaderboard(room_users)
+        return {"leaderboard": leaderboard}
+
     leaderboard = await user_service.calculate_and_get_leaderboard(code)
-
     return {"leaderboard": leaderboard}
+
+
+@app.get("/api/rooms/{code}/matches")
+async def get_match_rooms(code: str, room: RoomDep):
+    """Get all match rooms for a tournament"""
+    if not room.is_tournament():
+        raise HTTPException(status_code=400, detail="Not a tournament room")
+
+    child_rooms = await room_service.get_child_rooms(code)
+    return {
+        "matches": [r.to_dict() for r in child_rooms],
+        "count": len(child_rooms),
+    }
 
 
 @app.post("/api/rooms/{code}/start")
 async def start_room(code: str, room: HostRoomDep):
-    """Start the event (admin only)
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
-    # Update room status (I/O)
+    """Start the event (admin only)"""
     await room_service.set_room_status(code, "active")
-
     return {"status": "active"}
 
 
 @app.post("/api/rooms/{code}/finish")
 async def finish_room(code: str, room: HostRoomDep):
-    """Finish the event (admin only)
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
-    # Update room status (I/O)
+    """Finish the event (admin only)"""
     await room_service.set_room_status(code, "finished")
-
-    # Get final leaderboard
     leaderboard = await user_service.calculate_and_get_leaderboard(code)
 
     return {
@@ -311,22 +446,29 @@ async def finish_room(code: str, room: HostRoomDep):
 # ============================================================================
 
 @app.post("/api/rooms/{code}/bets")
-async def create_bet(code: str, room: HostRoomDep, request: dict):
-    """Create a new bet (admin only)
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
+async def create_bet(code: str, room: HostRoomDep, request: CreateBetRequest):
+    """Create a new bet (admin only)"""
     try:
-        # Create bet (I/O - delegates to service)
+        existing_bets = await bet_service.get_bets_in_room(code)
+        is_valid, error = game_logic.validate_bet_count(len(existing_bets), room.room_type)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error)
+
         bet = await bet_service.create_bet(
             room_code=code,
-            question=request["question"],
-            options=request["options"],
-            points_value=request.get("pointsValue", 100),
+            question=request.question,
+            options=request.options,
+            points_value=request.pointsValue,
+            bet_type=request.betType,
+            created_from=request.createdFrom,
+            template_id=request.templateId,
+            timer_duration=request.timerDuration,
         )
 
         return bet.to_dict()
 
+    except HTTPException:
+        raise
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Missing field: {e}")
     except Exception as e:
@@ -335,14 +477,9 @@ async def create_bet(code: str, room: HostRoomDep, request: dict):
 
 @app.post("/api/rooms/{code}/bets/lock")
 async def lock_bet(code: str, room: HostRoomDep, request: LockBetRequest):
-    """Lock a bet (close betting) (admin only)
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
+    """Lock a bet (close betting) (admin only)"""
     try:
-        # Lock bet (I/O - delegates to service)
         bet = await bet_service.lock_bet(request.bet_id)
-
         return bet.to_dict()
 
     except ValueError as e:
@@ -358,15 +495,9 @@ async def resolve_bet(
     room: HostRoomDep,
     request: ResolveBetRequest,
 ):
-    """Resolve a bet (admin only)
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
+    """Resolve a bet (admin only)"""
     try:
-        # Resolve bet and distribute points (I/O - delegates to service)
         await bet_service.resolve_bet(bet_id, request.winning_option)
-
-        # Get updated leaderboard
         leaderboard = await user_service.calculate_and_get_leaderboard(code)
 
         return {
@@ -380,6 +511,23 @@ async def resolve_bet(
         raise HTTPException(status_code=500, detail=f"Failed to resolve bet: {str(e)}")
 
 
+@app.post("/api/rooms/{code}/bets/{bet_id}/undo")
+async def undo_resolve_bet(
+    code: str,
+    bet_id: str,
+    room: HostRoomDep,
+):
+    """Undo a bet resolution within 10-second window (admin only)"""
+    try:
+        undone_bet = await bet_service.undo_resolve_bet(bet_id)
+        return undone_bet.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to undo bet resolution: {str(e)}")
+
+
 @app.post("/api/rooms/{code}/bets/place")
 async def place_bet(
     code: str,
@@ -387,12 +535,8 @@ async def place_bet(
     request: PlaceBetRequest,
     x_user_id: Annotated[str, Header(alias="X-User-Id")],
 ):
-    """Place a bet
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
+    """Place a bet"""
     try:
-        # Place bet (I/O + validation - delegates to service)
         user_bet = await bet_service.place_user_bet(
             user_id=x_user_id,
             bet_id=request.bet_id,
@@ -409,11 +553,7 @@ async def place_bet(
 
 @app.get("/api/rooms/{code}/bets")
 async def get_bets(code: str, room: RoomDep):
-    """Get all bets in a room
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
-    # Get bets (I/O - delegates to service)
+    """Get all bets in a room"""
     bets = await bet_service.get_bets_in_room(code)
 
     return {
@@ -424,11 +564,7 @@ async def get_bets(code: str, room: RoomDep):
 
 @app.get("/api/rooms/{code}/bets/{bet_id}")
 async def get_bet(code: str, bet_id: str, room: RoomDep):
-    """Get bet details
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
-    # Get bet (I/O - delegates to service)
+    """Get bet details"""
     bet = await bet_service.get_bet(bet_id)
 
     if not bet:
@@ -441,6 +577,26 @@ async def get_bet(code: str, bet_id: str, room: RoomDep):
 
 
 # ============================================================================
+# Tournament Aggregation
+# ============================================================================
+
+async def get_tournament_aggregated_leaderboard(tournament_code: str) -> list:
+    """Aggregate leaderboard across tournament + all match rooms"""
+    tournament_room_users = await room_service.get_room_users(tournament_code)
+    child_rooms = await room_service.get_child_rooms(tournament_code)
+
+    match_room_users_by_room = {}
+    for child_room in child_rooms:
+        match_users = await room_service.get_room_users(child_room.code)
+        match_room_users_by_room[child_room.code] = match_users
+
+    return game_logic.aggregate_tournament_leaderboard(
+        tournament_room_users,
+        match_room_users_by_room,
+    )
+
+
+# ============================================================================
 # Transcript & Automation Endpoints
 # ============================================================================
 
@@ -450,19 +606,14 @@ async def ingest_transcript(
     room: RoomDep,
     request: TranscriptRequest,
 ):
-    """Ingest transcript entry and trigger automation
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
+    """Ingest transcript entry and trigger automation"""
     try:
-        # Create transcript entry (I/O - delegates to service)
         entry = await transcript_service.create_transcript_entry(
             room_code=code,
             text=request.text,
             source=request.source,
         )
 
-        # Process for automation (I/O + pure logic via service)
         automation_result = await automation_service.process_transcript_for_automation(
             room_code=code,
             transcript_text=request.text,
@@ -481,11 +632,7 @@ async def ingest_transcript(
 
 @app.get("/api/rooms/{code}/transcript")
 async def get_transcript(code: str, room: RoomDep, limit: int = 100):
-    """Get recent transcript entries
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
-    # Get entries (I/O - delegates to service)
+    """Get recent transcript entries"""
     entries = await transcript_service.get_transcript_entries(code, limit)
 
     return {
@@ -500,12 +647,8 @@ async def toggle_automation(
     room: HostRoomDep,
     request: ToggleAutomationRequest,
 ):
-    """Toggle automation on/off (admin only)
-
-    Imperative Shell - handles HTTP, delegates to services
-    """
+    """Toggle automation on/off (admin only)"""
     try:
-        # Toggle automation (I/O - delegates to service)
         await automation_service.toggle_automation(code, request.enabled)
 
         return {
@@ -534,7 +677,7 @@ async def root():
     """Root endpoint"""
     return {
         "service": "SmallBets.live API",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "docs": "/docs",
     }
 

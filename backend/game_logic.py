@@ -9,14 +9,74 @@ CRITICAL: This module is PURE FUNCTIONAL CORE
 All betting calculations, scoring rules, and game state transitions live here.
 """
 
+import random
 from typing import Dict, List, Optional
 from models.bet import Bet, BetStatus
 from models.user import User
 from models.user_bet import UserBet
+from models.room_user import RoomUser
 
 
 # Constants
 INITIAL_POINTS = 1000
+MAX_BETS_PER_MATCH = 50
+MAX_BETS_PER_TOURNAMENT = 20
+
+# Room code alphabet (no O/0/I/1/L)
+ROOM_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"  # 30 chars
+
+
+def generate_room_code_v2() -> str:
+    """Generate a 6-character room code with checksum
+
+    Pure function (uses random, but deterministic given seed)
+
+    Format: XXXXXY where Y = checksum (sum of first 5 char indices mod 30)
+    Collision space: ~24.3M codes
+    """
+    alphabet = ROOM_CODE_ALPHABET
+    first_5 = ''.join(random.choices(alphabet, k=5))
+    checksum = sum(alphabet.index(c) for c in first_5) % 30
+    return first_5 + alphabet[checksum]
+
+
+def validate_room_code_v2(code: str) -> tuple[bool, Optional[str]]:
+    """Validate a 6-character room code with checksum
+
+    Pure function
+
+    Args:
+        code: Room code to validate
+
+    Returns:
+        (is_valid, error_message)
+    """
+    alphabet = ROOM_CODE_ALPHABET
+
+    if len(code) != 6:
+        return False, "Room code must be exactly 6 characters"
+
+    if not code.isalnum():
+        return False, "Room code must contain only letters and numbers"
+
+    if not code.isupper():
+        return False, "Room code must be uppercase"
+
+    # Check all characters are in the valid alphabet
+    for char in code:
+        if char not in alphabet:
+            return False, f"Room code contains invalid character: {char}"
+
+    # Validate checksum
+    first_5 = code[:5]
+    expected_checksum = sum(alphabet.index(c) for c in first_5) % 30
+    actual_checksum_char = code[5]
+    expected_checksum_char = alphabet[expected_checksum]
+
+    if actual_checksum_char != expected_checksum_char:
+        return False, "Invalid room code (checksum failed)"
+
+    return True, None
 
 
 def calculate_scores(
@@ -194,8 +254,94 @@ def calculate_leaderboard(users: Dict[str, User]) -> List[Dict[str, any]]:
     return leaderboard
 
 
+def calculate_room_user_leaderboard(room_users: List[RoomUser]) -> List[Dict[str, any]]:
+    """Calculate leaderboard from RoomUser records (for tournament rooms)
+
+    Pure function
+
+    Args:
+        room_users: List of RoomUser objects for a single room
+
+    Returns:
+        Sorted leaderboard data
+    """
+    sorted_users = sorted(
+        room_users,
+        key=lambda u: (-u.points, u.joined_at),
+    )
+
+    leaderboard = []
+    for rank, ru in enumerate(sorted_users, start=1):
+        leaderboard.append({
+            "userId": ru.user_id,
+            "nickname": ru.nickname,
+            "points": ru.points,
+            "rank": rank,
+            "isHost": ru.is_host,
+        })
+
+    return leaderboard
+
+
+def aggregate_tournament_leaderboard(
+    tournament_room_users: List[RoomUser],
+    match_room_users_by_room: Dict[str, List[RoomUser]],
+) -> List[Dict[str, any]]:
+    """Aggregate tournament leaderboard across tournament + all match rooms
+
+    Pure function
+
+    Args:
+        tournament_room_users: RoomUser records from the tournament room
+        match_room_users_by_room: Dict of roomCode -> list of RoomUser records for each match room
+
+    Returns:
+        Sorted leaderboard with aggregated points
+    """
+    # Start with tournament room points
+    user_points: Dict[str, int] = {}
+    user_nicknames: Dict[str, str] = {}
+    user_join_times: Dict[str, any] = {}
+    user_is_host: Dict[str, bool] = {}
+
+    for ru in tournament_room_users:
+        user_points[ru.user_id] = ru.points
+        user_nicknames[ru.user_id] = ru.nickname
+        user_join_times[ru.user_id] = ru.joined_at
+        user_is_host[ru.user_id] = ru.is_host
+
+    # Add points from each match room
+    for room_code, match_users in match_room_users_by_room.items():
+        for ru in match_users:
+            if ru.user_id in user_points:
+                user_points[ru.user_id] += ru.points
+            else:
+                user_points[ru.user_id] = ru.points
+                user_nicknames[ru.user_id] = ru.nickname
+                user_join_times[ru.user_id] = ru.joined_at
+                user_is_host[ru.user_id] = False
+
+    # Sort by points desc, join time asc
+    sorted_user_ids = sorted(
+        user_points.keys(),
+        key=lambda uid: (-user_points[uid], user_join_times.get(uid, 0)),
+    )
+
+    leaderboard = []
+    for rank, uid in enumerate(sorted_user_ids, start=1):
+        leaderboard.append({
+            "userId": uid,
+            "nickname": user_nicknames.get(uid, "Unknown"),
+            "points": user_points[uid],
+            "rank": rank,
+            "isHost": user_is_host.get(uid, False),
+        })
+
+    return leaderboard
+
+
 def validate_room_code(code: str) -> tuple[bool, Optional[str]]:
-    """Validate room code format
+    """Validate room code format (supports both 4-char legacy and 6-char new format)
 
     Pure function
 
@@ -205,8 +351,11 @@ def validate_room_code(code: str) -> tuple[bool, Optional[str]]:
     Returns:
         (is_valid, error_message)
     """
+    if len(code) == 6:
+        return validate_room_code_v2(code)
+
     if len(code) != 4:
-        return False, "Room code must be exactly 4 characters"
+        return False, "Room code must be 4 or 6 characters"
 
     if not code.isalnum():
         return False, "Room code must contain only letters and numbers"
@@ -241,5 +390,27 @@ def validate_nickname(nickname: str) -> tuple[bool, Optional[str]]:
 
     if len(nickname) < 1:
         return False, "Nickname must be at least 1 character"
+
+    return True, None
+
+
+def validate_bet_count(current_bet_count: int, room_type: str) -> tuple[bool, Optional[str]]:
+    """Validate if another bet can be created in a room
+
+    Pure function
+
+    Args:
+        current_bet_count: Number of existing bets in the room
+        room_type: "tournament", "match", or "event"
+
+    Returns:
+        (is_valid, error_message)
+    """
+    if room_type == "match":
+        if current_bet_count >= MAX_BETS_PER_MATCH:
+            return False, f"Maximum {MAX_BETS_PER_MATCH} bets per match room"
+    elif room_type == "tournament":
+        if current_bet_count >= MAX_BETS_PER_TOURNAMENT:
+            return False, f"Maximum {MAX_BETS_PER_TOURNAMENT} bets per tournament room"
 
     return True, None

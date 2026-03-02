@@ -1,0 +1,71 @@
+{
+  "templateId": "ipl-2026",
+  "name": "IPL 2026",
+  "bets": [
+    {
+      "question": "Who will win IPL 2026?",
+      "options": [
+        "Mumbai Indians",
+        "Chennai Super Kings",
+        "Royal Challengers Bengaluru",
+        "Kolkata Knight Riders",
+        "Delhi Capitals",
+        "Rajasthan Royals",
+        "Punjab Kings",
+        "Sunrisers Hyderabad",
+        "Gujarat Titans",
+        "Lucknow Super Giants"
+      ],
+      "pointsValue": 100,
+      "timerSeconds": 120
+    },
+    {
+      "question": "Orange Cap (Most Runs)?",
+      "options": [
+        "Virat Kohli",
+        "Shubman Gill",
+        "Ruturaj Gaikwad",
+        "Travis Head",
+        "Suryakumar Yadav"
+      ],
+      "pointsValue": 100,
+      "timerSeconds": 120
+    },
+    {
+      "question": "Purple Cap (Most Wickets)?",
+      "options": [
+        "Jasprit Bumrah",
+        "Rashid Khan",
+        "Yuzvendra Chahal",
+        "Mohammed Siraj",
+        "Kagiso Rabada"
+      ],
+      "pointsValue": 100,
+      "timerSeconds": 120
+    },
+    {
+      "question": "Most Sixes in Tournament?",
+      "options": [
+        "Suryakumar Yadav",
+        "Heinrich Klaasen",
+        "Abhishek Sharma",
+        "Rishabh Pant",
+        "Nicholas Pooran"
+      ],
+      "pointsValue": 100,
+      "timerSeconds": 120
+    },
+    {
+      "question": "Best Bowling Figures in a Match?",
+      "options": [
+        "Jasprit Bumrah",
+        "Rashid Khan",
+        "Kuldeep Yadav",
+        "Mohammed Shami",
+        "Trent Boult"
+      ],
+      "pointsValue": 100,
+      "timerSeconds": 120
+    }
+  ]
+}

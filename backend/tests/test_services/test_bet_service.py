@@ -195,9 +195,26 @@ async def test_resolve_bet_does_not_double_deduct_points():
     mock_db = MagicMock()
     mock_batch = MagicMock()
     mock_db.batch.return_value = mock_batch
-    mock_collection = MagicMock()
-    mock_collection.document.return_value = MagicMock()
-    mock_db.collection.return_value = mock_collection
+
+    # Set up collection mocks: roomUsers docs should not exist (legacy room)
+    mock_room_user_doc = MagicMock()
+    mock_room_user_doc.exists = False
+
+    mock_room_user_ref = MagicMock()
+    mock_room_user_ref.get.return_value = mock_room_user_doc
+
+    mock_room_users_col = MagicMock()
+    mock_room_users_col.document.return_value = mock_room_user_ref
+
+    mock_other_col = MagicMock()
+    mock_other_col.document.return_value = MagicMock()
+
+    def collection_side_effect(name):
+        if name == "roomUsers":
+            return mock_room_users_col
+        return mock_other_col
+
+    mock_db.collection.side_effect = collection_side_effect
 
     with patch("services.bet_service.get_db", return_value=mock_db), \
          patch("services.bet_service.get_bet", return_value=bet), \

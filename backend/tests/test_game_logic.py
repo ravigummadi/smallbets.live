@@ -441,11 +441,11 @@ def test_validate_room_code_wrong_length():
     """Test room code wrong length"""
     is_valid, error = validate_room_code("AAA")  # Too short
     assert is_valid is False
-    assert "4 characters" in error
+    assert "4 or 6" in error
 
-    is_valid, error = validate_room_code("AAAAA")  # Too long
+    is_valid, error = validate_room_code("AAAAA")  # 5 chars invalid
     assert is_valid is False
-    assert "4 characters" in error
+    assert "4 or 6" in error
 
 
 @pytest.mark.unit

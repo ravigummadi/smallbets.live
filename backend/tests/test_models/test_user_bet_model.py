@@ -52,12 +52,21 @@ def test_user_bet_room_code_validation():
             selected_option="Option A",
         )
 
+    # Valid: 6-char room code (tournament/match rooms)
+    user_bet = UserBet(
+        user_id="user1",
+        bet_id="bet1",
+        room_code="AAAAAA",
+        selected_option="Option A",
+    )
+    assert user_bet.room_code == "AAAAAA"
+
     # Invalid: too long
     with pytest.raises(ValidationError):
         UserBet(
             user_id="user1",
             bet_id="bet1",
-            room_code="AAAAA",
+            room_code="AAAAAAA",  # 7 chars
             selected_option="Option A",
         )
 

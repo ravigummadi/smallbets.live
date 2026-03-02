@@ -84,12 +84,12 @@ describe('JoinRoomPage', () => {
     });
 
     it('should validate room code format', () => {
-      // Test with invalid room code (too long - maxLength=4 truncates to "INVA")
+      // Test with invalid room code
       mockRoomCode = 'INVALID_CODE';
       render(<JoinRoomPage />);
 
-      // Room code should be visible in the input (truncated by maxLength to 4 chars)
-      const input = screen.getByPlaceholderText(/enter 4-character code/i) as HTMLInputElement;
+      // Room code should be visible in the input
+      const input = screen.getByPlaceholderText(/enter room code/i) as HTMLInputElement;
       expect(input.value).toBe('INVALID_CODE');
     });
   });
@@ -121,6 +121,7 @@ describe('JoinRoomPage', () => {
       expect(mockSaveSession).toHaveBeenCalledWith({
         userId: 'user-123',
         roomCode: 'BLUE',
+        nickname: 'Player1',
       });
 
       expect(mockNavigate).toHaveBeenCalledWith('/room/BLUE');

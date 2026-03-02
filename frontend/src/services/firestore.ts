@@ -14,7 +14,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import type { Room, User, Bet, UserBet, LeaderboardEntry } from '@/types';
+import type { Room, User, Bet, UserBet, RoomUser } from '@/types';
 
 /**
  * Convert Firestore Timestamp to Date
@@ -53,7 +53,13 @@ export function subscribeToRoom(
       hostId: data.hostId,
       automationEnabled: data.automationEnabled ?? true,
       createdAt: timestampToDate(data.createdAt),
-      expiresAt: timestampToDate(data.expiresAt),
+      expiresAt: data.expiresAt ? timestampToDate(data.expiresAt) : null,
+      roomType: data.roomType ?? 'event',
+      parentRoomCode: data.parentRoomCode ?? null,
+      participants: data.participants ?? [],
+      matchDetails: data.matchDetails ?? null,
+      currentBetId: data.currentBetId ?? null,
+      version: data.version ?? 1,
     };
 
     callback(room);
@@ -116,6 +122,12 @@ export function subscribeToBet(
       resolvedAt: data.resolvedAt ? timestampToDate(data.resolvedAt) : null,
       winningOption: data.winningOption ?? null,
       pointsValue: data.pointsValue ?? 100,
+      betType: data.betType ?? 'in-game',
+      createdFrom: data.createdFrom ?? 'custom',
+      templateId: data.templateId ?? null,
+      timerDuration: data.timerDuration ?? 60,
+      canUndoUntil: data.canUndoUntil ? timestampToDate(data.canUndoUntil) : null,
+      version: data.version ?? 1,
     };
 
     callback(bet);
@@ -148,6 +160,12 @@ export function subscribeToBets(
         resolvedAt: data.resolvedAt ? timestampToDate(data.resolvedAt) : null,
         winningOption: data.winningOption ?? null,
         pointsValue: data.pointsValue ?? 100,
+        betType: data.betType ?? 'in-game',
+        createdFrom: data.createdFrom ?? 'custom',
+        templateId: data.templateId ?? null,
+        timerDuration: data.timerDuration ?? 60,
+        canUndoUntil: data.canUndoUntil ? timestampToDate(data.canUndoUntil) : null,
+        version: data.version ?? 1,
       };
     });
 
@@ -242,5 +260,35 @@ export function subscribeToUserBets(
     });
 
     callback(userBets);
+  });
+}
+
+/**
+ * Subscribe to all room users (for tournament/match rooms)
+ */
+export function subscribeToRoomUsers(
+  roomCode: string,
+  callback: (roomUsers: RoomUser[]) => void
+): Unsubscribe {
+  const roomUsersQuery = query(
+    collection(db, 'roomUsers'),
+    where('roomCode', '==', roomCode)
+  );
+
+  return onSnapshot(roomUsersQuery, (snapshot) => {
+    const roomUsers: RoomUser[] = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: data.id,
+        roomCode: data.roomCode,
+        userId: data.userId,
+        nickname: data.nickname,
+        points: data.points,
+        joinedAt: timestampToDate(data.joinedAt),
+        isHost: data.isHost ?? false,
+      };
+    });
+
+    callback(roomUsers);
   });
 }

@@ -1,5 +1,5 @@
 /**
- * Create Room page - Host creates a new room
+ * Create Room page - Host creates a new room or tournament
  */
 
 import { useState } from 'react';
@@ -11,8 +11,11 @@ const EVENT_TEMPLATES = [
   { id: 'grammys-2026', name: 'Grammy Awards 2026' },
   { id: 'oscars-2026', name: 'Oscars 2026' },
   { id: 'superbowl-lix', name: 'Super Bowl LIX' },
+  { id: 'ipl-2026', name: 'IPL 2026 (Tournament)' },
   { id: 'custom', name: 'Custom Event' },
 ];
+
+const TOURNAMENT_TEMPLATES = new Set(['ipl-2026']);
 
 export default function CreateRoomPage() {
   const [nickname, setNickname] = useState('');
@@ -22,6 +25,8 @@ export default function CreateRoomPage() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { saveSession } = useSession();
+
+  const isTournament = TOURNAMENT_TEMPLATES.has(eventTemplate);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,21 +45,31 @@ export default function CreateRoomPage() {
     setError(null);
 
     try {
-      // Create room via API
-      const response = await roomApi.createRoom({
-        event_template: eventTemplate,
-        event_name: eventTemplate === 'custom' ? eventName.trim() : undefined,
-        host_nickname: nickname.trim(),
-      });
+      let response;
 
-      // Save session
+      if (isTournament) {
+        // Create tournament room (6-char code, no expiry)
+        response = await roomApi.createTournament({
+          event_template: eventTemplate,
+          event_name: eventName.trim() || undefined,
+          host_nickname: nickname.trim(),
+        });
+      } else {
+        // Create regular event room (4-char code, 24h expiry)
+        response = await roomApi.createRoom({
+          event_template: eventTemplate,
+          event_name: eventTemplate === 'custom' ? eventName.trim() : undefined,
+          host_nickname: nickname.trim(),
+        });
+      }
+
       saveSession({
         userId: response.user_id,
         roomCode: response.room_code,
         hostId: response.host_id,
+        nickname: nickname.trim(),
       });
 
-      // Navigate to room
       navigate(`/room/${response.room_code}`);
     } catch (err: any) {
       setError(err.detail || 'Failed to create room. Please try again.');
@@ -64,7 +79,9 @@ export default function CreateRoomPage() {
 
   return (
     <div className="container" style={{ paddingTop: '2rem' }}>
-      <h2 className="mb-lg" style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>Create a Room</h2>
+      <h2 className="mb-lg" style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+        {isTournament ? 'Create Tournament' : 'Create a Room'}
+      </h2>
 
       <form onSubmit={handleSubmit}>
         <div className="card mb-lg">
@@ -97,23 +114,27 @@ export default function CreateRoomPage() {
             ))}
           </select>
           <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-            Pre-configured bets for popular events
+            {isTournament
+              ? 'Multi-match tournament with season-long and per-match betting'
+              : 'Pre-configured bets for popular events'}
           </p>
         </div>
 
-        {eventTemplate === 'custom' && (
+        {(eventTemplate === 'custom' || isTournament) && (
           <div className="card mb-lg">
-            <h4 className="mb-md">Event Name</h4>
+            <h4 className="mb-md">{isTournament ? 'Tournament Name' : 'Event Name'}</h4>
             <input
               type="text"
-              placeholder="Enter your event name"
+              placeholder={isTournament ? 'e.g., IPL 2026 Friends League' : 'Enter your event name'}
               value={eventName}
               onChange={(e) => setEventName(e.target.value)}
               maxLength={50}
               className="mb-md"
             />
             <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-              Give your custom event a name (e.g., "Family Game Night", "March Madness 2026")
+              {isTournament
+                ? 'Give your tournament a name to share with friends'
+                : 'Give your custom event a name (e.g., "Family Game Night", "March Madness 2026")'}
             </p>
           </div>
         )}
@@ -129,7 +150,10 @@ export default function CreateRoomPage() {
           className="btn btn-primary btn-full btn-lg"
           disabled={loading || !nickname.trim() || (eventTemplate === 'custom' && !eventName.trim())}
         >
-          {loading ? 'Creating Room...' : 'Create Room'}
+          {loading
+            ? (isTournament ? 'Creating Tournament...' : 'Creating Room...')
+            : (isTournament ? 'Create Tournament' : 'Create Room')
+          }
         </button>
 
         <div className="mt-md text-center">
