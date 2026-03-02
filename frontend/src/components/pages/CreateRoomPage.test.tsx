@@ -228,6 +228,7 @@ describe('CreateRoomPage', () => {
         userId: 'user-123',
         roomCode: 'BLUE42',
         hostId: 'host-123',
+        nickname: 'TestHost',
       });
 
       expect(mockNavigate).toHaveBeenCalledWith('/room/BLUE42');

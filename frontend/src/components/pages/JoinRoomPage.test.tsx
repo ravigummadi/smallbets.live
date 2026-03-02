@@ -121,6 +121,7 @@ describe('JoinRoomPage', () => {
       expect(mockSaveSession).toHaveBeenCalledWith({
         userId: 'user-123',
         roomCode: 'BLUE',
+        nickname: 'Player1',
       });
 
       expect(mockNavigate).toHaveBeenCalledWith('/room/BLUE');

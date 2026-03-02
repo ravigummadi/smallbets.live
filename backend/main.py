@@ -321,6 +321,30 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
             if room.host_id == request.parent_user_id:
                 is_admin = True
 
+        # Check if a user with this nickname already exists in the room
+        # to prevent duplicate participants on re-join
+        existing_user = await user_service.find_user_by_nickname(code, request.nickname)
+        if existing_user:
+            # Return existing user — update admin status if needed
+            if is_admin and not existing_user.is_admin:
+                existing_user = existing_user.model_copy(update={"is_admin": True})
+                await user_service.update_user(existing_user)
+
+            # Update room host_id if this returning user is the host
+            if is_admin and room.host_id != existing_user.user_id:
+                updated_room = room.model_copy(update={"host_id": existing_user.user_id})
+                await room_service.update_room(updated_room)
+                room = updated_room
+
+            host_id = existing_user.user_id if existing_user.is_admin else None
+
+            return JoinRoomResponse(
+                user_id=existing_user.user_id,
+                host_id=host_id,
+                room=room.to_dict(),
+                user=existing_user.to_dict(),
+            )
+
         user = await user_service.create_user(
             room_code=code,
             nickname=request.nickname,

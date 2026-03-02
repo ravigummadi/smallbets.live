@@ -103,6 +103,32 @@ async def get_users_in_room(room_code: str) -> List[User]:
     return users
 
 
+async def find_user_by_nickname(room_code: str, nickname: str) -> Optional[User]:
+    """Find a user in a room by nickname
+
+    Imperative Shell - performs Firestore query
+
+    Args:
+        room_code: Room code
+        nickname: Nickname to search for
+
+    Returns:
+        User object or None if not found
+    """
+    db = get_db()
+
+    users_ref = (
+        db.collection("users")
+        .where("roomCode", "==", room_code)
+        .where("nickname", "==", nickname)
+    )
+    docs = list(users_ref.stream())
+
+    if docs:
+        return User.from_dict(docs[0].to_dict())
+    return None
+
+
 async def update_user_points(user_id: str, points: int) -> None:
     """Update user's point balance
 

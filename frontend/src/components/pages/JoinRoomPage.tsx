@@ -58,9 +58,10 @@ export default function JoinRoomPage() {
       const response = await roomApi.joinRoom(roomCode, joinRequest);
 
       // Save session - include hostId if the backend recognized us as host
-      const sessionData: { userId: string; roomCode: string; hostId?: string } = {
+      const sessionData: { userId: string; roomCode: string; hostId?: string; nickname?: string } = {
         userId: response.user_id,
         roomCode: roomCode,
+        nickname: nickname.trim(),
       };
       if (response.host_id) {
         sessionData.hostId = response.host_id;

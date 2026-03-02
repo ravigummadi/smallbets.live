@@ -67,6 +67,7 @@ export default function CreateRoomPage() {
         userId: response.user_id,
         roomCode: response.room_code,
         hostId: response.host_id,
+        nickname: nickname.trim(),
       });
 
       navigate(`/room/${response.room_code}`);

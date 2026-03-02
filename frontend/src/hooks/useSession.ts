@@ -10,6 +10,7 @@ interface SessionData {
   userId: string;
   roomCode: string;
   hostId?: string;
+  nickname?: string;
 }
 
 const SESSION_KEY = 'smallbets_session';

@@ -54,7 +54,7 @@ export default function RoomPage() {
       navigate(`/join/${code}`, {
         state: session ? {
           parentUserId: session.userId,
-          nickname: undefined,  // Will be filled from parent session if needed
+          nickname: session.nickname,
         } : undefined,
       });
     }
@@ -342,11 +342,7 @@ export default function RoomPage() {
       {isMatch && displayRoom.parentRoomCode && (
         <div className="mb-md" style={{ fontSize: '0.875rem' }}>
           <Link
-            to={`/join/${displayRoom.parentRoomCode}`}
-            state={{
-              parentUserId: session?.userId,
-              nickname: user?.nickname,
-            }}
+            to={`/room/${displayRoom.parentRoomCode}`}
             style={{ color: 'var(--color-primary)', textDecoration: 'none' }}
           >
             Tournament: {EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Tournament'}
@@ -416,12 +412,7 @@ export default function RoomPage() {
               {matchRooms.map(matchRoom => (
                 <Link
                   key={matchRoom.code}
-                  to={`/join/${matchRoom.code}`}
-                  state={{
-                    fromTournament: code,
-                    parentUserId: session?.userId,
-                    nickname: user?.nickname,
-                  }}
+                  to={`/room/${matchRoom.code}`}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',

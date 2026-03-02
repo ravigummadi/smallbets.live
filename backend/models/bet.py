@@ -1,6 +1,6 @@
 """Bet model - represents a betting question"""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -102,7 +102,12 @@ class Bet(BaseModel):
         """Check if bet resolution can be undone (within 10s window)"""
         if self.status != BetStatus.RESOLVED or self.can_undo_until is None:
             return False
-        return datetime.utcnow() < self.can_undo_until
+        now = datetime.now(timezone.utc)
+        deadline = self.can_undo_until
+        # Ensure both sides are tz-aware for comparison
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=timezone.utc)
+        return now < deadline
 
     def open_bet(self) -> "Bet":
         """Return new Bet instance with opened status"""
@@ -123,7 +128,7 @@ class Bet(BaseModel):
         if winning_option not in self.options:
             raise ValueError(f"Invalid winning option: {winning_option}")
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return self.model_copy(update={
             "status": BetStatus.RESOLVED,
             "resolved_at": now,
