@@ -170,10 +170,11 @@ async def undo_resolve_bet(bet_id: str) -> Bet:
 
     for ub in user_bets:
         if ub.points_won is not None:
-            # Reverse the points: subtract what was won, add back the bet cost
+            # Reverse the points: subtract what was won during resolution.
+            # The original bet cost (deducted at placement) stays deducted.
             user = await user_service.get_user(ub.user_id)
             if user:
-                new_points = user.points - ub.points_won + bet.points_value
+                new_points = user.points - ub.points_won
                 user_ref = db.collection("users").document(ub.user_id)
                 batch.update(user_ref, {"points": new_points})
 
@@ -183,7 +184,7 @@ async def undo_resolve_bet(bet_id: str) -> Bet:
                 room_user_doc = room_user_ref.get()
                 if room_user_doc.exists:
                     ru_data = room_user_doc.to_dict()
-                    ru_new_points = ru_data["points"] - ub.points_won + bet.points_value
+                    ru_new_points = ru_data["points"] - ub.points_won
                     batch.update(room_user_ref, {"points": ru_new_points})
 
             # Reset user bet points_won
