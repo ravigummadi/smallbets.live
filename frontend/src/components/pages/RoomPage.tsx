@@ -46,10 +46,17 @@ export default function RoomPage() {
   const [matchTeam2, setMatchTeam2] = useState('');
   const [creatingMatch, setCreatingMatch] = useState(false);
 
-  // Redirect if no session
+  // Redirect if no session for this room
   useEffect(() => {
     if (!session || session.roomCode !== code) {
-      navigate(`/join/${code}`);
+      // Pass current session as context so identity is preserved
+      // when navigating between tournament and match rooms
+      navigate(`/join/${code}`, {
+        state: session ? {
+          parentUserId: session.userId,
+          nickname: undefined,  // Will be filled from parent session if needed
+        } : undefined,
+      });
     }
   }, [session, code, navigate]);
 
@@ -115,7 +122,15 @@ export default function RoomPage() {
         match_date_time: new Date().toISOString(),
       });
 
-      navigate(`/room/${response.match_room_code}`);
+      // Navigate to join the match room, passing tournament context
+      // so the host is recognized as admin in the match room
+      navigate(`/join/${response.match_room_code}`, {
+        state: {
+          fromTournament: code,
+          parentUserId: session?.userId,
+          nickname: user?.nickname,
+        },
+      });
     } catch (err: any) {
       console.error('Failed to create match room:', err);
     } finally {
@@ -327,7 +342,11 @@ export default function RoomPage() {
       {isMatch && displayRoom.parentRoomCode && (
         <div className="mb-md" style={{ fontSize: '0.875rem' }}>
           <Link
-            to={`/room/${displayRoom.parentRoomCode}`}
+            to={`/join/${displayRoom.parentRoomCode}`}
+            state={{
+              parentUserId: session?.userId,
+              nickname: user?.nickname,
+            }}
             style={{ color: 'var(--color-primary)', textDecoration: 'none' }}
           >
             Tournament: {EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Tournament'}
@@ -397,7 +416,12 @@ export default function RoomPage() {
               {matchRooms.map(matchRoom => (
                 <Link
                   key={matchRoom.code}
-                  to={`/room/${matchRoom.code}`}
+                  to={`/join/${matchRoom.code}`}
+                  state={{
+                    fromTournament: code,
+                    parentUserId: session?.userId,
+                    nickname: user?.nickname,
+                  }}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',

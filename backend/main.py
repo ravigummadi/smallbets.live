@@ -80,10 +80,12 @@ class CreateMatchRoomResponse(BaseModel):
 
 class JoinRoomRequest(BaseModel):
     nickname: str
+    parent_user_id: Optional[str] = None
 
 
 class JoinRoomResponse(BaseModel):
     user_id: str
+    host_id: Optional[str] = None
     room: dict
     user: dict
 
@@ -273,16 +275,9 @@ async def create_match_room(code: str, room: HostRoomDep, request: CreateMatchRo
             venue=request.venue,
         )
 
-        # Create RoomUser for host in match room
-        host_room_user = await room_service.get_room_user(code, room.host_id)
-        host_nickname = host_room_user.nickname if host_room_user else "Host"
-
-        await room_service.create_room_user(
-            room_code=match_room.code,
-            user_id=room.host_id,
-            nickname=host_nickname,
-            is_host=True,
-        )
+        # Note: Don't pre-create RoomUser for host here.
+        # The host will join via join_room with parent_user_id,
+        # which will create their RoomUser and set them as admin.
 
         return CreateMatchRoomResponse(
             room_code=match_room.code,
@@ -306,12 +301,30 @@ async def get_room(room: RoomDep):
 
 @app.post("/api/rooms/{code}/join", response_model=JoinRoomResponse)
 async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
-    """Join a room"""
+    """Join a room
+
+    For tournament/match rooms, pass parent_user_id to preserve identity.
+    If the parent_user_id is the host of the parent tournament, the joining
+    user will be set as admin in this room.
+    """
     try:
+        # Determine if this user should be admin based on parent room context
+        is_admin = False
+        if request.parent_user_id and room.room_type in ("tournament", "match"):
+            # Check if user was host in parent tournament
+            parent_code = room.parent_room_code if room.room_type == "match" else None
+            if parent_code:
+                parent_room = await room_service.get_room(parent_code)
+                if parent_room and parent_room.host_id == request.parent_user_id:
+                    is_admin = True
+            # Also check if user is host of this room directly (tournament join)
+            if room.host_id == request.parent_user_id:
+                is_admin = True
+
         user = await user_service.create_user(
             room_code=code,
             nickname=request.nickname,
-            is_admin=False,
+            is_admin=is_admin,
         )
 
         # For tournament/match rooms, also create RoomUser and add to participants
@@ -320,12 +333,21 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
                 room_code=code,
                 user_id=user.user_id,
                 nickname=request.nickname,
-                is_host=False,
+                is_host=is_admin,
             )
             await room_service.add_participant(code, user.user_id)
 
+            # If this user is the host, update the room's host_id to the new user id
+            if is_admin:
+                updated_room = room.model_copy(update={"host_id": user.user_id})
+                await room_service.update_room(updated_room)
+                room = updated_room
+
+        host_id = user.user_id if is_admin else None
+
         return JoinRoomResponse(
             user_id=user.user_id,
+            host_id=host_id,
             room=room.to_dict(),
             user=user.to_dict(),
         )

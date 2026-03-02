@@ -127,10 +127,12 @@ export interface CreateMatchRoomResponse {
 
 export interface JoinRoomRequest {
   nickname: string;
+  parent_user_id?: string;
 }
 
 export interface JoinRoomResponse {
   user_id: string;
+  host_id?: string;
   room: Room;
   user: User;
 }
