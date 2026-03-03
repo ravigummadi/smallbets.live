@@ -12,6 +12,7 @@ class MatchDetails(BaseModel):
     team2: str = Field(..., min_length=1, description="Second team name")
     match_date_time: str = Field(..., description="ISO 8601 datetime with timezone")
     venue: Optional[str] = Field(default=None, description="Match venue")
+    title: Optional[str] = Field(default=None, description="Match title (e.g., IPL Match 12)")
 
     def to_dict(self) -> dict:
         result = {
@@ -21,6 +22,8 @@ class MatchDetails(BaseModel):
         }
         if self.venue is not None:
             result["venue"] = self.venue
+        if self.title is not None:
+            result["title"] = self.title
         return result
 
     @classmethod
@@ -30,6 +33,7 @@ class MatchDetails(BaseModel):
             team2=data["team2"],
             match_date_time=data["matchDateTime"],
             venue=data.get("venue"),
+            title=data.get("title"),
         )
 
 

@@ -207,6 +207,83 @@ describe('API Service', () => {
       });
     });
 
+    describe('createMatchRoom', () => {
+      it('should create match room with title and date', async () => {
+        const mockResponse = {
+          room_code: 'MATCH1',
+          match_room_code: 'MATCH1',
+          parent_room_code: 'TOUR01',
+        };
+
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        });
+
+        const result = await roomApi.createMatchRoom('TOUR01', 'host-123', {
+          team1: 'RCB',
+          team2: 'MI',
+          match_date_time: '2026-03-15T00:00:00.000Z',
+          title: 'IPL Match 12',
+        });
+
+        expect(result).toEqual(mockResponse);
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/rooms/TOUR01/matches'),
+          expect.objectContaining({
+            method: 'POST',
+            headers: expect.objectContaining({
+              'X-Host-Id': 'host-123',
+            }),
+            body: JSON.stringify({
+              team1: 'RCB',
+              team2: 'MI',
+              match_date_time: '2026-03-15T00:00:00.000Z',
+              title: 'IPL Match 12',
+            }),
+          })
+        );
+      });
+
+      it('should create match room without optional title', async () => {
+        const mockResponse = {
+          room_code: 'MATCH2',
+          match_room_code: 'MATCH2',
+          parent_room_code: 'TOUR01',
+        };
+
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        });
+
+        const result = await roomApi.createMatchRoom('TOUR01', 'host-123', {
+          team1: 'CSK',
+          team2: 'DC',
+          match_date_time: '2026-04-01T00:00:00.000Z',
+        });
+
+        expect(result).toEqual(mockResponse);
+      });
+
+      it('should handle unauthorized match room creation', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: 'Forbidden',
+          json: async () => ({ detail: 'Not the room host' }),
+        });
+
+        await expect(
+          roomApi.createMatchRoom('TOUR01', 'wrong-host', {
+            team1: 'RCB',
+            team2: 'MI',
+            match_date_time: '2026-03-15T00:00:00.000Z',
+          })
+        ).rejects.toThrow('API request failed: 403');
+      });
+    });
+
     describe('getLeaderboard', () => {
       it('should fetch leaderboard successfully', async () => {
         const mockResponse = {

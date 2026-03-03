@@ -70,6 +70,7 @@ class CreateMatchRoomRequest(BaseModel):
     team2: str
     match_date_time: str
     venue: Optional[str] = None
+    title: Optional[str] = None
 
 
 class CreateMatchRoomResponse(BaseModel):
@@ -273,6 +274,7 @@ async def create_match_room(code: str, room: HostRoomDep, request: CreateMatchRo
             team2=request.team2,
             match_date_time=request.match_date_time,
             venue=request.venue,
+            title=request.title,
         )
 
         # Note: Don't pre-create RoomUser for host here.

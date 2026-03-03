@@ -52,6 +52,31 @@ def test_match_room_creation():
 
 
 @pytest.mark.unit
+def test_match_room_creation_with_title():
+    """Test creating a match room with a title"""
+    match_details = MatchDetails(
+        team1="RCB",
+        team2="MI",
+        match_date_time="2026-03-15T14:00:00Z",
+        venue="Chinnaswamy",
+        title="IPL Match 12 - Qualifier",
+    )
+    room = Room(
+        code="FGHJ32",
+        event_template="ipl-2026",
+        event_name="IPL Match 12 - Qualifier",
+        status="active",
+        host_id="host-1",
+        room_type="match",
+        parent_room_code="ABCDE2",
+        match_details=match_details,
+        expires_at=None,
+    )
+    assert room.match_details.title == "IPL Match 12 - Qualifier"
+    assert room.event_name == "IPL Match 12 - Qualifier"
+
+
+@pytest.mark.unit
 def test_tournament_room_never_expires():
     """Test tournament rooms never expire"""
     room = Room(
@@ -124,6 +149,59 @@ def test_room_to_dict_tournament_fields():
 
 
 @pytest.mark.unit
+def test_match_details_title_serialization():
+    """Test that title is serialized and deserialized correctly"""
+    match_details = MatchDetails(
+        team1="RCB",
+        team2="MI",
+        match_date_time="2026-03-15T14:00:00Z",
+        title="IPL Match 12",
+    )
+    data = match_details.to_dict()
+    assert data["title"] == "IPL Match 12"
+    assert data["team1"] == "RCB"
+    assert data["matchDateTime"] == "2026-03-15T14:00:00Z"
+
+    # Round-trip
+    restored = MatchDetails.from_dict(data)
+    assert restored.title == "IPL Match 12"
+    assert restored.team1 == "RCB"
+
+
+@pytest.mark.unit
+def test_match_details_title_optional():
+    """Test that title is optional and defaults to None"""
+    match_details = MatchDetails(
+        team1="CSK",
+        team2="DC",
+        match_date_time="2026-04-01T19:30:00Z",
+    )
+    assert match_details.title is None
+    data = match_details.to_dict()
+    assert "title" not in data
+
+    # Round-trip without title
+    restored = MatchDetails.from_dict(data)
+    assert restored.title is None
+
+
+@pytest.mark.unit
+def test_match_details_date_stored():
+    """Test that match_date_time is properly stored and retrievable"""
+    match_details = MatchDetails(
+        team1="RCB",
+        team2="MI",
+        match_date_time="2026-03-15T00:00:00Z",
+        title="Evening Match",
+    )
+    data = match_details.to_dict()
+    assert data["matchDateTime"] == "2026-03-15T00:00:00Z"
+
+    restored = MatchDetails.from_dict(data)
+    assert restored.match_date_time == "2026-03-15T00:00:00Z"
+
+
+@pytest.mark.unit
 def test_room_from_dict_tournament_fields():
     """Test deserialization handles tournament fields"""
     now = datetime.utcnow()
@@ -151,6 +229,35 @@ def test_room_from_dict_tournament_fields():
     assert room.match_details is not None
     assert room.match_details.team1 == "RCB"
     assert room.version == 3
+
+
+@pytest.mark.unit
+def test_room_from_dict_with_title():
+    """Test deserialization handles match details with title"""
+    now = datetime.utcnow()
+    data = {
+        "code": "FGHJ32",
+        "eventTemplate": "ipl-2026",
+        "eventName": "IPL Match 12",
+        "status": "active",
+        "hostId": "host-1",
+        "createdAt": now,
+        "expiresAt": None,
+        "roomType": "match",
+        "parentRoomCode": "ABCDE2",
+        "matchDetails": {
+            "team1": "RCB",
+            "team2": "MI",
+            "matchDateTime": "2026-03-15T14:00:00Z",
+            "title": "IPL Match 12",
+        },
+        "participants": ["host-1"],
+        "version": 1,
+    }
+    room = Room.from_dict(data)
+    assert room.match_details is not None
+    assert room.match_details.title == "IPL Match 12"
+    assert room.event_name == "IPL Match 12"
 
 
 @pytest.mark.unit
