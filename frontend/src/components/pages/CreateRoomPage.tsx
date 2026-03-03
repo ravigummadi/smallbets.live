@@ -7,18 +7,21 @@ import { useNavigate } from 'react-router-dom';
 import { roomApi } from '@/services/api';
 import { useSession } from '@/hooks/useSession';
 
-const EVENT_TEMPLATES = [
+const CEREMONY_TEMPLATES = [
   { id: 'grammys-2026', name: 'Grammy Awards 2026' },
   { id: 'oscars-2026', name: 'Oscars 2026' },
   { id: 'superbowl-lix', name: 'Super Bowl LIX' },
-  { id: 'ipl-2026', name: 'IPL 2026 (Tournament)' },
   { id: 'custom', name: 'Custom Event' },
 ];
 
-const TOURNAMENT_TEMPLATES = new Set(['ipl-2026']);
+const TOURNAMENT_TEMPLATES = [
+  { id: 'ipl-2026', name: 'IPL 2026' },
+  { id: 'custom', name: 'Custom Tournament' },
+];
 
 export default function CreateRoomPage() {
   const [nickname, setNickname] = useState('');
+  const [isTournament, setIsTournament] = useState(false);
   const [eventTemplate, setEventTemplate] = useState('grammys-2026');
   const [eventName, setEventName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,7 +29,7 @@ export default function CreateRoomPage() {
   const navigate = useNavigate();
   const { saveSession } = useSession();
 
-  const isTournament = TOURNAMENT_TEMPLATES.has(eventTemplate);
+  const templates = isTournament ? TOURNAMENT_TEMPLATES : CEREMONY_TEMPLATES;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +40,12 @@ export default function CreateRoomPage() {
     }
 
     if (eventTemplate === 'custom' && !eventName.trim()) {
-      setError('Please enter a name for your custom event');
+      setError(isTournament ? 'Please enter a tournament name' : 'Please enter a name for your custom event');
+      return;
+    }
+
+    if (isTournament && !eventName.trim()) {
+      setError('Please enter a tournament name');
       return;
     }
 
@@ -101,23 +109,51 @@ export default function CreateRoomPage() {
         </div>
 
         <div className="card mb-lg">
-          <h4 className="mb-md">Event Template</h4>
+          <h4 className="mb-md">Event Type</h4>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              type="button"
+              className={`btn btn-full ${!isTournament ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => {
+                setIsTournament(false);
+                setEventTemplate(CEREMONY_TEMPLATES[0].id);
+                setEventName('');
+              }}
+            >
+              Single Event
+            </button>
+            <button
+              type="button"
+              className={`btn btn-full ${isTournament ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => {
+                setIsTournament(true);
+                setEventTemplate(TOURNAMENT_TEMPLATES[0].id);
+                setEventName('');
+              }}
+            >
+              Tournament
+            </button>
+          </div>
+          <p className="text-muted" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+            {isTournament
+              ? 'Multi-match tournament with season-long and per-match betting'
+              : 'Single ceremony or event with pre-configured bets'}
+          </p>
+        </div>
+
+        <div className="card mb-lg">
+          <h4 className="mb-md">{isTournament ? 'Tournament Template' : 'Event Template'}</h4>
           <select
             value={eventTemplate}
             onChange={(e) => setEventTemplate(e.target.value)}
             className="mb-md"
           >
-            {EVENT_TEMPLATES.map((template) => (
+            {templates.map((template) => (
               <option key={template.id} value={template.id}>
                 {template.name}
               </option>
             ))}
           </select>
-          <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-            {isTournament
-              ? 'Multi-match tournament with season-long and per-match betting'
-              : 'Pre-configured bets for popular events'}
-          </p>
         </div>
 
         {(eventTemplate === 'custom' || isTournament) && (
@@ -148,7 +184,7 @@ export default function CreateRoomPage() {
         <button
           type="submit"
           className="btn btn-primary btn-full btn-lg"
-          disabled={loading || !nickname.trim() || (eventTemplate === 'custom' && !eventName.trim())}
+          disabled={loading || !nickname.trim() || ((eventTemplate === 'custom' || isTournament) && !eventName.trim())}
         >
           {loading
             ? (isTournament ? 'Creating Tournament...' : 'Creating Room...')

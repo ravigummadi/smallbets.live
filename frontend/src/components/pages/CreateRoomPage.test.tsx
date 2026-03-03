@@ -19,6 +19,7 @@ expect.extend({ toHaveNoViolations });
 vi.mock('@/services/api', () => ({
   roomApi: {
     createRoom: vi.fn(),
+    createTournament: vi.fn(),
   },
 }));
 
@@ -58,9 +59,11 @@ describe('CreateRoomPage', () => {
       expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
     });
 
-    it('should render event template selector', () => {
+    it('should render event type toggle and template selector', () => {
       render(<CreateRoomPage />);
 
+      expect(screen.getByRole('button', { name: /single event/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /tournament/i })).toBeInTheDocument();
       expect(screen.getByRole('combobox')).toBeInTheDocument();
       expect(screen.getByRole('option', { name: /grammy awards 2026/i })).toBeInTheDocument();
       expect(screen.getByRole('option', { name: /oscars 2026/i })).toBeInTheDocument();
@@ -480,6 +483,87 @@ describe('CreateRoomPage', () => {
       await user.click(cancelButton);
 
       expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  describe('Tournament creation', () => {
+    it('should show tournament templates when Tournament is selected', async () => {
+      const user = userEvent.setup();
+      render(<CreateRoomPage />);
+
+      await user.click(screen.getByRole('button', { name: /tournament/i }));
+
+      expect(screen.getByRole('option', { name: /ipl 2026/i })).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /custom tournament/i })).toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: /grammy/i })).not.toBeInTheDocument();
+    });
+
+    it('should show tournament name field when Tournament is selected', async () => {
+      const user = userEvent.setup();
+      render(<CreateRoomPage />);
+
+      await user.click(screen.getByRole('button', { name: /tournament/i }));
+
+      expect(screen.getByPlaceholderText(/e\.g\., IPL 2026 Friends League/i)).toBeInTheDocument();
+    });
+
+    it('should require tournament name for submit', async () => {
+      const user = userEvent.setup();
+      render(<CreateRoomPage />);
+
+      const nicknameInput = screen.getByPlaceholderText(/enter your nickname/i);
+      await user.type(nicknameInput, 'TestHost');
+
+      await user.click(screen.getByRole('button', { name: /tournament/i }));
+
+      const submitButton = screen.getByRole('button', { name: /create tournament/i });
+      expect(submitButton).toBeDisabled();
+    });
+
+    it('should create tournament successfully via createTournament API', async () => {
+      const user = userEvent.setup();
+      const mockResponse = {
+        room_code: 'TOUR42',
+        user_id: 'user-123',
+        host_id: 'host-123',
+      };
+
+      vi.mocked(roomApi.createTournament).mockResolvedValueOnce(mockResponse);
+
+      render(<CreateRoomPage />);
+
+      const nicknameInput = screen.getByPlaceholderText(/enter your nickname/i);
+      await user.type(nicknameInput, 'TestHost');
+
+      await user.click(screen.getByRole('button', { name: /tournament/i }));
+
+      const nameInput = screen.getByPlaceholderText(/e\.g\., IPL 2026 Friends League/i);
+      await user.type(nameInput, 'My Tournament');
+
+      const submitButton = screen.getByRole('button', { name: /create tournament/i });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(roomApi.createTournament).toHaveBeenCalledWith({
+          event_template: 'ipl-2026',
+          event_name: 'My Tournament',
+          host_nickname: 'TestHost',
+        });
+      });
+
+      expect(mockNavigate).toHaveBeenCalledWith('/room/TOUR42');
+    });
+
+    it('should switch back to ceremony templates when Single Event is clicked', async () => {
+      const user = userEvent.setup();
+      render(<CreateRoomPage />);
+
+      await user.click(screen.getByRole('button', { name: /tournament/i }));
+      expect(screen.getByRole('option', { name: /ipl 2026/i })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: /single event/i }));
+      expect(screen.getByRole('option', { name: /grammy awards 2026/i })).toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: /ipl 2026/i })).not.toBeInTheDocument();
     });
   });
 
