@@ -13,7 +13,7 @@ import { useUserBets } from '@/hooks/useUserBets';
 import { useParticipants } from '@/hooks/useParticipants';
 import AdminPanel from '@/components/admin/AdminPanel';
 import { betApi, roomApi } from '@/services/api';
-import type { Room, Bet, UserBet } from '@/types';
+import type { Room, Bet, UserBet, User } from '@/types';
 
 // Map template IDs to friendly names
 const EVENT_TEMPLATE_NAMES: Record<string, string> = {
@@ -25,9 +25,9 @@ const EVENT_TEMPLATE_NAMES: Record<string, string> = {
 };
 
 export default function RoomPage() {
-  const { code } = useParams<{ code: string }>();
+  const { code, userKey } = useParams<{ code: string; userKey?: string }>();
   const navigate = useNavigate();
-  const { session } = useSession();
+  const { session, saveSession } = useSession();
   const { room, loading: roomLoading } = useRoom(code || null);
   const { user, loading: userLoading } = useUser(session?.userId || null);
   const { bets, loading: betsLoading } = useBets(code || null);
@@ -40,6 +40,12 @@ export default function RoomPage() {
   const [betErrors, setBetErrors] = useState<Record<string, string>>({});
   const [matchRooms, setMatchRooms] = useState<Room[]>([]);
 
+  // Session restoration state
+  const [restoreUser, setRestoreUser] = useState<User | null>(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+
   // Match room creation state
   const [showCreateMatch, setShowCreateMatch] = useState(false);
   const [matchTitle, setMatchTitle] = useState('');
@@ -48,8 +54,126 @@ export default function RoomPage() {
   const [matchTeam2, setMatchTeam2] = useState('');
   const [creatingMatch, setCreatingMatch] = useState(false);
 
+  // Session restoration via userKey link
+  useEffect(() => {
+    if (!userKey || !code) return;
+
+    setRestoreLoading(true);
+    setRestoreError(null);
+
+    roomApi.getUserByKey(code, userKey)
+      .then((userData) => {
+        setRestoreUser(userData);
+        setShowRestoreModal(true);
+      })
+      .catch((err: any) => {
+        if (err.status === 429) {
+          setRestoreError('Too many requests. Please try again later.');
+        } else if (err.status === 404) {
+          setRestoreError('This link is invalid or the user was not found.');
+        } else if (err.status === 400) {
+          setRestoreError('Invalid link format.');
+        } else {
+          setRestoreError('Failed to restore session. Please try again.');
+        }
+      })
+      .finally(() => {
+        setRestoreLoading(false);
+      });
+  }, [userKey, code]);
+
+  const handleConfirmRestore = () => {
+    if (!restoreUser || !code) return;
+
+    saveSession({
+      userId: restoreUser.userId,
+      roomCode: code,
+      hostId: restoreUser.isAdmin ? restoreUser.userId : undefined,
+      nickname: restoreUser.nickname,
+    });
+
+    setShowRestoreModal(false);
+    setRestoreUser(null);
+    // Navigate to clean URL
+    navigate(`/room/${code}`, { replace: true });
+  };
+
+  const handleCancelRestore = () => {
+    setShowRestoreModal(false);
+    setRestoreUser(null);
+    // Navigate to clean URL or join page
+    if (session && session.roomCode === code) {
+      navigate(`/room/${code}`, { replace: true });
+    } else {
+      navigate(`/join/${code}`, { replace: true });
+    }
+  };
+
+  // Show restore modal/loading/error when on a userKey URL
+  if (userKey) {
+    if (restoreLoading) {
+      return (
+        <div className="container" style={{ paddingTop: '3rem' }}>
+          <div className="spinner" />
+          <p className="text-center text-muted">Restoring session...</p>
+        </div>
+      );
+    }
+
+    if (restoreError) {
+      return (
+        <div className="container" style={{ paddingTop: '3rem' }}>
+          <div className="card text-center">
+            <p className="text-error">{restoreError}</p>
+            <button
+              className="btn btn-secondary mt-md"
+              onClick={() => navigate(`/join/${code}`)}
+            >
+              Join Room Instead
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (showRestoreModal && restoreUser) {
+      const hasExistingSession = session && session.roomCode === code;
+      return (
+        <div className="container" style={{ paddingTop: '3rem' }}>
+          <div className="card">
+            <h3 style={{ marginBottom: 'var(--spacing-md)' }}>Restore Session</h3>
+            <p style={{ marginBottom: 'var(--spacing-md)' }}>
+              Continue as <strong>{restoreUser.nickname}</strong>? You have{' '}
+              <strong>{restoreUser.points}</strong> points.
+            </p>
+            {hasExistingSession && (
+              <p
+                style={{
+                  marginBottom: 'var(--spacing-md)',
+                  color: 'var(--color-warning, #f59e0b)',
+                  fontSize: '0.875rem',
+                }}
+              >
+                This will end your current session as {session.nickname || 'another user'}.
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirmRestore}>
+                Continue as {restoreUser.nickname}
+              </button>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={handleCancelRestore}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
+
   // Redirect if no session for this room
   useEffect(() => {
+    if (userKey) return; // Don't redirect during restoration
     if (!session || session.roomCode !== code) {
       // Pass current session as context so identity is preserved
       // when navigating between tournament and match rooms
@@ -60,7 +184,7 @@ export default function RoomPage() {
         } : undefined,
       });
     }
-  }, [session, code, navigate]);
+  }, [session, code, navigate, userKey]);
 
   // Update local room when Firestore room changes
   useEffect(() => {

@@ -5,7 +5,12 @@ IMPERATIVE SHELL: This module handles HTTP requests/responses
 - No business logic in endpoints
 """
 
-from fastapi import FastAPI, HTTPException, Header, Depends
+import logging
+import re
+import time
+from collections import defaultdict
+
+from fastapi import FastAPI, HTTPException, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Annotated
@@ -34,6 +39,48 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# Rate Limiting (in-memory, MVP)
+# ============================================================================
+
+class RateLimiter:
+    """Simple in-memory rate limiter per IP.
+
+    MVP approach - adequate for single-instance deployment.
+    For production, use Redis or Cloud Armor.
+    """
+
+    def __init__(self, max_requests: int = 10, window_seconds: int = 60):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self._requests: dict[str, list[float]] = defaultdict(list)
+
+    def is_allowed(self, client_ip: str) -> bool:
+        now = time.time()
+        window_start = now - self.window_seconds
+
+        # Clean old entries
+        self._requests[client_ip] = [
+            t for t in self._requests[client_ip] if t > window_start
+        ]
+
+        if len(self._requests[client_ip]) >= self.max_requests:
+            return False
+
+        self._requests[client_ip].append(now)
+        return True
+
+
+# Rate limiter for session restoration endpoint
+session_restore_limiter = RateLimiter(max_requests=10, window_seconds=60)
+
+# Regex for validating userKey format
+USER_KEY_PATTERN = re.compile(r"^[23456789A-HJ-NP-Za-hj-np-z]{8}$")
 
 
 # Initialize Firebase on startup
@@ -392,6 +439,102 @@ async def get_participants(code: str, room: RoomDep):
     return {
         "participants": [user.to_dict() for user in users],
         "count": len(users),
+    }
+
+
+# ============================================================================
+# User Link Endpoints
+# ============================================================================
+
+@app.get("/api/rooms/{code}/participants-with-links")
+async def get_participants_with_links(
+    code: str,
+    room: HostRoomDep,
+):
+    """Get all participants with their unique session links (host-only)
+
+    Returns participants with userKey included for link construction.
+    Backfills missing keys on demand for existing users.
+    """
+    try:
+        users = await user_service.get_users_in_room(code)
+
+        participants = []
+        for user in users:
+            try:
+                user_with_key = await user_service.ensure_user_has_key(user)
+                participant_data = user_with_key.to_dict(include_key=True)
+                participants.append(participant_data)
+            except ValueError:
+                logger.error(
+                    "KEY_GENERATION_FAILED: room=%s user=%s",
+                    code, user.user_id,
+                )
+                # Continue without this participant per spec
+                continue
+
+        return {"participants": participants}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get participants with links: {str(e)}",
+        )
+
+
+@app.get("/api/rooms/{code}/users/{user_key}")
+async def get_user_by_key(
+    code: str,
+    user_key: str,
+    request: Request,
+):
+    """Look up user by userKey for session restoration (public, no auth)
+
+    Security controls:
+    - Input validation via regex
+    - Rate limiting: 10 req/min per IP
+    - Structured logging for abuse monitoring
+    """
+    # Rate limiting
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    if not session_restore_limiter.is_allowed(client_ip):
+        logger.warning("RATE_LIMITED: ip=%s room=%s", client_ip, code)
+        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
+
+    # Input validation
+    if not USER_KEY_PATTERN.match(user_key):
+        raise HTTPException(status_code=400, detail="Invalid user key format")
+
+    # Verify room exists
+    room = await room_service.get_room(code)
+    if not room:
+        raise HTTPException(status_code=404, detail=f"Room not found: {code}")
+
+    try:
+        user = await user_service.get_user_by_key(code, user_key)
+    except Exception as e:
+        error_str = str(e)
+        if "FAILED_PRECONDITION" in error_str:
+            raise HTTPException(
+                status_code=503,
+                detail="Service temporarily unavailable (index building)",
+            )
+        raise HTTPException(status_code=500, detail=f"Lookup failed: {error_str}")
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    logger.info("SESSION_RESTORE: room=%s user=%s", code, user.user_id)
+
+    # Return user data WITHOUT userKey (security)
+    return {
+        "userId": user.user_id,
+        "nickname": user.nickname,
+        "points": user.points,
+        "isAdmin": user.is_admin,
+        "roomCode": user.room_code,
     }
 
 

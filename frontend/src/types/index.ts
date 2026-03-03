@@ -83,6 +83,10 @@ export interface UserBet {
   pointsWon: number | null;
 }
 
+export interface ParticipantWithLink extends User {
+  userKey: string;
+}
+
 export interface LeaderboardEntry {
   userId: string;
   nickname: string;

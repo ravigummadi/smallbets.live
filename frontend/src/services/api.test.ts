@@ -605,6 +605,112 @@ describe('API Service', () => {
     });
   });
 
+  describe('roomApi - user links', () => {
+    describe('getParticipantsWithLinks', () => {
+      it('should send X-Host-Id header', async () => {
+        const mockResponse = {
+          participants: [
+            { userId: 'user-1', nickname: 'Alice', points: 1000, userKey: 'xY7kM9zQ' },
+          ],
+        };
+
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        });
+
+        const result = await roomApi.getParticipantsWithLinks('ABC123', 'host-123');
+
+        expect(result).toEqual(mockResponse);
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/rooms/ABC123/participants-with-links'),
+          expect.objectContaining({
+            headers: expect.objectContaining({
+              'X-Host-Id': 'host-123',
+            }),
+          })
+        );
+      });
+
+      it('should handle 403 unauthorized', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: 'Forbidden',
+          json: async () => ({ detail: 'Not the room host' }),
+        });
+
+        await expect(
+          roomApi.getParticipantsWithLinks('ABC123', 'wrong-host')
+        ).rejects.toThrow('API request failed: 403');
+      });
+    });
+
+    describe('getUserByKey', () => {
+      it('should fetch user by key successfully', async () => {
+        const mockResponse = {
+          userId: 'user-123',
+          nickname: 'Alice',
+          points: 850,
+          isAdmin: false,
+          roomCode: 'ABC123',
+        };
+
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        });
+
+        const result = await roomApi.getUserByKey('ABC123', 'xY7kM9zQ');
+
+        expect(result).toEqual(mockResponse);
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/rooms/ABC123/users/xY7kM9zQ'),
+          expect.any(Object)
+        );
+      });
+
+      it('should handle 404 user not found', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          statusText: 'Not Found',
+          json: async () => ({ detail: 'User not found' }),
+        });
+
+        await expect(
+          roomApi.getUserByKey('ABC123', 'nonexist')
+        ).rejects.toThrow('API request failed: 404');
+      });
+
+      it('should handle 400 invalid key format', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          json: async () => ({ detail: 'Invalid user key format' }),
+        });
+
+        await expect(
+          roomApi.getUserByKey('ABC123', 'bad')
+        ).rejects.toThrow('API request failed: 400');
+      });
+
+      it('should handle 429 rate limited', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          statusText: 'Too Many Requests',
+          json: async () => ({ detail: 'Too many requests' }),
+        });
+
+        await expect(
+          roomApi.getUserByKey('ABC123', 'xY7kM9zQ')
+        ).rejects.toThrow('API request failed: 429');
+      });
+    });
+  });
+
   describe('Error handling', () => {
     it('should include Content-Type header in all requests', async () => {
       (global.fetch as any).mockResolvedValueOnce({
