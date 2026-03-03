@@ -14,6 +14,7 @@ export interface MatchDetails {
   team2: string;
   matchDateTime: string;
   venue?: string;
+  title?: string;
 }
 
 export interface Room {
@@ -117,6 +118,7 @@ export interface CreateMatchRoomRequest {
   team2: string;
   match_date_time: string;
   venue?: string;
+  title?: string;
 }
 
 export interface CreateMatchRoomResponse {

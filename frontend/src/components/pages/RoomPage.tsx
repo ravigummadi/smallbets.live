@@ -42,6 +42,8 @@ export default function RoomPage() {
 
   // Match room creation state
   const [showCreateMatch, setShowCreateMatch] = useState(false);
+  const [matchTitle, setMatchTitle] = useState('');
+  const [matchDate, setMatchDate] = useState('');
   const [matchTeam1, setMatchTeam1] = useState('');
   const [matchTeam2, setMatchTeam2] = useState('');
   const [creatingMatch, setCreatingMatch] = useState(false);
@@ -119,7 +121,8 @@ export default function RoomPage() {
       const response = await roomApi.createMatchRoom(code, session.hostId, {
         team1: matchTeam1.trim(),
         team2: matchTeam2.trim(),
-        match_date_time: new Date().toISOString(),
+        match_date_time: matchDate ? new Date(matchDate).toISOString() : new Date().toISOString(),
+        title: matchTitle.trim() || undefined,
       });
 
       // Navigate to join the match room, passing tournament context
@@ -425,7 +428,14 @@ export default function RoomPage() {
                     borderLeft: `3px solid ${matchRoom.status === 'active' ? 'var(--color-success)' : 'var(--color-text-muted)'}`,
                   }}
                 >
-                  <span>{matchRoom.eventName || `Match ${matchRoom.code}`}</span>
+                  <div>
+                    <span>{matchRoom.matchDetails?.title || matchRoom.eventName || `Match ${matchRoom.code}`}</span>
+                    {matchRoom.matchDetails?.matchDateTime && (
+                      <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.125rem' }}>
+                        {new Date(matchRoom.matchDetails.matchDateTime).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                     {matchRoom.status === 'active' ? 'LIVE' : matchRoom.status}
                   </span>
@@ -440,6 +450,19 @@ export default function RoomPage() {
             <div className="mt-md" style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
               {showCreateMatch ? (
                 <div style={{ display: 'grid', gap: '0.75rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Match Title (e.g., IPL Match 12 - Qualifier)"
+                    value={matchTitle}
+                    onChange={(e) => setMatchTitle(e.target.value)}
+                    maxLength={60}
+                  />
+                  <input
+                    type="date"
+                    placeholder="Match Date"
+                    value={matchDate}
+                    onChange={(e) => setMatchDate(e.target.value)}
+                  />
                   <input
                     type="text"
                     placeholder="Team 1 (e.g., RCB)"

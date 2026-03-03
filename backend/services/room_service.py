@@ -120,6 +120,7 @@ async def create_match_room(
     team2: str,
     match_date_time: str,
     venue: Optional[str] = None,
+    title: Optional[str] = None,
 ) -> Room:
     """Create a match room linked to a tournament"""
     db = get_db()
@@ -138,12 +139,16 @@ async def create_match_room(
         team2=team2,
         match_date_time=match_date_time,
         venue=venue,
+        title=title,
     )
+
+    # Use title as event_name if provided, otherwise default to "team1 vs team2"
+    event_name = title if title else f"{team1} vs {team2}"
 
     room = Room(
         code=code,
         event_template=parent_room.event_template,
-        event_name=f"{team1} vs {team2}",
+        event_name=event_name,
         status="active",
         host_id=host_id,
         automation_enabled=False,

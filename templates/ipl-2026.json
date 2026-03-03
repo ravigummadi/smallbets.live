@@ -67,5 +67,118 @@
       "pointsValue": 100,
       "timerSeconds": 120
     }
+  ],
+  "matches": [
+    {
+      "title": "IPL 2026 Match 1 - Season Opener",
+      "team1": "Kolkata Knight Riders",
+      "team2": "Mumbai Indians",
+      "matchDate": "2026-03-14",
+      "venue": "Eden Gardens, Kolkata",
+      "matchBets": [
+        {
+          "question": "Who will win?",
+          "options": ["Kolkata Knight Riders", "Mumbai Indians"],
+          "pointsValue": 100,
+          "timerSeconds": 60
+        },
+        {
+          "question": "Top scorer?",
+          "options": ["Sunil Narine", "Rinku Singh", "Rohit Sharma", "Suryakumar Yadav", "Other"],
+          "pointsValue": 100,
+          "timerSeconds": 90
+        },
+        {
+          "question": "Will there be a century?",
+          "options": ["Yes", "No"],
+          "pointsValue": 100,
+          "timerSeconds": 60
+        }
+      ]
+    },
+    {
+      "title": "IPL 2026 Match 2",
+      "team1": "Chennai Super Kings",
+      "team2": "Royal Challengers Bengaluru",
+      "matchDate": "2026-03-15",
+      "venue": "MA Chidambaram Stadium, Chennai",
+      "matchBets": [
+        {
+          "question": "Who will win?",
+          "options": ["Chennai Super Kings", "Royal Challengers Bengaluru"],
+          "pointsValue": 100,
+          "timerSeconds": 60
+        },
+        {
+          "question": "Top scorer?",
+          "options": ["Ruturaj Gaikwad", "MS Dhoni", "Virat Kohli", "Rajat Patidar", "Other"],
+          "pointsValue": 100,
+          "timerSeconds": 90
+        },
+        {
+          "question": "Will there be a century?",
+          "options": ["Yes", "No"],
+          "pointsValue": 100,
+          "timerSeconds": 60
+        }
+      ]
+    },
+    {
+      "title": "IPL 2026 Match 3",
+      "team1": "Delhi Capitals",
+      "team2": "Rajasthan Royals",
+      "matchDate": "2026-03-16",
+      "venue": "Arun Jaitley Stadium, Delhi",
+      "matchBets": [
+        {
+          "question": "Who will win?",
+          "options": ["Delhi Capitals", "Rajasthan Royals"],
+          "pointsValue": 100,
+          "timerSeconds": 60
+        },
+        {
+          "question": "Top scorer?",
+          "options": ["Rishabh Pant", "Jake Fraser-McGurk", "Sanju Samson", "Jos Buttler", "Other"],
+          "pointsValue": 100,
+          "timerSeconds": 90
+        }
+      ]
+    },
+    {
+      "title": "IPL 2026 Qualifier 1",
+      "team1": "TBD",
+      "team2": "TBD",
+      "matchDate": "2026-05-20",
+      "venue": "TBD",
+      "matchBets": [
+        {
+          "question": "Who will win?",
+          "options": ["Team 1", "Team 2"],
+          "pointsValue": 100,
+          "timerSeconds": 60
+        }
+      ]
+    },
+    {
+      "title": "IPL 2026 Final",
+      "team1": "TBD",
+      "team2": "TBD",
+      "matchDate": "2026-05-25",
+      "venue": "TBD",
+      "matchBets": [
+        {
+          "question": "Who will win IPL 2026 Final?",
+          "options": ["Team 1", "Team 2"],
+          "pointsValue": 200,
+          "timerSeconds": 120
+        },
+        {
+          "question": "Player of the Match?",
+          "options": ["TBD"],
+          "pointsValue": 100,
+          "timerSeconds": 90
+        }
+      ]
+    }
   ]
 }
