@@ -15,7 +15,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch, MagicMock, mock_open
 import json
 from services.template_service import load_template, create_bets_from_template
-from models.event_template import EventTemplate
+from models.event_template import EventTemplate, MatchTemplate
 from models.bet import Bet, BetStatus
 
 
@@ -361,6 +361,148 @@ def test_validate_superbowl_template():
     for bet in data["bets"]:
         assert "question" in bet
         assert "options" in bet
+
+
+@pytest.mark.unit
+def test_validate_ipl_template_matches():
+    """Test IPL 2026 template includes matches with titles and dates"""
+    backend_dir = Path(__file__).parent.parent
+    templates_dir = backend_dir.parent / "templates"
+    ipl_path = templates_dir / "ipl-2026.json"
+
+    if not ipl_path.exists():
+        pytest.skip("ipl-2026.json template not found")
+
+    with open(ipl_path, 'r') as f:
+        data = json.load(f)
+
+    assert "matches" in data
+    assert len(data["matches"]) >= 1
+
+    for match in data["matches"]:
+        assert "title" in match, "Each match must have a title"
+        assert "team1" in match, "Each match must have team1"
+        assert "team2" in match, "Each match must have team2"
+        assert "matchDate" in match, "Each match must have a matchDate"
+        assert len(match["title"]) > 0
+        assert len(match["matchDate"]) == 10  # YYYY-MM-DD format
+
+
+@pytest.mark.unit
+def test_ipl_template_loads_with_matches():
+    """Test IPL 2026 template loads matches into EventTemplate model"""
+    backend_dir = Path(__file__).parent.parent
+    templates_dir = backend_dir.parent / "templates"
+    ipl_path = templates_dir / "ipl-2026.json"
+
+    if not ipl_path.exists():
+        pytest.skip("ipl-2026.json template not found")
+
+    with open(ipl_path, 'r') as f:
+        data = json.load(f)
+
+    template = EventTemplate.from_dict(data)
+    assert template.template_id == "ipl-2026"
+    assert len(template.matches) >= 1
+
+    first_match = template.matches[0]
+    assert first_match.title is not None
+    assert first_match.team1 is not None
+    assert first_match.team2 is not None
+    assert first_match.match_date is not None
+
+
+# ============================================================================
+# MatchTemplate Model Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+def test_match_template_serialization():
+    """Test MatchTemplate to_dict and from_dict round-trip"""
+    mt = MatchTemplate(
+        title="IPL Match 1 - Season Opener",
+        team1="KKR",
+        team2="MI",
+        match_date="2026-03-14",
+        venue="Eden Gardens",
+        match_bets=[
+            {"question": "Who will win?", "options": ["KKR", "MI"], "pointsValue": 100}
+        ],
+    )
+
+    data = mt.to_dict()
+    assert data["title"] == "IPL Match 1 - Season Opener"
+    assert data["team1"] == "KKR"
+    assert data["team2"] == "MI"
+    assert data["matchDate"] == "2026-03-14"
+    assert data["venue"] == "Eden Gardens"
+    assert len(data["matchBets"]) == 1
+
+    restored = MatchTemplate.from_dict(data)
+    assert restored.title == mt.title
+    assert restored.team1 == mt.team1
+    assert restored.match_date == mt.match_date
+    assert restored.venue == mt.venue
+
+
+@pytest.mark.unit
+def test_match_template_optional_venue():
+    """Test MatchTemplate without venue"""
+    mt = MatchTemplate(
+        title="Qualifier 1",
+        team1="TBD",
+        team2="TBD",
+        match_date="2026-05-20",
+    )
+
+    data = mt.to_dict()
+    assert "venue" not in data
+
+    restored = MatchTemplate.from_dict(data)
+    assert restored.venue is None
+
+
+@pytest.mark.unit
+def test_event_template_with_matches_serialization():
+    """Test EventTemplate serialization includes matches"""
+    template = EventTemplate(
+        template_id="test-tournament",
+        name="Test Tournament",
+        bets=[],
+        matches=[
+            MatchTemplate(
+                title="Match 1",
+                team1="A",
+                team2="B",
+                match_date="2026-01-01",
+            ),
+        ],
+    )
+
+    data = template.to_dict()
+    assert "matches" in data
+    assert len(data["matches"]) == 1
+    assert data["matches"][0]["title"] == "Match 1"
+
+    restored = EventTemplate.from_dict(data)
+    assert len(restored.matches) == 1
+    assert restored.matches[0].title == "Match 1"
+
+
+@pytest.mark.unit
+def test_event_template_without_matches_backward_compat():
+    """Test EventTemplate without matches for backward compatibility"""
+    data = {
+        "templateId": "grammys-2026",
+        "name": "Grammys 2026",
+        "bets": [{"question": "Q?", "options": ["A", "B"]}],
+    }
+    template = EventTemplate.from_dict(data)
+    assert template.matches == []
+
+    serialized = template.to_dict()
+    assert "matches" not in serialized
 
 
 # ============================================================================
