@@ -12,6 +12,15 @@ from typing import Optional, List, Tuple
 from difflib import SequenceMatcher
 import math
 
+# Pre-compiled regex for numeric range detection (used in hot path)
+_NUMERIC_RANGE_RE = re.compile(
+    r'^\s*\d+\s*[-–]\s*\d+\s*(?:runs?|pts|points|goals?|wickets?)?\s*$'
+    r'|^\s*\d+\s*\+\s*(?:runs?|pts|points|goals?|wickets?)?\s*$'
+    r'|^\s*(?:under|below|less than|<)\s*\d+\s*$'
+    r'|^\s*(?:over|above|more than|>)\s*\d+\s*$',
+    re.IGNORECASE
+)
+
 
 def normalize_text(text: str) -> str:
     """Normalize text for matching
@@ -83,15 +92,7 @@ def is_numeric_range_options(options: List[str]) -> bool:
     if len(options) < 2:
         return False
 
-    range_pattern = re.compile(
-        r'^\s*\d+\s*[-–]\s*\d+\s*(?:runs?|pts|points|goals?|wickets?)?\s*$'
-        r'|^\s*\d+\s*\+\s*(?:runs?|pts|points|goals?|wickets?)?\s*$'
-        r'|^\s*(?:under|below|less than|<)\s*\d+\s*$'
-        r'|^\s*(?:over|above|more than|>)\s*\d+\s*$',
-        re.IGNORECASE
-    )
-
-    matches = sum(1 for opt in options if range_pattern.match(opt.strip()))
+    matches = sum(1 for opt in options if _NUMERIC_RANGE_RE.match(opt.strip()))
     return matches >= len(options) / 2
 
 
@@ -223,16 +224,20 @@ def generate_resolve_patterns_from_question(question: str) -> List[str]:
     if not content_words:
         return []
 
+    # Cap at 4 content words to avoid ReDoS with chained .* patterns
+    content_words = content_words[:4]
+
     patterns = []
 
     # Multi-word subject pattern (e.g., "rohit.*sharma")
+    # Use non-greedy .*? to reduce backtracking risk
     if len(content_words) >= 2:
-        patterns.append(".*".join(content_words))
+        patterns.append(".*?".join(re.escape(w) for w in content_words))
 
     # Individual content words as fallback patterns
     for word in content_words:
         if len(word) >= 3:
-            patterns.append(word)
+            patterns.append(re.escape(word))
 
     return patterns
 
@@ -343,11 +348,11 @@ def extract_winner_from_text(
     for option in options:
         # Extract just the key part of option (before " - ")
         # e.g., "Cowboy Carter - Beyoncé" -> ["Cowboy Carter", "Beyoncé"]
-        option_parts = [part.strip() for part in option.split('-')]
-
-        # Skip splitting for numeric range options (e.g., "41-60")
-        if is_numeric_range_options([option]):
+        # But don't split numeric ranges like "41-60"
+        if _NUMERIC_RANGE_RE.match(option.strip()):
             option_parts = [option]
+        else:
+            option_parts = [part.strip() for part in option.split('-')]
 
         # Check each part for a match
         for part in option_parts:
