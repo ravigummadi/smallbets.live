@@ -43,7 +43,7 @@ export default function RoomPage() {
   // Admin modal state (host only)
   const [showBetModal, setShowBetModal] = useState(false);
   const [showFeedModal, setShowFeedModal] = useState(false);
-  const [automationEnabled, setAutomationEnabled] = useState(false);
+  const [automationEnabled, setAutomationEnabled] = useState(true);
 
   // Inline bet management state (host only)
   const [closingBetId, setClosingBetId] = useState<string | null>(null);

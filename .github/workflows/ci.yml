@@ -44,6 +44,6 @@ jobs:
           python-version: "3.11"
 
       - run: pip install uv && uv pip install --system -r pyproject.toml --all-extras
-      - run: uv pip install --system pytest pytest-asyncio pytest-cov pytest-mock httpx
+      - run: uv pip install --system pytest pytest-asyncio pytest-cov pytest-mock "httpx>=0.26.0,<0.28.0"
 
       - run: python -m pytest -m unit --tb=short

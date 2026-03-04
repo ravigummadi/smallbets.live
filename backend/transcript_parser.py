@@ -4,11 +4,22 @@ FUNCTIONAL CORE: Pure functions for transcript analysis
 - No I/O operations
 - Deterministic text processing
 - Fuzzy matching with confidence scoring
+- Numeric range extraction for score-based bets
 """
 
 import re
 from typing import Optional, List, Tuple
 from difflib import SequenceMatcher
+import math
+
+# Pre-compiled regex for numeric range detection (used in hot path)
+_NUMERIC_RANGE_RE = re.compile(
+    r'^\s*\d+\s*[-–]\s*\d+\s*(?:runs?|pts|points|goals?|wickets?)?\s*$'
+    r'|^\s*\d+\s*\+\s*(?:runs?|pts|points|goals?|wickets?)?\s*$'
+    r'|^\s*(?:under|below|less than|<)\s*\d+\s*$'
+    r'|^\s*(?:over|above|more than|>)\s*\d+\s*$',
+    re.IGNORECASE
+)
 
 
 def normalize_text(text: str) -> str:
@@ -65,6 +76,170 @@ def fuzzy_match_score(text: str, pattern: str) -> float:
         similarity = min(1.0, similarity + 0.3)
 
     return similarity
+
+
+def is_numeric_range_options(options: List[str]) -> bool:
+    """Check if bet options are numeric ranges like '0-20', '41-60', '61+'.
+
+    Pure function - string analysis only
+
+    Args:
+        options: List of bet options
+
+    Returns:
+        True if at least half the options are numeric ranges
+    """
+    if len(options) < 2:
+        return False
+
+    matches = sum(1 for opt in options if _NUMERIC_RANGE_RE.match(opt.strip()))
+    return matches >= len(options) / 2
+
+
+def parse_range_option(option: str) -> Tuple[Optional[float], Optional[float]]:
+    """Parse a range option string into (min, max) bounds.
+
+    Pure function - string parsing only
+
+    Args:
+        option: Range string like '41-60', '61+', 'Under 20'
+
+    Returns:
+        Tuple of (min_val, max_val). None means not parseable.
+        math.inf used for unbounded upper limit.
+    """
+    option = option.strip()
+
+    # Remove unit suffixes
+    option = re.sub(
+        r'\s*(?:runs?|pts|points|goals?|wickets?)\s*$', '', option, flags=re.IGNORECASE
+    ).strip()
+
+    # Pattern: "41-60" or "41–60"
+    match = re.match(r'^(\d+)\s*[-–]\s*(\d+)$', option)
+    if match:
+        return float(match.group(1)), float(match.group(2))
+
+    # Pattern: "61+"
+    match = re.match(r'^(\d+)\s*\+$', option)
+    if match:
+        return float(match.group(1)), math.inf
+
+    # Pattern: "Under 20", "Less than 20", "< 20", "Below 20"
+    match = re.match(r'^(?:under|below|less than|<)\s*(\d+)$', option, re.IGNORECASE)
+    if match:
+        return 0.0, float(match.group(1)) - 1
+
+    # Pattern: "Over 100", "More than 100", "> 100", "Above 100"
+    match = re.match(r'^(?:over|above|more than|>)\s*(\d+)$', option, re.IGNORECASE)
+    if match:
+        return float(match.group(1)) + 1, math.inf
+
+    return None, None
+
+
+def extract_score_number_from_text(text: str) -> Optional[float]:
+    """Extract the most likely score/result number from text.
+
+    Pure function - regex extraction only
+
+    Looks for numbers near result-indicating words like 'runs', 'scored', etc.
+    Falls back to extracting all numbers if no contextual match found.
+
+    Args:
+        text: Transcript text (e.g., 'Rohit sharma got out for 45 runs')
+
+    Returns:
+        The most likely score number, or None if not found
+    """
+    text_lower = text.lower()
+
+    # Patterns for score numbers (number near result words)
+    score_patterns = [
+        r'(\d+)\s*(?:runs?|pts|points|goals?|wickets?)',
+        r'(?:scored?|made|got|hit)\s+(\d+)',
+        r'(?:for|at|on)\s+(\d+)\s*(?:runs?)?',
+    ]
+
+    for pattern in score_patterns:
+        match = re.search(pattern, text_lower)
+        if match:
+            return float(match.group(1))
+
+    # Fallback: return the largest number in the text (heuristic)
+    all_numbers = [float(n) for n in re.findall(r'\b(\d+)\b', text_lower)]
+    if all_numbers:
+        return max(all_numbers)
+
+    return None
+
+
+def match_number_to_range_option(number: float, options: List[str]) -> Optional[str]:
+    """Find which range option contains the given number.
+
+    Pure function - numeric comparison only
+
+    Args:
+        number: The number to match
+        options: List of range option strings
+
+    Returns:
+        The matching option string, or None
+    """
+    for option in options:
+        min_val, max_val = parse_range_option(option)
+        if min_val is not None and max_val is not None:
+            if min_val <= number <= max_val:
+                return option
+    return None
+
+
+def generate_resolve_patterns_from_question(question: str) -> List[str]:
+    """Generate resolve patterns by extracting key subjects from bet question.
+
+    Pure function - string analysis only
+
+    Extracts content words (removing question/stop words) and builds
+    regex patterns to match transcripts about the same subject.
+
+    Args:
+        question: Bet question (e.g., 'How much does Rohit sharma score?')
+
+    Returns:
+        List of regex patterns (e.g., ['rohit.*sharma'])
+    """
+    stop_words = {
+        "who", "what", "how", "much", "many", "does", "will", "is", "are",
+        "the", "a", "an", "in", "on", "at", "to", "for", "of", "with",
+        "do", "can", "be", "this", "that", "it", "and", "or", "but",
+        "score", "scores", "scored", "win", "wins", "get", "gets",
+        "make", "makes", "total", "first", "last", "next", "today",
+        "tonight", "match", "game",
+    }
+
+    text = normalize_text(question)
+    words = text.split()
+    content_words = [w for w in words if w not in stop_words and len(w) > 1]
+
+    if not content_words:
+        return []
+
+    # Cap at 4 content words to avoid ReDoS with chained .* patterns
+    content_words = content_words[:4]
+
+    patterns = []
+
+    # Multi-word subject pattern (e.g., "rohit.*sharma")
+    # Use non-greedy .*? to reduce backtracking risk
+    if len(content_words) >= 2:
+        patterns.append(".*?".join(re.escape(w) for w in content_words))
+
+    # Individual content words as fallback patterns
+    for word in content_words:
+        if len(word) >= 3:
+            patterns.append(re.escape(word))
+
+    return patterns
 
 
 def match_trigger_patterns(
@@ -126,6 +301,11 @@ def extract_winner_from_text(
 
     Pure function - text analysis only
 
+    Supports two extraction strategies:
+    1. Numeric range matching: For options like '0-20', '41-60', '61+'
+       extracts numbers from text and maps to the correct range
+    2. Fuzzy text matching: For text options like player/team names
+
     Args:
         text: Announcement text (e.g., "And the winner is... Beyoncé!")
         options: List of possible options to match
@@ -142,18 +322,37 @@ def extract_winner_from_text(
         ...     threshold=0.7
         ... )
         ("Beyoncé", 0.95)
+
+        >>> extract_winner_from_text(
+        ...     "Rohit sharma got out for 45 runs",
+        ...     ["0-20", "21-40", "41-60", "61+"],
+        ...     threshold=0.7
+        ... )
+        ("41-60", 1.0)
     """
     if not options:
         return None, 0.0
 
-    text_normalized = normalize_text(text)
+    # Strategy 1: Numeric range matching
+    if is_numeric_range_options(options):
+        score_number = extract_score_number_from_text(text)
+        if score_number is not None:
+            winner = match_number_to_range_option(score_number, options)
+            if winner:
+                return winner, 1.0
+
+    # Strategy 2: Fuzzy text matching
     best_option = None
     best_score = 0.0
 
     for option in options:
         # Extract just the key part of option (before " - ")
         # e.g., "Cowboy Carter - Beyoncé" -> ["Cowboy Carter", "Beyoncé"]
-        option_parts = [part.strip() for part in option.split('-')]
+        # But don't split numeric ranges like "41-60"
+        if _NUMERIC_RANGE_RE.match(option.strip()):
+            option_parts = [option]
+        else:
+            option_parts = [part.strip() for part in option.split('-')]
 
         # Check each part for a match
         for part in option_parts:
