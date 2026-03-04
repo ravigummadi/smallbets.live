@@ -44,6 +44,7 @@ export default function RoomPage() {
   const [participantLinks, setParticipantLinks] = useState<ParticipantWithLink[]>([]);
   const [linksLoaded, setLinksLoaded] = useState(false);
   const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+  const [copiedRoomLink, setCopiedRoomLink] = useState(false);
 
   // Session restoration state
   const [restoreUser, setRestoreUser] = useState<User | null>(null);
@@ -228,6 +229,23 @@ export default function RoomPage() {
         setLinksLoaded(true);
       });
   }, [session?.hostId, code, participants.length]);
+
+  const handleCopyRoomLink = async () => {
+    if (!code) return;
+    const link = `${window.location.origin}/join/${code}`;
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = link;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    setCopiedRoomLink(true);
+    setTimeout(() => setCopiedRoomLink(false), 2000);
+  };
 
   const handleCopyParticipantLink = async (participant: ParticipantWithLink) => {
     if (!code) return;
@@ -527,8 +545,21 @@ export default function RoomPage() {
       <div className="card mb-md">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h3 style={{ marginBottom: '0.25rem' }}>
-              {isTournament && 'Tournament: '}{eventName} - Room {displayRoom.code}
+            <h3 style={{ marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <span>{isTournament && 'Tournament: '}{eventName} - Room {displayRoom.code}</span>
+              <button
+                className="btn btn-secondary"
+                style={{
+                  fontSize: '0.7rem',
+                  padding: '0.15rem 0.4rem',
+                  minHeight: 'auto',
+                  lineHeight: '1.2',
+                  fontWeight: 500,
+                }}
+                onClick={handleCopyRoomLink}
+              >
+                {copiedRoomLink ? 'Copied!' : 'Share'}
+              </button>
             </h3>
             <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               {displayRoom.status === 'waiting' && <span>Waiting to start</span>}
