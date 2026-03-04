@@ -68,8 +68,12 @@ export default function JoinRoomPage() {
       }
       saveSession(sessionData);
 
-      // Navigate to room
-      navigate(`/room/${roomCode}`);
+      // Navigate to unique user URL so the user has a bookmarkable/shareable link
+      if (response.user_key) {
+        navigate(`/room/${roomCode}/u/${response.user_key}`);
+      } else {
+        navigate(`/room/${roomCode}`);
+      }
     } catch (err: any) {
       if (err.status === 404) {
         setError(`Room "${roomCode}" not found`);

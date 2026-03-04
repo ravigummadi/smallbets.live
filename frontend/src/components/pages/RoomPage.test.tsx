@@ -24,7 +24,8 @@ vi.mock('react-router-dom', async (importOriginal) => {
 // Mock hooks
 vi.mock('@/hooks/useSession', () => ({
   useSession: () => ({
-    session: { userId: 'user-123', roomCode: 'ABC123', hostId: 'host-123' },
+    session: { userId: 'user-123', roomCode: 'ABC123', hostId: 'host-123', nickname: 'TestUser' },
+    saveSession: vi.fn(),
     isHost: true,
   }),
 }));
@@ -85,6 +86,11 @@ vi.mock('@/hooks/useParticipants', () => ({
 vi.mock('@/services/api', () => ({
   betApi: {
     placeBet: vi.fn(),
+  },
+  roomApi: {
+    getParticipantsWithLinks: vi.fn(() => Promise.resolve({ participants: [] })),
+    getMatchRooms: vi.fn(() => Promise.resolve({ matches: [] })),
+    getUserByKey: vi.fn(() => Promise.resolve(null)),
   },
 }));
 

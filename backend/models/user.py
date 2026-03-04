@@ -1,6 +1,7 @@
 """User model - represents a session participant"""
 
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -16,13 +17,19 @@ class User(BaseModel):
     points: int = Field(default=1000, description="Current point balance")
     is_admin: bool = Field(default=False, description="Whether user is room admin")
     joined_at: datetime = Field(default_factory=datetime.utcnow)
+    user_key: Optional[str] = Field(default=None, description="8-char unique key for session restoration links")
 
-    def to_dict(self) -> dict:
+    def to_dict(self, include_key: bool = False) -> dict:
         """Serialize for Firestore storage
 
         Pure function - no I/O operations
+
+        Args:
+            include_key: If True, include userKey in output.
+                         Default False for security (not exposed to clients).
+                         Use True when persisting to Firestore.
         """
-        return {
+        result = {
             "userId": self.user_id,
             "roomCode": self.room_code,
             "nickname": self.nickname,
@@ -30,6 +37,9 @@ class User(BaseModel):
             "isAdmin": self.is_admin,
             "joinedAt": self.joined_at,
         }
+        if include_key and self.user_key is not None:
+            result["userKey"] = self.user_key
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> "User":
@@ -44,6 +54,7 @@ class User(BaseModel):
             points=data["points"],
             is_admin=data.get("isAdmin", False),
             joined_at=data["joinedAt"],
+            user_key=data.get("userKey"),
         )
 
     def can_afford_bet(self, bet_cost: int) -> bool:

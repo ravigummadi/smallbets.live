@@ -16,6 +16,7 @@ function App() {
         <Route path="/create" element={<CreateRoomPage />} />
         <Route path="/join/:code?" element={<JoinRoomPage />} />
         <Route path="/room/:code" element={<RoomPage />} />
+        <Route path="/room/:code/u/:userKey" element={<RoomPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

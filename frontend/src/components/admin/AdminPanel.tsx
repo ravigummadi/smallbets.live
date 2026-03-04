@@ -2,13 +2,13 @@
  * Admin Panel - Admin controls and monitoring
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LiveFeedPanel from './LiveFeedPanel';
 import BetCreationForm from './BetCreationForm';
 import BetListPanel from './BetListPanel';
 import { roomApi } from '@/services/api';
 import { useBets } from '@/hooks/useBets';
-import type { Room } from '@/types';
+import type { Room, ParticipantWithLink } from '@/types';
 
 interface AdminPanelProps {
   room: Room;
@@ -25,6 +25,13 @@ export default function AdminPanel({
   const [showModal, setShowModal] = useState(false);
   const [showFeedModal, setShowFeedModal] = useState(false);
   const { bets, loading: betsLoading } = useBets(room.code);
+
+  // Participant links state
+  const [participantsWithLinks, setParticipantsWithLinks] = useState<ParticipantWithLink[]>([]);
+  const [linksLoading, setLinksLoading] = useState(false);
+  const [linksError, setLinksError] = useState<string | null>(null);
+  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+  const [showParticipants, setShowParticipants] = useState(false);
 
   const handleToggleAutomation = (enabled: boolean) => {
     setAutomationEnabled(enabled);
@@ -46,6 +53,48 @@ export default function AdminPanel({
       onRoomUpdate({ ...room, status: 'finished' });
     } catch (err) {
       console.error('Failed to finish room:', err);
+    }
+  };
+
+  // Load participants with links when section is shown
+  useEffect(() => {
+    if (!showParticipants) return;
+
+    setLinksLoading(true);
+    setLinksError(null);
+
+    roomApi.getParticipantsWithLinks(room.code, hostId)
+      .then((res) => {
+        setParticipantsWithLinks(res.participants);
+      })
+      .catch((err: any) => {
+        if (err.status === 403) {
+          setLinksError('Not authorized to view participant links.');
+        } else {
+          setLinksError('Failed to load participant links.');
+        }
+      })
+      .finally(() => {
+        setLinksLoading(false);
+      });
+  }, [showParticipants, room.code, hostId]);
+
+  const handleCopyLink = async (participant: ParticipantWithLink) => {
+    const link = `${window.location.origin}/room/${room.code}/u/${participant.userKey}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedUserId(participant.userId);
+      setTimeout(() => setCopiedUserId(null), 2000);
+    } catch {
+      // Fallback for non-HTTPS contexts
+      const textArea = document.createElement('textarea');
+      textArea.value = link;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiedUserId(participant.userId);
+      setTimeout(() => setCopiedUserId(null), 2000);
     }
   };
 
@@ -92,6 +141,76 @@ export default function AdminPanel({
           >
             + Create New Bet
           </button>
+        )}
+      </div>
+
+      {/* Participant Links Section */}
+      <div className="card">
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+          }}
+          onClick={() => setShowParticipants(!showParticipants)}
+        >
+          <h4 style={{ marginBottom: 0 }}>Participant Links</h4>
+          <span style={{ fontSize: '1.25rem', color: 'var(--color-text-secondary)' }}>
+            {showParticipants ? '\u2212' : '+'}
+          </span>
+        </div>
+
+        {showParticipants && (
+          <div style={{ marginTop: 'var(--spacing-md)' }}>
+            {linksLoading ? (
+              <p className="text-muted" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
+                Loading participant links...
+              </p>
+            ) : linksError ? (
+              <p className="text-error" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
+                {linksError}
+              </p>
+            ) : participantsWithLinks.length === 0 ? (
+              <p className="text-muted" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
+                No participants yet.
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gap: '0.5rem' }}>
+                {participantsWithLinks.map((participant) => (
+                  <div
+                    key={participant.userId}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: 'var(--color-bg-elevated)',
+                      borderRadius: 'var(--radius-sm)',
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontWeight: '500' }}>{participant.nickname}</span>
+                      <span className="text-muted" style={{ marginLeft: '0.5rem', fontSize: '0.75rem' }}>
+                        {participant.points} pts
+                      </span>
+                    </div>
+                    <button
+                      className="btn btn-secondary"
+                      style={{
+                        fontSize: '0.75rem',
+                        padding: '0.25rem 0.5rem',
+                        minHeight: 'auto',
+                      }}
+                      onClick={() => handleCopyLink(participant)}
+                    >
+                      {copiedUserId === participant.userId ? 'Copied!' : 'Copy Link'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

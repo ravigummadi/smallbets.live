@@ -13,6 +13,7 @@ import type {
   JoinRoomRequest,
   JoinRoomResponse,
   PlaceBetRequest,
+  ParticipantWithLink,
   Room,
   Bet,
   User,
@@ -122,6 +123,22 @@ export const roomApi = {
       method: 'POST',
       headers: { 'X-Host-Id': hostId },
     });
+  },
+
+  async getParticipantsWithLinks(
+    code: string,
+    hostId: string,
+  ): Promise<{ participants: ParticipantWithLink[] }> {
+    return fetchApi(`/api/rooms/${code}/participants-with-links`, {
+      headers: { 'X-Host-Id': hostId },
+    });
+  },
+
+  async getUserByKey(
+    roomCode: string,
+    userKey: string,
+  ): Promise<User> {
+    return fetchApi(`/api/rooms/${roomCode}/users/${userKey}`);
   },
 };
 

@@ -78,7 +78,12 @@ export default function CreateRoomPage() {
         nickname: nickname.trim(),
       });
 
-      navigate(`/room/${response.room_code}`);
+      // Navigate to unique user URL so the host has a bookmarkable/shareable link
+      if (response.user_key) {
+        navigate(`/room/${response.room_code}/u/${response.user_key}`);
+      } else {
+        navigate(`/room/${response.room_code}`);
+      }
     } catch (err: any) {
       setError(err.detail || 'Failed to create room. Please try again.');
       setLoading(false);
