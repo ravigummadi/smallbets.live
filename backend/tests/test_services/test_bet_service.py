@@ -8,6 +8,8 @@ Tests marked with @pytest.mark.unit for selective execution.
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+from google.cloud import firestore
+from google.cloud.firestore_v1.transforms import Increment as FirestoreIncrement
 from services import bet_service
 from models.bet import Bet, BetStatus
 from models.user import User
@@ -227,3 +229,256 @@ async def test_resolve_bet_does_not_double_deduct_points():
     # Loser should remain at 900 (no extra deduction)
     updated_points = sorted(call.args[1]["points"] for call in mock_batch.update.call_args_list)
     assert updated_points == [900, 1100]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_delete_open_bet_no_votes():
+    """Test deleting an open bet with no user bets"""
+    bet = Bet(
+        bet_id="bet1",
+        room_code="AAAA",
+        question="Test?",
+        options=["A", "B"],
+        status=BetStatus.OPEN,
+        points_value=100,
+    )
+
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+    mock_col = MagicMock()
+    mock_doc_ref = MagicMock()
+    mock_col.document.return_value = mock_doc_ref
+    mock_db.collection.return_value = mock_col
+
+    with patch("services.bet_service.get_db", return_value=mock_db), \
+         patch("services.bet_service.get_bet", return_value=bet), \
+         patch("services.bet_service.get_user_bets_for_bet", return_value=[]):
+
+        await bet_service.delete_bet("bet1")
+
+    # Bet document should be deleted
+    mock_batch.delete.assert_called_once()
+    mock_batch.commit.assert_called_once()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_delete_open_bet_refunds_points():
+    """Test deleting an open bet refunds points atomically using Increment"""
+    bet = Bet(
+        bet_id="bet1",
+        room_code="AAAA",
+        question="Test?",
+        options=["A", "B"],
+        status=BetStatus.OPEN,
+        points_value=100,
+    )
+
+    user_bets = [
+        UserBet(user_id="u1", bet_id="bet1", room_code="AAAA", selected_option="A"),
+        UserBet(user_id="u2", bet_id="bet1", room_code="AAAA", selected_option="B"),
+    ]
+
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+
+    mock_room_user_doc = MagicMock()
+    mock_room_user_doc.exists = False
+    mock_room_user_ref = MagicMock()
+    mock_room_user_ref.get.return_value = mock_room_user_doc
+    mock_room_users_col = MagicMock()
+    mock_room_users_col.document.return_value = mock_room_user_ref
+
+    mock_other_col = MagicMock()
+    mock_other_col.document.return_value = MagicMock()
+
+    def collection_side_effect(name):
+        if name == "roomUsers":
+            return mock_room_users_col
+        return mock_other_col
+
+    mock_db.collection.side_effect = collection_side_effect
+
+    with patch("services.bet_service.get_db", return_value=mock_db), \
+         patch("services.bet_service.get_bet", return_value=bet), \
+         patch("services.bet_service.get_user_bets_for_bet", return_value=user_bets):
+
+        await bet_service.delete_bet("bet1")
+
+    # Points should be refunded atomically via Increment (no get_user calls)
+    update_calls = mock_batch.update.call_args_list
+    point_updates = [c.args[1]["points"] for c in update_calls if "points" in c.args[1]]
+    # Each user should get Increment(100) - verify all are Increment sentinels
+    assert len(point_updates) == 2
+    for inc in point_updates:
+        assert isinstance(inc, FirestoreIncrement)
+
+    # User bet docs + bet doc should be deleted (3 deletes total)
+    assert mock_batch.delete.call_count == 3
+    mock_batch.commit.assert_called_once()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_delete_locked_bet_fails():
+    """Test that locked bets cannot be deleted"""
+    bet = Bet(
+        bet_id="bet1",
+        room_code="AAAA",
+        question="Test?",
+        options=["A", "B"],
+        status=BetStatus.LOCKED,
+        points_value=100,
+    )
+
+    with patch("services.bet_service.get_bet", return_value=bet):
+        with pytest.raises(ValueError, match="Only open bets can be deleted"):
+            await bet_service.delete_bet("bet1")
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_delete_resolved_bet_fails():
+    """Test that resolved bets cannot be deleted"""
+    bet = Bet(
+        bet_id="bet1",
+        room_code="AAAA",
+        question="Test?",
+        options=["A", "B"],
+        status=BetStatus.RESOLVED,
+        points_value=100,
+    )
+
+    with patch("services.bet_service.get_bet", return_value=bet):
+        with pytest.raises(ValueError, match="Only open bets can be deleted"):
+            await bet_service.delete_bet("bet1")
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_delete_nonexistent_bet_fails():
+    """Test deleting a bet that doesn't exist"""
+    with patch("services.bet_service.get_bet", return_value=None):
+        with pytest.raises(ValueError, match="Bet not found"):
+            await bet_service.delete_bet("nonexistent")
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_edit_open_bet_updates_question():
+    """Test editing an open bet's question resets votes and refunds points atomically"""
+    bet = Bet(
+        bet_id="bet1",
+        room_code="AAAA",
+        question="Old question?",
+        options=["A", "B"],
+        status=BetStatus.OPEN,
+        points_value=100,
+        version=1,
+    )
+
+    user_bets = [
+        UserBet(user_id="u1", bet_id="bet1", room_code="AAAA", selected_option="A"),
+    ]
+
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+
+    mock_room_user_doc = MagicMock()
+    mock_room_user_doc.exists = False
+    mock_room_user_ref = MagicMock()
+    mock_room_user_ref.get.return_value = mock_room_user_doc
+    mock_room_users_col = MagicMock()
+    mock_room_users_col.document.return_value = mock_room_user_ref
+
+    mock_other_col = MagicMock()
+    mock_other_col.document.return_value = MagicMock()
+
+    def collection_side_effect(name):
+        if name == "roomUsers":
+            return mock_room_users_col
+        return mock_other_col
+
+    mock_db.collection.side_effect = collection_side_effect
+
+    with patch("services.bet_service.get_db", return_value=mock_db), \
+         patch("services.bet_service.get_bet", return_value=bet), \
+         patch("services.bet_service.get_user_bets_for_bet", return_value=user_bets):
+
+        updated = await bet_service.edit_bet("bet1", question="New question?")
+
+    assert updated.question == "New question?"
+    assert updated.options == ["A", "B"]  # Unchanged
+    assert updated.version == 2
+
+    # User refunded atomically via Increment(100)
+    update_calls = [c for c in mock_batch.update.call_args_list if "points" in c.args[1]]
+    assert len(update_calls) == 1
+    assert isinstance(update_calls[0].args[1]["points"], FirestoreIncrement)
+
+    # User bet deleted + bet updated
+    mock_batch.delete.assert_called_once()
+    mock_batch.commit.assert_called_once()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_edit_open_bet_updates_options():
+    """Test editing an open bet's options"""
+    bet = Bet(
+        bet_id="bet1",
+        room_code="AAAA",
+        question="Test?",
+        options=["A", "B"],
+        status=BetStatus.OPEN,
+        points_value=100,
+        version=1,
+    )
+
+    mock_db = MagicMock()
+    mock_batch = MagicMock()
+    mock_db.batch.return_value = mock_batch
+    mock_col = MagicMock()
+    mock_col.document.return_value = MagicMock()
+    mock_db.collection.return_value = mock_col
+
+    with patch("services.bet_service.get_db", return_value=mock_db), \
+         patch("services.bet_service.get_bet", return_value=bet), \
+         patch("services.bet_service.get_user_bets_for_bet", return_value=[]):
+
+        updated = await bet_service.edit_bet("bet1", options=["X", "Y", "Z"])
+
+    assert updated.options == ["X", "Y", "Z"]
+    assert updated.question == "Test?"  # Unchanged
+    assert updated.version == 2
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_edit_locked_bet_fails():
+    """Test that locked bets cannot be edited"""
+    bet = Bet(
+        bet_id="bet1",
+        room_code="AAAA",
+        question="Test?",
+        options=["A", "B"],
+        status=BetStatus.LOCKED,
+        points_value=100,
+    )
+
+    with patch("services.bet_service.get_bet", return_value=bet):
+        with pytest.raises(ValueError, match="Only open bets can be edited"):
+            await bet_service.edit_bet("bet1", question="New?")
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_edit_nonexistent_bet_fails():
+    """Test editing a bet that doesn't exist"""
+    with patch("services.bet_service.get_bet", return_value=None):
+        with pytest.raises(ValueError, match="Bet not found"):
+            await bet_service.edit_bet("nonexistent", question="New?")

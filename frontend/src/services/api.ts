@@ -10,6 +10,7 @@ import type {
   CreateMatchRoomRequest,
   CreateMatchRoomResponse,
   CreateBetRequest,
+  EditBetRequest,
   JoinRoomRequest,
   JoinRoomResponse,
   PlaceBetRequest,
@@ -206,5 +207,29 @@ export const betApi = {
 
   async getBet(roomCode: string, betId: string): Promise<Bet> {
     return fetchApi(`/api/rooms/${roomCode}/bets/${betId}`);
+  },
+
+  async deleteBet(
+    roomCode: string,
+    hostId: string,
+    betId: string
+  ): Promise<{ status: string; betId: string }> {
+    return fetchApi(`/api/rooms/${roomCode}/bets/${betId}`, {
+      method: 'DELETE',
+      headers: { 'X-Host-Id': hostId },
+    });
+  },
+
+  async editBet(
+    roomCode: string,
+    hostId: string,
+    betId: string,
+    request: EditBetRequest
+  ): Promise<Bet> {
+    return fetchApi(`/api/rooms/${roomCode}/bets/${betId}`, {
+      method: 'PUT',
+      headers: { 'X-Host-Id': hostId },
+      body: JSON.stringify(request),
+    });
   },
 };

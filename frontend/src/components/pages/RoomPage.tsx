@@ -12,6 +12,7 @@ import { useBets } from '@/hooks/useBets';
 import { useUserBets } from '@/hooks/useUserBets';
 import { useParticipants } from '@/hooks/useParticipants';
 import BetCreationForm from '@/components/admin/BetCreationForm';
+import EditBetModal from '@/components/admin/EditBetModal';
 import LiveFeedPanel from '@/components/admin/LiveFeedPanel';
 import { betApi, roomApi } from '@/services/api';
 import type { Room, Bet, UserBet, User, ParticipantWithLink } from '@/types';
@@ -50,6 +51,8 @@ export default function RoomPage() {
   const [resolvingBetId, setResolvingBetId] = useState<string | null>(null);
   const [showResolveOptions, setShowResolveOptions] = useState<string | null>(null);
   const [adminError, setAdminError] = useState<string | null>(null);
+  const [deletingBetId, setDeletingBetId] = useState<string | null>(null);
+  const [editingBet, setEditingBet] = useState<Bet | null>(null);
 
   // Participant links state (host only)
   const [participantLinks, setParticipantLinks] = useState<ParticipantWithLink[]>([]);
@@ -395,6 +398,20 @@ export default function RoomPage() {
     }
   }, [code, session?.hostId]);
 
+  const handleDeleteBet = async (betId: string) => {
+    if (!code || !session?.hostId) return;
+    setDeletingBetId(betId);
+    setAdminError(null);
+    try {
+      await betApi.deleteBet(code, session.hostId, betId);
+    } catch (err: any) {
+      setAdminError(err.detail || 'Failed to delete bet');
+    } finally {
+      setDeletingBetId(null);
+    }
+  };
+
+
   if (roomLoading || userLoading) {
     return (
       <div className="container" style={{ paddingTop: '3rem' }}>
@@ -587,14 +604,33 @@ export default function RoomPage() {
                 borderTop: '1px solid var(--color-border)',
               }}>
                 {bet.status === 'open' && (
-                  <button
-                    className="btn btn-secondary btn-full"
-                    onClick={(e) => { e.stopPropagation(); handleCloseBet(bet.betId); }}
-                    disabled={closingBetId === bet.betId}
-                    style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-                  >
-                    {closingBetId === bet.betId ? 'Closing...' : 'Close Bet'}
-                  </button>
+                  <div style={{ display: 'grid', gap: 'var(--spacing-xs)' }}>
+                    <button
+                      className="btn btn-secondary btn-full"
+                      onClick={(e) => { e.stopPropagation(); handleCloseBet(bet.betId); }}
+                      disabled={closingBetId === bet.betId}
+                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                    >
+                      {closingBetId === bet.betId ? 'Closing...' : 'Close Bet'}
+                    </button>
+                    <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={(e) => { e.stopPropagation(); setEditingBet(bet); }}
+                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1 }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-danger"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteBet(bet.betId); }}
+                        disabled={deletingBetId === bet.betId}
+                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1 }}
+                      >
+                        {deletingBetId === bet.betId ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
                 )}
                 {bet.status === 'locked' && showResolveOptions !== bet.betId && (
                   <button
@@ -1046,6 +1082,16 @@ export default function RoomPage() {
             />
           </div>
         </div>
+      )}
+
+      {/* Edit Bet Modal */}
+      {editingBet && session?.hostId && (
+        <EditBetModal
+          bet={editingBet}
+          roomCode={code!}
+          hostId={session.hostId}
+          onClose={() => setEditingBet(null)}
+        />
       )}
     </div>
   );

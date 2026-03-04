@@ -603,6 +603,118 @@ describe('API Service', () => {
         );
       });
     });
+
+    describe('deleteBet', () => {
+      it('should delete bet with host authorization', async () => {
+        const mockResponse = { status: 'deleted', betId: 'bet-123' };
+
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        });
+
+        const result = await betApi.deleteBet('ABC123', 'host-123', 'bet-123');
+
+        expect(result).toEqual(mockResponse);
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/rooms/ABC123/bets/bet-123'),
+          expect.objectContaining({
+            method: 'DELETE',
+            headers: expect.objectContaining({
+              'X-Host-Id': 'host-123',
+            }),
+          })
+        );
+      });
+
+      it('should reject deleting non-open bet', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          json: async () => ({ detail: 'Only open bets can be deleted' }),
+        });
+
+        await expect(
+          betApi.deleteBet('ABC123', 'host-123', 'bet-123')
+        ).rejects.toThrow('API request failed: 400');
+      });
+
+      it('should reject unauthorized delete', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: 'Forbidden',
+          json: async () => ({ detail: 'Not the room host' }),
+        });
+
+        await expect(
+          betApi.deleteBet('ABC123', 'wrong-host', 'bet-123')
+        ).rejects.toThrow('API request failed: 403');
+      });
+    });
+
+    describe('editBet', () => {
+      it('should edit bet with host authorization', async () => {
+        const mockResponse = {
+          betId: 'bet-123',
+          question: 'Updated question?',
+          options: ['X', 'Y'],
+          status: 'open',
+        };
+
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        });
+
+        const result = await betApi.editBet('ABC123', 'host-123', 'bet-123', {
+          question: 'Updated question?',
+          options: ['X', 'Y'],
+        });
+
+        expect(result).toEqual(mockResponse);
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/rooms/ABC123/bets/bet-123'),
+          expect.objectContaining({
+            method: 'PUT',
+            headers: expect.objectContaining({
+              'X-Host-Id': 'host-123',
+            }),
+            body: JSON.stringify({
+              question: 'Updated question?',
+              options: ['X', 'Y'],
+            }),
+          })
+        );
+      });
+
+      it('should reject editing non-open bet', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          json: async () => ({ detail: 'Only open bets can be edited' }),
+        });
+
+        await expect(
+          betApi.editBet('ABC123', 'host-123', 'bet-123', { question: 'New?' })
+        ).rejects.toThrow('API request failed: 400');
+      });
+
+      it('should reject unauthorized edit', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          statusText: 'Forbidden',
+          json: async () => ({ detail: 'Not the room host' }),
+        });
+
+        await expect(
+          betApi.editBet('ABC123', 'wrong-host', 'bet-123', { question: 'New?' })
+        ).rejects.toThrow('API request failed: 403');
+      });
+    });
   });
 
   describe('roomApi - user links', () => {
