@@ -71,8 +71,21 @@ export default function RoomPage() {
 
     roomApi.getUserByKey(code!, userKey!)
       .then((userData) => {
-        setRestoreUser(userData);
-        setShowRestoreModal(true);
+        // Check if there's an existing session for a DIFFERENT room
+        const hasConflictingSession = session && session.roomCode !== code;
+        if (hasConflictingSession) {
+          // Show confirmation before replacing existing session
+          setRestoreUser(userData);
+          setShowRestoreModal(true);
+        } else {
+          // No conflicting session — auto-restore immediately
+          saveSession({
+            userId: userData.userId,
+            roomCode: code!,
+            hostId: userData.isAdmin ? userData.userId : undefined,
+            nickname: userData.nickname,
+          });
+        }
       })
       .catch((err: any) => {
         if (err.status === 429) {
