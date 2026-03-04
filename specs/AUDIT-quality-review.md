@@ -351,27 +351,7 @@ End-of-season summary: best predictor, biggest upset, most popular bets, luckies
 
 ---
 
-## Part 3: Competitive Research Summary
-
-### Direct Comparables
-| App | Model | Strength | SmallBets.live Advantage |
-|-----|-------|----------|--------------------------|
-| **WagerLab** | Virtual currency social betting | Gamification (avatars, trophies, streaks) | Real-time live events, no app install |
-| **BuddyBet** | Peer-to-peer handshake bets | Social feed, agree/disagree mechanic | No account needed, cricket support |
-| **Scoreboard Social** | Browser-based watch party predictions | Fully automated, no host needed | Cricket support, custom events |
-| **Superbru** (2.6M users) | Pre-match predictions with friend pools | Tournament lifecycle, massive user base | Real-time in-play betting during matches |
-| **PlayAuctionGame** | IPL auction simulator, room-code based | IPL-specific, zero friction | Match predictions vs. auction simulation |
-| **Kahoot!** | Room-code quiz games | Proven at massive scale, great UX | Real event outcomes, betting mechanic |
-
-### Key Insight
-SmallBets.live is the only app that combines: **virtual points + no signup + room codes + real-time live betting + cricket + friends.** The positioning is strong. The execution gap is in **host experience** (too much manual work for cricket) and **operational readiness** (never deployed, never tested with real users).
-
-### Regulatory Context
-Probo (India's leading prediction market) was raided by the Enforcement Directorate in July 2025 — 400+ crore in assets frozen. India's 2025 Online Gaming Act classifies real-money prediction apps as gambling. SmallBets.live's virtual-points-only model is **immune to this** by design. This is a feature, not a limitation.
-
----
-
-## Part 4: Priority Matrix
+## Part 3: Priority Matrix
 
 | Priority | Item | Impact | Effort | Target |
 |----------|------|--------|--------|--------|
@@ -397,7 +377,7 @@ Probo (India's leading prediction market) was raided by the Enforcement Director
 
 ---
 
-## Part 5: Overall Assessment
+## Part 4: Overall Assessment
 
 **The core idea is strong and validated by competitive research.** No existing product does exactly what SmallBets.live does. The virtual-points model is legally smart for India. The room-code no-signup pattern is proven at scale (Kahoot). Real-time in-play betting during cricket is a genuine differentiator over Superbru.
 
