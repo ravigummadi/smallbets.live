@@ -53,12 +53,21 @@ async def process_transcript_for_automation(
 
     # Check open/locked bets for resolution
     for bet in open_bets + locked_bets:
-        # Get resolve patterns from bet (now stored from template!)
-        resolve_patterns = bet.resolve_patterns if bet.resolve_patterns else [
-            "and the winner is",
-            "grammy goes to",
-            "oscar goes to"
-        ]
+        # Get resolve patterns from bet (stored from template)
+        resolve_patterns = bet.resolve_patterns
+        if not resolve_patterns:
+            # Generate contextual patterns from bet question
+            # e.g., "How much does Rohit sharma score?" -> ["rohit.*sharma"]
+            resolve_patterns = transcript_parser.generate_resolve_patterns_from_question(
+                bet.question
+            )
+        if not resolve_patterns:
+            # Final fallback: generic winner announcement patterns
+            resolve_patterns = [
+                "and the winner is",
+                "winner is",
+                "goes to",
+            ]
 
         # Extract winner (pure - delegates to transcript_parser)
         winner, winner_confidence, is_resolution = transcript_parser.extract_winner_with_patterns(
