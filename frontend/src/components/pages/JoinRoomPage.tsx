@@ -21,6 +21,8 @@ export default function JoinRoomPage() {
   const [nickname, setNickname] = useState(locationState?.nickname || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [roomNotFound, setRoomNotFound] = useState(false);
+  const [validating, setValidating] = useState(false);
   const navigate = useNavigate();
   const { saveSession } = useSession();
 
@@ -28,6 +30,26 @@ export default function JoinRoomPage() {
     if (code) {
       setRoomCode(code.toUpperCase());
     }
+  }, [code]);
+
+  // Eagerly validate room exists when code is provided via URL
+  useEffect(() => {
+    if (!code || code.length < 4 || code.length > 6) return;
+
+    setValidating(true);
+    setRoomNotFound(false);
+    setError(null);
+
+    roomApi.getRoom(code.toUpperCase())
+      .then(() => {
+        setValidating(false);
+      })
+      .catch((err: any) => {
+        setValidating(false);
+        if (err.status === 404) {
+          setRoomNotFound(true);
+        }
+      });
   }, [code]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,13 +98,71 @@ export default function JoinRoomPage() {
       }
     } catch (err: any) {
       if (err.status === 404) {
-        setError(`Room "${roomCode}" not found`);
+        setRoomNotFound(true);
       } else {
         setError(err.detail || 'Failed to join room. Please try again.');
       }
       setLoading(false);
     }
   };
+
+  if (validating) {
+    return (
+      <div className="container" style={{ paddingTop: '2rem' }}>
+        <h2 className="mb-lg" style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>Join a Room</h2>
+        <div className="card mb-lg">
+          <p className="text-muted">Checking room...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (roomNotFound) {
+    return (
+      <div className="container" style={{ paddingTop: '2rem' }}>
+        <h2 className="mb-lg" style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>Room Not Found</h2>
+
+        <div className="card mb-lg" style={{ borderColor: 'var(--color-error)' }}>
+          <p className="text-error" style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+            Room &ldquo;{roomCode}&rdquo; doesn&apos;t exist
+          </p>
+          <p className="text-muted">
+            The room code may be incorrect, or the room may have been closed.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary btn-full btn-lg mb-md"
+          onClick={() => navigate('/create')}
+        >
+          Create a New Room
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-secondary btn-full"
+          onClick={() => {
+            setRoomNotFound(false);
+            setRoomCode('');
+            setError(null);
+          }}
+        >
+          Try a Different Code
+        </button>
+
+        <div className="mt-md text-center">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => navigate('/')}
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container" style={{ paddingTop: '2rem' }}>
