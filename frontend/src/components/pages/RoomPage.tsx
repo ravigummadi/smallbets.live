@@ -579,6 +579,23 @@ export default function RoomPage() {
             <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 0 }}>
               points
             </p>
+            <span
+              style={{
+                display: 'inline-block',
+                marginTop: '0.35rem',
+                fontSize: '0.7rem',
+                fontWeight: 600,
+                padding: '0.15rem 0.5rem',
+                borderRadius: '999px',
+                background: isHost ? 'var(--color-primary)' : 'var(--color-surface)',
+                color: isHost ? '#fff' : 'var(--color-text-muted)',
+                border: isHost ? 'none' : '1px solid var(--color-border)',
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {isHost ? 'Host' : 'Guest'}
+            </span>
           </div>
         </div>
         {isHost && (
