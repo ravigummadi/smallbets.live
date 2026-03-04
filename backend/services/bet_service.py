@@ -280,3 +280,115 @@ async def get_user_bets_for_bet(bet_id: str) -> List[UserBet]:
     user_bets_docs = user_bets_ref.stream()
     user_bets = [UserBet.from_dict(doc.to_dict()) for doc in user_bets_docs]
     return user_bets
+
+
+async def delete_bet(bet_id: str) -> None:
+    """Delete an open bet, refunding points to all users who placed bets.
+
+    Only OPEN bets can be deleted. Closed/resolved bets cannot be deleted.
+    """
+    db = get_db()
+
+    bet = await get_bet(bet_id)
+    if not bet:
+        raise ValueError(f"Bet not found: {bet_id}")
+
+    if bet.status != BetStatus.OPEN:
+        raise ValueError("Only open bets can be deleted")
+
+    user_bets = await get_user_bets_for_bet(bet_id)
+
+    batch = db.batch()
+
+    # Refund points to each user who placed a bet
+    for ub in user_bets:
+        user = await user_service.get_user(ub.user_id)
+        if user:
+            new_points = user.points + bet.points_value
+            user_ref = db.collection("users").document(ub.user_id)
+            batch.update(user_ref, {"points": new_points})
+
+            # Also update roomUsers if exists
+            room_user_doc_id = f"{bet.room_code}_{ub.user_id}"
+            room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+            room_user_doc = room_user_ref.get()
+            if room_user_doc.exists:
+                ru_data = room_user_doc.to_dict()
+                ru_new_points = ru_data["points"] + bet.points_value
+                batch.update(room_user_ref, {"points": ru_new_points})
+
+        # Delete the user bet document
+        ub_ref = db.collection("userBets").document(f"{bet_id}_{ub.user_id}")
+        batch.delete(ub_ref)
+
+    # Delete the bet document
+    bet_ref = db.collection("bets").document(bet_id)
+    batch.delete(bet_ref)
+
+    batch.commit()
+
+
+async def edit_bet(
+    bet_id: str,
+    question: Optional[str] = None,
+    options: Optional[List[str]] = None,
+    points_value: Optional[int] = None,
+) -> Bet:
+    """Edit an open bet. Resets all votes and refunds points to users.
+
+    Only OPEN bets can be edited. Any edit resets all existing user bets
+    and refunds their points.
+    """
+    db = get_db()
+
+    bet = await get_bet(bet_id)
+    if not bet:
+        raise ValueError(f"Bet not found: {bet_id}")
+
+    if bet.status != BetStatus.OPEN:
+        raise ValueError("Only open bets can be edited")
+
+    # Get existing user bets to refund
+    user_bets = await get_user_bets_for_bet(bet_id)
+
+    batch = db.batch()
+
+    # Refund points and delete user bets
+    for ub in user_bets:
+        user = await user_service.get_user(ub.user_id)
+        if user:
+            new_points = user.points + bet.points_value
+            user_ref = db.collection("users").document(ub.user_id)
+            batch.update(user_ref, {"points": new_points})
+
+            # Also update roomUsers if exists
+            room_user_doc_id = f"{bet.room_code}_{ub.user_id}"
+            room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+            room_user_doc = room_user_ref.get()
+            if room_user_doc.exists:
+                ru_data = room_user_doc.to_dict()
+                ru_new_points = ru_data["points"] + bet.points_value
+                batch.update(room_user_ref, {"points": ru_new_points})
+
+        # Delete the user bet document
+        ub_ref = db.collection("userBets").document(f"{bet_id}_{ub.user_id}")
+        batch.delete(ub_ref)
+
+    # Apply edits to the bet
+    updates = {}
+    if question is not None:
+        updates["question"] = question
+    if options is not None:
+        updates["options"] = options
+    if points_value is not None:
+        updates["points_value"] = points_value
+    # Bump version
+    updates["version"] = bet.version + 1
+
+    updated_bet = bet.model_copy(update=updates)
+
+    bet_ref = db.collection("bets").document(bet_id)
+    batch.set(bet_ref, updated_bet.to_dict())
+
+    batch.commit()
+    return updated_bet

@@ -172,6 +172,12 @@ class CreateBetRequest(BaseModel):
     timerDuration: int = 60
 
 
+class EditBetRequest(BaseModel):
+    question: Optional[str] = None
+    options: Optional[List[str]] = None
+    pointsValue: Optional[int] = None
+
+
 # ============================================================================
 # Dependency Injection
 # ============================================================================
@@ -680,6 +686,46 @@ async def undo_resolve_bet(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to undo bet resolution: {str(e)}")
+
+
+@app.delete("/api/rooms/{code}/bets/{bet_id}")
+async def delete_bet(
+    code: str,
+    bet_id: str,
+    room: HostRoomDep,
+):
+    """Delete an open bet, refunding all placed bets (admin only)"""
+    try:
+        await bet_service.delete_bet(bet_id)
+        return {"status": "deleted", "betId": bet_id}
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete bet: {str(e)}")
+
+
+@app.put("/api/rooms/{code}/bets/{bet_id}")
+async def edit_bet(
+    code: str,
+    bet_id: str,
+    room: HostRoomDep,
+    request: EditBetRequest,
+):
+    """Edit an open bet, resetting all votes and refunding points (admin only)"""
+    try:
+        updated_bet = await bet_service.edit_bet(
+            bet_id=bet_id,
+            question=request.question,
+            options=request.options,
+            points_value=request.pointsValue,
+        )
+        return updated_bet.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to edit bet: {str(e)}")
 
 
 @app.post("/api/rooms/{code}/bets/place")

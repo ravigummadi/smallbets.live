@@ -27,6 +27,7 @@ export default function BetListPanel({
   const [closingBet, setClosingBet] = useState<string | null>(null);
   const [resolvingBet, setResolvingBet] = useState<string | null>(null);
   const [showResolveOptions, setShowResolveOptions] = useState<string | null>(null);
+  const [deletingBet, setDeletingBet] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleCloseBet = async (betId: string) => {
@@ -55,6 +56,20 @@ export default function BetListPanel({
       console.error('Failed to resolve bet:', err);
     } finally {
       setResolvingBet(null);
+    }
+  };
+
+  const handleDeleteBet = async (betId: string) => {
+    setDeletingBet(betId);
+    setError(null);
+
+    try {
+      await betApi.deleteBet(roomCode, hostId, betId);
+    } catch (err: any) {
+      setError(err.detail || 'Failed to delete bet');
+      console.error('Failed to delete bet:', err);
+    } finally {
+      setDeletingBet(null);
     }
   };
 
@@ -102,6 +117,7 @@ export default function BetListPanel({
         {sortedBets.map((bet) => {
           const canClose = bet.status === 'open';
           const canResolve = bet.status === 'locked';
+          const canDelete = bet.status === 'open';
           const isResolvingThis = resolvingBet === bet.betId;
           const showingResolveOptions = showResolveOptions === bet.betId;
 
@@ -184,6 +200,17 @@ export default function BetListPanel({
                       style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1 }}
                     >
                       Resolve Bet
+                    </button>
+                  )}
+
+                  {canDelete && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleDeleteBet(bet.betId)}
+                      disabled={deletingBet === bet.betId}
+                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1, color: 'var(--color-error)' }}
+                    >
+                      {deletingBet === bet.betId ? 'Deleting...' : 'Delete'}
                     </button>
                   )}
                 </div>

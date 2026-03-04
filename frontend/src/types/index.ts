@@ -159,3 +159,9 @@ export interface CreateBetRequest {
   templateId?: string;
   timerDuration?: number;
 }
+
+export interface EditBetRequest {
+  question?: string;
+  options?: string[];
+  pointsValue?: number;
+}
