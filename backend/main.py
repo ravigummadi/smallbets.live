@@ -104,6 +104,7 @@ class CreateRoomResponse(BaseModel):
     room_code: str
     host_id: str
     user_id: str
+    user_key: Optional[str] = None
 
 
 class CreateTournamentRequest(BaseModel):
@@ -134,6 +135,7 @@ class JoinRoomRequest(BaseModel):
 class JoinRoomResponse(BaseModel):
     user_id: str
     host_id: Optional[str] = None
+    user_key: Optional[str] = None
     room: dict
     user: dict
 
@@ -245,6 +247,7 @@ async def create_room(request: CreateRoomRequest):
             room_code=room.code,
             host_id=host_user.user_id,
             user_id=host_user.user_id,
+            user_key=host_user.user_key,
         )
 
     except ValueError as e:
@@ -299,6 +302,7 @@ async def create_tournament(request: CreateTournamentRequest):
             room_code=room.code,
             host_id=host_user.user_id,
             user_id=host_user.user_id,
+            user_key=host_user.user_key,
         )
 
     except ValueError as e:
@@ -379,6 +383,9 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
                 existing_user = existing_user.model_copy(update={"is_admin": True})
                 await user_service.update_user(existing_user)
 
+            # Backfill user_key if missing
+            existing_user = await user_service.ensure_user_has_key(existing_user)
+
             # Update room host_id if this returning user is the host
             if is_admin and room.host_id != existing_user.user_id:
                 updated_room = room.model_copy(update={"host_id": existing_user.user_id})
@@ -390,6 +397,7 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
             return JoinRoomResponse(
                 user_id=existing_user.user_id,
                 host_id=host_id,
+                user_key=existing_user.user_key,
                 room=room.to_dict(),
                 user=existing_user.to_dict(),
             )
@@ -421,6 +429,7 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
         return JoinRoomResponse(
             user_id=user.user_id,
             host_id=host_id,
+            user_key=user.user_key,
             room=room.to_dict(),
             user=user.to_dict(),
         )

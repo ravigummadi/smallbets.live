@@ -13,7 +13,7 @@ import { useUserBets } from '@/hooks/useUserBets';
 import { useParticipants } from '@/hooks/useParticipants';
 import AdminPanel from '@/components/admin/AdminPanel';
 import { betApi, roomApi } from '@/services/api';
-import type { Room, Bet, UserBet, User } from '@/types';
+import type { Room, Bet, UserBet, User, ParticipantWithLink } from '@/types';
 
 // Map template IDs to friendly names
 const EVENT_TEMPLATE_NAMES: Record<string, string> = {
@@ -40,6 +40,11 @@ export default function RoomPage() {
   const [betErrors, setBetErrors] = useState<Record<string, string>>({});
   const [matchRooms, setMatchRooms] = useState<Room[]>([]);
 
+  // Participant links state (host only)
+  const [participantLinks, setParticipantLinks] = useState<ParticipantWithLink[]>([]);
+  const [linksLoaded, setLinksLoaded] = useState(false);
+  const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+
   // Session restoration state
   const [restoreUser, setRestoreUser] = useState<User | null>(null);
   const [restoreLoading, setRestoreLoading] = useState(false);
@@ -55,13 +60,16 @@ export default function RoomPage() {
   const [creatingMatch, setCreatingMatch] = useState(false);
 
   // Session restoration via userKey link
+  // Only trigger restoration if we don't already have a matching session
+  const needsRestore = userKey && code && (!session || session.roomCode !== code);
+
   useEffect(() => {
-    if (!userKey || !code) return;
+    if (!needsRestore) return;
 
     setRestoreLoading(true);
     setRestoreError(null);
 
-    roomApi.getUserByKey(code, userKey)
+    roomApi.getUserByKey(code!, userKey!)
       .then((userData) => {
         setRestoreUser(userData);
         setShowRestoreModal(true);
@@ -80,7 +88,7 @@ export default function RoomPage() {
       .finally(() => {
         setRestoreLoading(false);
       });
-  }, [userKey, code]);
+  }, [needsRestore, userKey, code]);
 
   const handleConfirmRestore = () => {
     if (!restoreUser || !code) return;
@@ -94,23 +102,21 @@ export default function RoomPage() {
 
     setShowRestoreModal(false);
     setRestoreUser(null);
-    // Navigate to clean URL
-    navigate(`/room/${code}`, { replace: true });
+    // Stay on /u/:userKey URL - the session is now restored and the page will render normally
   };
 
   const handleCancelRestore = () => {
     setShowRestoreModal(false);
     setRestoreUser(null);
-    // Navigate to clean URL or join page
     if (session && session.roomCode === code) {
-      navigate(`/room/${code}`, { replace: true });
+      // Already have a session for this room, just stay
     } else {
       navigate(`/join/${code}`, { replace: true });
     }
   };
 
-  // Show restore modal/loading/error when on a userKey URL
-  if (userKey) {
+  // Show restore modal/loading/error when restoration is needed
+  if (needsRestore) {
     if (restoreLoading) {
       return (
         <div className="container" style={{ paddingTop: '3rem' }}>
@@ -137,7 +143,6 @@ export default function RoomPage() {
     }
 
     if (showRestoreModal && restoreUser) {
-      const hasExistingSession = session && session.roomCode === code;
       return (
         <div className="container" style={{ paddingTop: '3rem' }}>
           <div className="card">
@@ -146,17 +151,6 @@ export default function RoomPage() {
               Continue as <strong>{restoreUser.nickname}</strong>? You have{' '}
               <strong>{restoreUser.points}</strong> points.
             </p>
-            {hasExistingSession && (
-              <p
-                style={{
-                  marginBottom: 'var(--spacing-md)',
-                  color: 'var(--color-warning, #f59e0b)',
-                  fontSize: '0.875rem',
-                }}
-              >
-                This will end your current session as {session.nickname || 'another user'}.
-              </p>
-            )}
             <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
               <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirmRestore}>
                 Continue as {restoreUser.nickname}
@@ -169,14 +163,19 @@ export default function RoomPage() {
         </div>
       );
     }
+
+    // Still loading/processing, show spinner
+    return (
+      <div className="container" style={{ paddingTop: '3rem' }}>
+        <div className="spinner" />
+      </div>
+    );
   }
 
-  // Redirect if no session for this room
+  // Redirect if no session for this room (and not on a userKey URL)
   useEffect(() => {
-    if (userKey) return; // Don't redirect during restoration
+    if (userKey) return; // userKey URLs handle their own auth via restoration
     if (!session || session.roomCode !== code) {
-      // Pass current session as context so identity is preserved
-      // when navigating between tournament and match rooms
       navigate(`/join/${code}`, {
         state: session ? {
           parentUserId: session.userId,
@@ -201,6 +200,38 @@ export default function RoomPage() {
         .catch(() => {});
     }
   }, [localRoom?.roomType, localRoom?.code]);
+
+  // Load participant links for host (for Copy Link buttons)
+  // Re-fetch when participant count changes to pick up new joiners
+  useEffect(() => {
+    if (!session?.hostId || !code) return;
+
+    roomApi.getParticipantsWithLinks(code, session.hostId)
+      .then((res) => {
+        setParticipantLinks(res.participants);
+        setLinksLoaded(true);
+      })
+      .catch(() => {
+        setLinksLoaded(true);
+      });
+  }, [session?.hostId, code, participants.length]);
+
+  const handleCopyParticipantLink = async (participant: ParticipantWithLink) => {
+    if (!code) return;
+    const link = `${window.location.origin}/room/${code}/u/${participant.userKey}`;
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = link;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    setCopiedUserId(participant.userId);
+    setTimeout(() => setCopiedUserId(null), 2000);
+  };
 
   const toggleBetExpanded = (betId: string) => {
     const newExpanded = new Set(expandedBets);
@@ -705,34 +736,53 @@ export default function RoomPage() {
         <div style={{ display: 'grid', gap: '0.5rem' }}>
           {participants
             .sort((a, b) => b.points - a.points)
-            .map((participant, index) => (
-              <div
-                key={participant.userId}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '0.75rem',
-                  backgroundColor: 'var(--color-bg-elevated)',
-                  borderRadius: 'var(--radius-md)',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center' }}>
-                  {index < 3 ? (
-                    <span className={`rank-badge rank-${index + 1}`}>{index + 1}</span>
-                  ) : (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', marginRight: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>{index + 1}</span>
-                  )}
-                  {participant.nickname}
-                  {participant.isAdmin && (
-                    <span className="text-muted" style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>
-                      (Host)
-                    </span>
-                  )}
-                </span>
-                <span style={{ fontWeight: '600' }}>{participant.points}</span>
-              </div>
-            ))}
+            .map((participant, index) => {
+              const linkData = participantLinks.find(p => p.userId === participant.userId);
+              return (
+                <div
+                  key={participant.userId}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0.75rem',
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    borderRadius: 'var(--radius-md)',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center' }}>
+                    {index < 3 ? (
+                      <span className={`rank-badge rank-${index + 1}`}>{index + 1}</span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', marginRight: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>{index + 1}</span>
+                    )}
+                    {participant.nickname}
+                    {participant.isAdmin && (
+                      <span className="text-muted" style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>
+                        (Host)
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontWeight: '600' }}>{participant.points}</span>
+                    {isHost && linkData && (
+                      <button
+                        className="btn btn-secondary"
+                        style={{
+                          fontSize: '0.7rem',
+                          padding: '0.2rem 0.4rem',
+                          minHeight: 'auto',
+                          lineHeight: '1.2',
+                        }}
+                        onClick={() => handleCopyParticipantLink(linkData)}
+                      >
+                        {copiedUserId === participant.userId ? 'Copied!' : 'Copy Link'}
+                      </button>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
         </div>
       </div>
     </div>

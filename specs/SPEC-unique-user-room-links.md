@@ -27,47 +27,56 @@ https://smallbets.live/room/{roomCode}/u/{userKey}
 **Flow**:
 1. User visits link
 2. Frontend looks up userId from userKey
-3. Shows confirmation: "Continue as Alice?"
+3. If no session for this room: shows confirmation "Continue as Alice?"
 4. On confirm, restores full session
-5. Navigates to clean URL `/room/{roomCode}`
+5. URL stays at `/room/{roomCode}/u/{userKey}` (bookmarkable)
 
 ## User Requirements
 
-1. **Link Generation**: Automatic when user joins room
-2. **UI Location**: Admin Panel only (host-only view)
-3. **Existing Session**: Replace with link's userId (after confirmation)
-4. **Link Security**: No expiration (simple MVP approach)
+1. **Link Generation**: Automatic when user joins or creates room
+2. **URL is the identity**: All users (host + guest) have a unique URL `/room/{code}/u/{key}`
+3. **UI Location**: Participants list on main room page (visible to host only)
+4. **Existing Session**: Replace with link's userId (after confirmation)
+5. **Link Security**: No expiration (simple MVP approach)
 
 ## User Workflows
 
-### Workflow 1: User Joins Room (Link Generation)
+### Workflow 1: Host Creates Room
+1. Host enters nickname and creates room (any type: event, tournament, match)
+2. Backend creates User with UUID `user_id` + unique 8-char `user_key`
+3. Backend returns `user_key` in CreateRoomResponse
+4. Frontend navigates to `/room/{code}/u/{hostKey}` (host's unique URL)
+5. Host can bookmark this URL for session recovery
+
+### Workflow 2: User Joins Room (Link Generation)
 1. User enters nickname and joins room
 2. Backend creates User with UUID `user_id` + unique 8-char `user_key`
 3. Collision retry: Up to 5 attempts if duplicate detected
-4. Frontend saves session to sessionStorage
-5. User enters room
+4. Backend returns `user_key` in JoinRoomResponse
+5. Frontend navigates to `/room/{code}/u/{userKey}` (user's unique URL)
+6. User can bookmark this URL for session recovery
 
-### Workflow 2: Host Shares Link
-1. Host opens Admin Panel in room
-2. "Participants" section shows all users with "Copy Link" button
+### Workflow 3: Host Shares Link
+1. Host views Participants list in room page
+2. Each participant has a "Copy Link" button (host-only)
 3. Host clicks "Copy Link" for participant
 4. Frontend constructs `https://smallbets.live/room/{code}/u/{key}` and copies to clipboard
-5. Toast notification: "✓ Link copied for Alice"
+5. Button shows "Copied!" confirmation
 6. Host shares via WhatsApp/SMS
 
-### Workflow 3: User Restores Session via Link
+### Workflow 4: User Restores Session via Link
 1. User clicks unique link (possibly different device)
 2. Frontend detects URL pattern `/room/:code/u/:userKey`
-3. Calls API to look up user by key
-4. Shows confirmation modal: "Continue as Alice? You have 850 points."
-5. User confirms
-6. Session restored, navigates to `/room/{code}`
+3. If user already has session for this room: shows room directly (no confirmation needed)
+4. If no session: calls API to look up user by key
+5. Shows confirmation modal: "Continue as Alice? You have 850 points."
+6. User confirms
+7. Session restored, stays on `/room/{code}/u/{userKey}`
 
-### Workflow 4: User Clicks Link with Active Session
+### Workflow 5: User Clicks Different User's Link
 1. User with active session clicks different user's link
-2. Same confirmation flow
-3. Clear warning: "This will end your current session as Bob"
-4. User confirms → session replaced
+2. Same confirmation flow as Workflow 4
+3. User confirms → session replaced, stays on new URL
 
 ---
 
@@ -107,7 +116,22 @@ https://smallbets.live/room/{roomCode}/u/{userKey}
 - Query with composite index: `(roomCode, userKey)`
 - Return User or None
 
-### API Endpoints
+### API Endpoint Changes
+
+#### 0. Existing Endpoints: Return user_key
+
+**CreateRoomResponse**, **CreateTournamentResponse**, and **JoinRoomResponse** now include `user_key` field so the frontend can immediately navigate to the unique URL.
+
+```json
+{
+  "room_code": "ABC123",
+  "host_id": "uuid",
+  "user_id": "uuid",
+  "user_key": "xY7kM9zQ"
+}
+```
+
+For JoinRoom with existing user (re-join by nickname), the backend backfills the key if missing via `ensure_user_has_key()`.
 
 #### 1. Host-Only Endpoint: Get Participants with Links
 ```
@@ -205,27 +229,42 @@ getUserByKey(roomCode: string, userKey: string)
 - Public endpoint, no auth
 - Returns user data for session restoration
 
-#### 3. Room Page (`frontend/src/components/pages/RoomPage.tsx`)
+#### 3. Create Room Page (`frontend/src/components/pages/CreateRoomPage.tsx`)
 
-**Add session restoration logic**:
+**Navigate to unique URL after creation**:
+- After successful room creation, navigate to `/room/{code}/u/{userKey}` instead of `/room/{code}`
+- Falls back to `/room/{code}` if `user_key` not in response
+
+#### 4. Join Room Page (`frontend/src/components/pages/JoinRoomPage.tsx`)
+
+**Navigate to unique URL after joining**:
+- After successful join, navigate to `/room/{code}/u/{userKey}` instead of `/room/{code}`
+- Falls back to `/room/{code}` if `user_key` not in response
+
+#### 5. Room Page (`frontend/src/components/pages/RoomPage.tsx`)
+
+**Session restoration logic**:
 - Detect URL pattern with userKey
-- Call `getUserByKey()` API
-- Show confirmation modal with user info
-- On confirm: update session storage, navigate to clean URL
+- If session already exists for this room: skip restoration, show room normally
+- If no session: call `getUserByKey()` API, show confirmation modal
+- On confirm: update session storage, stay on `/u/:userKey` URL
 - Handle errors (429, 404, 400)
 
-#### 4. Admin Panel (`frontend/src/components/admin/AdminPanel.tsx`)
+**Participant links for host**:
+- Load participant links via `getParticipantsWithLinks()` when host is viewing
+- Show "Copy Link" button next to each participant in the participants list
+- Re-fetch when participant count changes to pick up new joiners
 
-**Add "Participants" section**:
-- Call `getParticipantsWithLinks()` on mount
-- Display table with columns: Nickname, Points, Actions
+#### 6. Admin Panel (`frontend/src/components/admin/AdminPanel.tsx`)
+
+**"Participants" section** (collapsible, lazy-loaded):
+- Call `getParticipantsWithLinks()` when expanded
 - "Copy Link" button per participant
 - Construct URL: `${window.location.origin}/room/${roomCode}/u/${userKey}`
-- Copy to clipboard, show toast
+- Copy to clipboard, show "Copied!" feedback
 
 **Error handling**:
 - 403: Show "Not authorized" message
-- 401: Redirect to authentication
 
 #### 5. TypeScript Types
 

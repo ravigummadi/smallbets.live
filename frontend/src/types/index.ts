@@ -115,6 +115,7 @@ export interface CreateRoomResponse {
   room_code: string;
   host_id: string;
   user_id: string;
+  user_key?: string;
 }
 
 export interface CreateMatchRoomRequest {
@@ -139,6 +140,7 @@ export interface JoinRoomRequest {
 export interface JoinRoomResponse {
   user_id: string;
   host_id?: string;
+  user_key?: string;
   room: Room;
   user: User;
 }
