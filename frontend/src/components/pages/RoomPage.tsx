@@ -11,7 +11,8 @@ import { useUser } from '@/hooks/useUser';
 import { useBets } from '@/hooks/useBets';
 import { useUserBets } from '@/hooks/useUserBets';
 import { useParticipants } from '@/hooks/useParticipants';
-import AdminPanel from '@/components/admin/AdminPanel';
+import BetCreationForm from '@/components/admin/BetCreationForm';
+import LiveFeedPanel from '@/components/admin/LiveFeedPanel';
 import { betApi, roomApi } from '@/services/api';
 import type { Room, Bet, UserBet, User, ParticipantWithLink } from '@/types';
 
@@ -33,12 +34,22 @@ export default function RoomPage() {
   const { bets, loading: betsLoading } = useBets(code || null);
   const { userBets } = useUserBets(session?.userId || null, code || null);
   const { participants } = useParticipants(code || null);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [localRoom, setLocalRoom] = useState<Room | null>(room);
   const [expandedBets, setExpandedBets] = useState<Set<string>>(new Set());
   const [placingBets, setPlacingBets] = useState<Set<string>>(new Set());
   const [betErrors, setBetErrors] = useState<Record<string, string>>({});
   const [matchRooms, setMatchRooms] = useState<Room[]>([]);
+
+  // Admin modal state (host only)
+  const [showBetModal, setShowBetModal] = useState(false);
+  const [showFeedModal, setShowFeedModal] = useState(false);
+  const [automationEnabled, setAutomationEnabled] = useState(false);
+
+  // Inline bet management state (host only)
+  const [closingBetId, setClosingBetId] = useState<string | null>(null);
+  const [resolvingBetId, setResolvingBetId] = useState<string | null>(null);
+  const [showResolveOptions, setShowResolveOptions] = useState<string | null>(null);
+  const [adminError, setAdminError] = useState<string | null>(null);
 
   // Participant links state (host only)
   const [participantLinks, setParticipantLinks] = useState<ParticipantWithLink[]>([]);
@@ -262,6 +273,54 @@ export default function RoomPage() {
     }
     setCopiedUserId(participant.userId);
     setTimeout(() => setCopiedUserId(null), 2000);
+  };
+
+  // Admin actions (host only)
+  const handleStartRoom = async () => {
+    if (!code || !session?.hostId) return;
+    try {
+      await roomApi.startRoom(code, session.hostId);
+      setLocalRoom(prev => prev ? { ...prev, status: 'active' } : prev);
+    } catch (err) {
+      console.error('Failed to start room:', err);
+    }
+  };
+
+  const handleFinishRoom = async () => {
+    if (!code || !session?.hostId) return;
+    try {
+      await roomApi.finishRoom(code, session.hostId);
+      setLocalRoom(prev => prev ? { ...prev, status: 'finished' } : prev);
+    } catch (err) {
+      console.error('Failed to finish room:', err);
+    }
+  };
+
+  const handleCloseBet = async (betId: string) => {
+    if (!code || !session?.hostId) return;
+    setClosingBetId(betId);
+    setAdminError(null);
+    try {
+      await betApi.lockBet(code, session.hostId, betId);
+    } catch (err: any) {
+      setAdminError(err.detail || 'Failed to close bet');
+    } finally {
+      setClosingBetId(null);
+    }
+  };
+
+  const handleResolveBet = async (betId: string, winningOption: string) => {
+    if (!code || !session?.hostId) return;
+    setResolvingBetId(betId);
+    setAdminError(null);
+    try {
+      await betApi.resolveBet(code, session.hostId, betId, winningOption);
+      setShowResolveOptions(null);
+    } catch (err: any) {
+      setAdminError(err.detail || 'Failed to resolve bet');
+    } finally {
+      setResolvingBetId(null);
+    }
   };
 
   const toggleBetExpanded = (betId: string) => {
@@ -519,6 +578,66 @@ export default function RoomPage() {
                 {bet.status === 'locked' ? 'Betting is closed' : 'Bet resolved'}
               </p>
             )}
+
+            {/* Inline admin controls (host only) */}
+            {isHost && (bet.status === 'open' || bet.status === 'locked') && (
+              <div style={{
+                marginTop: 'var(--spacing-md)',
+                paddingTop: 'var(--spacing-sm)',
+                borderTop: '1px solid var(--color-border)',
+              }}>
+                {bet.status === 'open' && (
+                  <button
+                    className="btn btn-secondary btn-full"
+                    onClick={(e) => { e.stopPropagation(); handleCloseBet(bet.betId); }}
+                    disabled={closingBetId === bet.betId}
+                    style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                  >
+                    {closingBetId === bet.betId ? 'Closing...' : 'Close Bet'}
+                  </button>
+                )}
+                {bet.status === 'locked' && showResolveOptions !== bet.betId && (
+                  <button
+                    className="btn btn-primary btn-full"
+                    onClick={(e) => { e.stopPropagation(); setShowResolveOptions(bet.betId); }}
+                    style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                  >
+                    Resolve Bet
+                  </button>
+                )}
+                {bet.status === 'locked' && showResolveOptions === bet.betId && (
+                  <div style={{ display: 'grid', gap: 'var(--spacing-xs)' }} onClick={(e) => e.stopPropagation()}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: 0 }}>
+                      Select winner:
+                    </p>
+                    {bet.options.map((option) => (
+                      <button
+                        key={option}
+                        className="btn btn-secondary"
+                        onClick={() => handleResolveBet(bet.betId, option)}
+                        disabled={resolvingBetId === bet.betId}
+                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', textAlign: 'left' }}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => setShowResolveOptions(null)}
+                      disabled={resolvingBetId === bet.betId}
+                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                    >
+                      Cancel
+                    </button>
+                    {resolvingBetId === bet.betId && (
+                      <p className="text-secondary" style={{ fontSize: '0.875rem', textAlign: 'center', marginBottom: 0 }}>
+                        Resolving...
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -598,27 +717,33 @@ export default function RoomPage() {
             </span>
           </div>
         </div>
-        {isHost && (
+        {isHost && displayRoom.status === 'active' && (
           <div className="mt-md" style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
             <button
               className="btn btn-secondary btn-full"
-              onClick={() => setShowAdminPanel(!showAdminPanel)}
+              onClick={handleFinishRoom}
               style={{ fontSize: 'var(--font-size-sm)' }}
             >
-              {showAdminPanel ? 'Hide Admin Panel' : 'Show Admin Panel'}
+              Finish {isTournament ? 'Tournament' : 'Event'}
             </button>
           </div>
         )}
       </div>
 
-      {/* Admin Panel (host only) */}
-      {isHost && showAdminPanel && session?.hostId && (
-        <div className="mb-md">
-          <AdminPanel
-            room={displayRoom}
-            hostId={session.hostId}
-            onRoomUpdate={setLocalRoom}
-          />
+      {/* Admin error toast */}
+      {adminError && (
+        <div
+          className="mb-md"
+          style={{
+            padding: 'var(--spacing-md)',
+            backgroundColor: 'var(--color-bg-elevated)',
+            borderLeft: '3px solid var(--color-error)',
+            borderRadius: 'var(--radius-sm)',
+          }}
+        >
+          <p className="text-error" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
+            {adminError}
+          </p>
         </div>
       )}
 
@@ -846,6 +971,82 @@ export default function RoomPage() {
             })}
         </div>
       </div>
+
+      {/* Bottom spacer for sticky action bar */}
+      {isHost && displayRoom.status !== 'finished' && (
+        <div style={{ height: '70px' }} />
+      )}
+
+      {/* Sticky Action Bar (host only) */}
+      {isHost && displayRoom.status !== 'finished' && (
+        <div className="sticky-action-bar">
+          {displayRoom.status === 'waiting' && (
+            <button className="btn btn-primary" onClick={handleStartRoom}
+              style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
+              Start {isTournament ? 'Tournament' : 'Event'}
+            </button>
+          )}
+          {(displayRoom.status === 'waiting' || displayRoom.status === 'active') && (
+            <button className="btn btn-primary" onClick={() => setShowBetModal(true)}
+              style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
+              + New Bet
+            </button>
+          )}
+          {displayRoom.status === 'active' && (
+            <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)}
+              style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
+              Live Feed
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Create Bet Modal */}
+      {showBetModal && session?.hostId && (
+        <div className="modal-overlay" onClick={() => setShowBetModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+              <h4 style={{ marginBottom: 0 }}>Create New Bet</h4>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowBetModal(false)}
+                style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', minHeight: 'auto' }}
+              >
+                ✕
+              </button>
+            </div>
+            <BetCreationForm
+              roomCode={code!}
+              hostId={session.hostId}
+              onSuccess={() => setShowBetModal(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Live Feed Modal */}
+      {showFeedModal && session?.hostId && (
+        <div className="modal-overlay" onClick={() => setShowFeedModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+              <h4 style={{ marginBottom: 0 }}>Live Transcript Feed</h4>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowFeedModal(false)}
+                style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', minHeight: 'auto' }}
+              >
+                ✕
+              </button>
+            </div>
+            <LiveFeedPanel
+              roomCode={code!}
+              hostId={session.hostId}
+              automationEnabled={automationEnabled}
+              onToggleAutomation={setAutomationEnabled}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
