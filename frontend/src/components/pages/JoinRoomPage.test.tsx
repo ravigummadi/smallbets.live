@@ -32,7 +32,7 @@ vi.mock('@/hooks/useSession', () => ({
 
 // Mock useNavigate and useParams
 const mockNavigate = vi.fn();
-let mockRoomCode = 'BLUE';
+let mockRoomCode: string | undefined = 'BLUE';
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return {
@@ -46,35 +46,49 @@ describe('JoinRoomPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockRoomCode = 'BLUE';
+    // Default: room exists (getRoom resolves)
+    vi.mocked(roomApi.getRoom).mockResolvedValue({} as any);
   });
 
   describe('Rendering', () => {
-    it('should render page title', () => {
+    it('should render page title', async () => {
       render(<JoinRoomPage />);
-      expect(screen.getByText(/join room/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/join/i)).toBeInTheDocument();
+      });
     });
 
-    it('should render nickname input', () => {
+    it('should render nickname input', async () => {
       render(<JoinRoomPage />);
-      expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
     });
 
-    it('should render join button', () => {
+    it('should render join button', async () => {
       render(<JoinRoomPage />);
-      expect(screen.getByRole('button', { name: /^join room$/i })).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /^join room$/i })).toBeInTheDocument();
+      });
     });
   });
 
   describe('Form validation', () => {
-    it('should disable join button when nickname is empty', () => {
+    it('should disable join button when nickname is empty', async () => {
       render(<JoinRoomPage />);
-      const button = screen.getByRole('button', { name: /^join room$/i });
-      expect(button).toBeDisabled();
+      await waitFor(() => {
+        const button = screen.getByRole('button', { name: /^join room$/i });
+        expect(button).toBeDisabled();
+      });
     });
 
     it('should enable join button when nickname is provided', async () => {
       const user = userEvent.setup();
       render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
 
       const input = screen.getByPlaceholderText(/enter your nickname/i);
       await user.type(input, 'Player1');
@@ -83,14 +97,92 @@ describe('JoinRoomPage', () => {
       expect(button).toBeEnabled();
     });
 
-    it('should validate room code format', () => {
-      // Test with invalid room code
+    it('should validate room code format', async () => {
+      // Test with invalid room code (too long, won't trigger eager validation)
       mockRoomCode = 'INVALID_CODE';
+      vi.mocked(roomApi.getRoom).mockClear();
       render(<JoinRoomPage />);
 
-      // Room code should be visible in the input
-      const input = screen.getByPlaceholderText(/enter room code/i) as HTMLInputElement;
-      expect(input.value).toBe('INVALID_CODE');
+      // Room code should be visible in the input (no eager validation for codes outside 4-6 range)
+      await waitFor(() => {
+        const input = screen.getByPlaceholderText(/enter room code/i) as HTMLInputElement;
+        expect(input.value).toBe('INVALID_CODE');
+      });
+    });
+  });
+
+  describe('Eager room validation', () => {
+    it('should show room not found when URL code does not exist', async () => {
+      vi.mocked(roomApi.getRoom).mockRejectedValueOnce({
+        status: 404,
+        detail: 'Room not found',
+      });
+
+      render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/room not found/i)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/doesn't exist/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create a new room/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /try a different code/i })).toBeInTheDocument();
+    });
+
+    it('should show form when room exists', async () => {
+      vi.mocked(roomApi.getRoom).mockResolvedValueOnce({} as any);
+
+      render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should navigate to create page when Create a New Room is clicked', async () => {
+      const user = userEvent.setup();
+      vi.mocked(roomApi.getRoom).mockRejectedValueOnce({
+        status: 404,
+        detail: 'Room not found',
+      });
+
+      render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /create a new room/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', { name: /create a new room/i }));
+      expect(mockNavigate).toHaveBeenCalledWith('/create');
+    });
+
+    it('should show join form when Try a Different Code is clicked', async () => {
+      const user = userEvent.setup();
+      vi.mocked(roomApi.getRoom).mockRejectedValueOnce({
+        status: 404,
+        detail: 'Room not found',
+      });
+
+      render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /try a different code/i })).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', { name: /try a different code/i }));
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter room code/i)).toBeInTheDocument();
+      });
+    });
+
+    it('should not eagerly validate when no URL code is provided', () => {
+      mockRoomCode = undefined;
+      vi.mocked(roomApi.getRoom).mockClear();
+      render(<JoinRoomPage />);
+
+      expect(roomApi.getRoom).not.toHaveBeenCalled();
+      expect(screen.getByPlaceholderText(/enter room code/i)).toBeInTheDocument();
     });
   });
 
@@ -105,6 +197,10 @@ describe('JoinRoomPage', () => {
       vi.mocked(roomApi.joinRoom).mockResolvedValueOnce(mockResponse);
 
       render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
 
       const input = screen.getByPlaceholderText(/enter your nickname/i);
       await user.type(input, 'Player1');
@@ -138,6 +234,10 @@ describe('JoinRoomPage', () => {
 
       render(<JoinRoomPage />);
 
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
+
       const input = screen.getByPlaceholderText(/enter your nickname/i);
       await user.type(input, '  Player1  ');
 
@@ -153,7 +253,7 @@ describe('JoinRoomPage', () => {
   });
 
   describe('Error handling', () => {
-    it('should show error when room not found', async () => {
+    it('should show room not found state when join returns 404', async () => {
       const user = userEvent.setup();
 
       vi.mocked(roomApi.joinRoom).mockRejectedValueOnce({
@@ -163,6 +263,10 @@ describe('JoinRoomPage', () => {
 
       render(<JoinRoomPage />);
 
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
+
       const input = screen.getByPlaceholderText(/enter your nickname/i);
       await user.type(input, 'Player1');
 
@@ -170,8 +274,10 @@ describe('JoinRoomPage', () => {
       await user.click(button);
 
       await waitFor(() => {
-        expect(screen.getByText(/not found/i)).toBeInTheDocument();
+        expect(screen.getByText(/doesn't exist/i)).toBeInTheDocument();
       });
+
+      expect(screen.getByRole('button', { name: /create a new room/i })).toBeInTheDocument();
     });
 
     it('should show error when nickname already taken', async () => {
@@ -183,6 +289,10 @@ describe('JoinRoomPage', () => {
       });
 
       render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
 
       const input = screen.getByPlaceholderText(/enter your nickname/i);
       await user.type(input, 'ExistingPlayer');
@@ -204,6 +314,10 @@ describe('JoinRoomPage', () => {
       });
 
       render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
 
       const input = screen.getByPlaceholderText(/enter your nickname/i);
       await user.type(input, 'Player1');
@@ -240,6 +354,10 @@ describe('JoinRoomPage', () => {
 
       render(<JoinRoomPage />);
 
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
+
       const input = screen.getByPlaceholderText(/enter your nickname/i);
       await user.type(input, 'Player1');
 
@@ -257,6 +375,25 @@ describe('JoinRoomPage', () => {
 
     it('should have no accessibility violations', async () => {
       const { container } = render(<JoinRoomPage />);
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
+      const results = await axe(container, axeOptions);
+      expect(results).toHaveNoViolations();
+    });
+
+    it('should have no accessibility violations on room not found', async () => {
+      vi.mocked(roomApi.getRoom).mockRejectedValueOnce({
+        status: 404,
+        detail: 'Room not found',
+      });
+
+      const { container } = render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/doesn't exist/i)).toBeInTheDocument();
+      });
+
       const results = await axe(container, axeOptions);
       expect(results).toHaveNoViolations();
     });
@@ -265,10 +402,14 @@ describe('JoinRoomPage', () => {
       const user = userEvent.setup();
 
       vi.mocked(roomApi.joinRoom).mockRejectedValueOnce({
-        detail: 'Room not found',
+        detail: 'Server error',
       });
 
       const { container } = render(<JoinRoomPage />);
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/enter your nickname/i)).toBeInTheDocument();
+      });
 
       const input = screen.getByPlaceholderText(/enter your nickname/i);
       await user.type(input, 'Player1');
@@ -277,7 +418,7 @@ describe('JoinRoomPage', () => {
       await user.click(button);
 
       await waitFor(() => {
-        expect(screen.getByText(/not found/i)).toBeInTheDocument();
+        expect(screen.getByText(/server error/i)).toBeInTheDocument();
       });
 
       const results = await axe(container, axeOptions);
