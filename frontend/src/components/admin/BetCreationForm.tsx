@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { betApi } from '@/services/api';
+import { MAX_BET_OPTIONS } from '@/constants';
 
 interface BetCreationFormProps {
   roomCode: string;
@@ -24,7 +25,7 @@ export default function BetCreationForm({
   const [success, setSuccess] = useState(false);
 
   const handleAddOption = () => {
-    if (options.length < 10) {
+    if (options.length < MAX_BET_OPTIONS) {
       setOptions([...options, '']);
     }
   };
@@ -158,7 +159,7 @@ export default function BetCreationForm({
             )}
           </div>
         ))}
-        {options.length < 10 && (
+        {options.length < MAX_BET_OPTIONS && (
           <button
             type="button"
             className="btn btn-secondary"

@@ -12,6 +12,7 @@ import { useBets } from '@/hooks/useBets';
 import { useUserBets } from '@/hooks/useUserBets';
 import { useParticipants } from '@/hooks/useParticipants';
 import BetCreationForm from '@/components/admin/BetCreationForm';
+import EditBetModal from '@/components/admin/EditBetModal';
 import LiveFeedPanel from '@/components/admin/LiveFeedPanel';
 import { betApi, roomApi } from '@/services/api';
 import type { Room, Bet, UserBet, User, ParticipantWithLink } from '@/types';
@@ -52,10 +53,6 @@ export default function RoomPage() {
   const [adminError, setAdminError] = useState<string | null>(null);
   const [deletingBetId, setDeletingBetId] = useState<string | null>(null);
   const [editingBet, setEditingBet] = useState<Bet | null>(null);
-  const [editQuestion, setEditQuestion] = useState('');
-  const [editOptions, setEditOptions] = useState<string[]>([]);
-  const [editPointsValue, setEditPointsValue] = useState(100);
-  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Participant links state (host only)
   const [participantLinks, setParticipantLinks] = useState<ParticipantWithLink[]>([]);
@@ -414,36 +411,6 @@ export default function RoomPage() {
     }
   };
 
-  const startEditBet = (bet: Bet) => {
-    setEditingBet(bet);
-    setEditQuestion(bet.question);
-    setEditOptions([...bet.options]);
-    setEditPointsValue(bet.pointsValue);
-  };
-
-  const handleEditBet = async () => {
-    if (!code || !session?.hostId || !editingBet) return;
-    setEditSubmitting(true);
-    setAdminError(null);
-    try {
-      const validOptions = editOptions.filter(opt => opt.trim() !== '');
-      if (validOptions.length < 2) {
-        setAdminError('At least 2 options are required');
-        setEditSubmitting(false);
-        return;
-      }
-      await betApi.editBet(code, session.hostId, editingBet.betId, {
-        question: editQuestion.trim(),
-        options: validOptions.map(opt => opt.trim()),
-        pointsValue: editPointsValue,
-      });
-      setEditingBet(null);
-    } catch (err: any) {
-      setAdminError(err.detail || 'Failed to edit bet');
-    } finally {
-      setEditSubmitting(false);
-    }
-  };
 
   if (roomLoading || userLoading) {
     return (
@@ -649,16 +616,16 @@ export default function RoomPage() {
                     <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
                       <button
                         className="btn btn-secondary"
-                        onClick={(e) => { e.stopPropagation(); startEditBet(bet); }}
+                        onClick={(e) => { e.stopPropagation(); setEditingBet(bet); }}
                         style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1 }}
                       >
                         Edit
                       </button>
                       <button
-                        className="btn btn-secondary"
+                        className="btn btn-danger"
                         onClick={(e) => { e.stopPropagation(); handleDeleteBet(bet.betId); }}
                         disabled={deletingBetId === bet.betId}
-                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1, color: 'var(--color-error)' }}
+                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1 }}
                       >
                         {deletingBetId === bet.betId ? 'Deleting...' : 'Delete'}
                       </button>
@@ -1118,97 +1085,13 @@ export default function RoomPage() {
       )}
 
       {/* Edit Bet Modal */}
-      {editingBet && (
-        <div className="modal-overlay" onClick={() => setEditingBet(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-              <h4 style={{ marginBottom: 0 }}>Edit Bet</h4>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setEditingBet(null)}
-                style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', minHeight: 'auto' }}
-              >
-                ✕
-              </button>
-            </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-warning)', marginBottom: 'var(--spacing-md)' }}>
-              Editing will reset all existing votes and refund points to users.
-            </p>
-            <div className="mb-md">
-              <label style={{ display: 'block', marginBottom: 'var(--spacing-sm)', fontWeight: '600' }}>
-                Question *
-              </label>
-              <input
-                type="text"
-                value={editQuestion}
-                onChange={(e) => setEditQuestion(e.target.value)}
-                maxLength={200}
-                style={{ width: '100%' }}
-              />
-            </div>
-            <div className="mb-md">
-              <label style={{ display: 'block', marginBottom: 'var(--spacing-sm)', fontWeight: '600' }}>
-                Options * (minimum 2)
-              </label>
-              {editOptions.map((option, index) => (
-                <div key={index} style={{ display: 'flex', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-sm)' }}>
-                  <input
-                    type="text"
-                    placeholder={`Option ${index + 1}`}
-                    value={option}
-                    onChange={(e) => {
-                      const newOptions = [...editOptions];
-                      newOptions[index] = e.target.value;
-                      setEditOptions(newOptions);
-                    }}
-                    maxLength={100}
-                    style={{ flex: 1 }}
-                  />
-                  {editOptions.length > 2 && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setEditOptions(editOptions.filter((_, i) => i !== index))}
-                      style={{ padding: '0.5rem 1rem' }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              {editOptions.length < 10 && (
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setEditOptions([...editOptions, ''])}
-                  style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-                >
-                  + Add Option
-                </button>
-              )}
-            </div>
-            <div className="mb-md">
-              <label style={{ display: 'block', marginBottom: 'var(--spacing-sm)', fontWeight: '600' }}>
-                Points Value *
-              </label>
-              <input
-                type="number"
-                min={10}
-                max={1000}
-                value={editPointsValue}
-                onChange={(e) => setEditPointsValue(Number(e.target.value))}
-                style={{ width: '100%' }}
-              />
-            </div>
-            <button
-              className="btn btn-primary btn-full"
-              onClick={handleEditBet}
-              disabled={editSubmitting || !editQuestion.trim()}
-            >
-              {editSubmitting ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
+      {editingBet && session?.hostId && (
+        <EditBetModal
+          bet={editingBet}
+          roomCode={code!}
+          hostId={session.hostId}
+          onClose={() => setEditingBet(null)}
+        />
       )}
     </div>
   );

@@ -205,10 +205,10 @@ export default function BetListPanel({
 
                   {canDelete && (
                     <button
-                      className="btn btn-secondary"
+                      className="btn btn-danger"
                       onClick={() => handleDeleteBet(bet.betId)}
                       disabled={deletingBet === bet.betId}
-                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1, color: 'var(--color-error)' }}
+                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1 }}
                     >
                       {deletingBet === bet.betId ? 'Deleting...' : 'Delete'}
                     </button>

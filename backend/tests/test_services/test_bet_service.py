@@ -8,6 +8,8 @@ Tests marked with @pytest.mark.unit for selective execution.
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+from google.cloud import firestore
+from google.cloud.firestore_v1.transforms import Increment as FirestoreIncrement
 from services import bet_service
 from models.bet import Bet, BetStatus
 from models.user import User
@@ -264,7 +266,7 @@ async def test_delete_open_bet_no_votes():
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_delete_open_bet_refunds_points():
-    """Test deleting an open bet refunds points to users who placed bets"""
+    """Test deleting an open bet refunds points atomically using Increment"""
     bet = Bet(
         bet_id="bet1",
         room_code="AAAA",
@@ -278,11 +280,6 @@ async def test_delete_open_bet_refunds_points():
         UserBet(user_id="u1", bet_id="bet1", room_code="AAAA", selected_option="A"),
         UserBet(user_id="u2", bet_id="bet1", room_code="AAAA", selected_option="B"),
     ]
-
-    users = {
-        "u1": User(user_id="u1", room_code="AAAA", nickname="U1", points=900),
-        "u2": User(user_id="u2", room_code="AAAA", nickname="U2", points=900),
-    }
 
     mock_db = MagicMock()
     mock_batch = MagicMock()
@@ -307,15 +304,17 @@ async def test_delete_open_bet_refunds_points():
 
     with patch("services.bet_service.get_db", return_value=mock_db), \
          patch("services.bet_service.get_bet", return_value=bet), \
-         patch("services.bet_service.get_user_bets_for_bet", return_value=user_bets), \
-         patch("services.user_service.get_user", side_effect=lambda uid: users[uid]):
+         patch("services.bet_service.get_user_bets_for_bet", return_value=user_bets):
 
         await bet_service.delete_bet("bet1")
 
-    # Points should be refunded: 900 + 100 = 1000 for each user
-    update_calls = [c for c in mock_batch.update.call_args_list if "points" in c.args[1]]
-    refunded_points = sorted(c.args[1]["points"] for c in update_calls)
-    assert refunded_points == [1000, 1000]
+    # Points should be refunded atomically via Increment (no get_user calls)
+    update_calls = mock_batch.update.call_args_list
+    point_updates = [c.args[1]["points"] for c in update_calls if "points" in c.args[1]]
+    # Each user should get Increment(100) - verify all are Increment sentinels
+    assert len(point_updates) == 2
+    for inc in point_updates:
+        assert isinstance(inc, FirestoreIncrement)
 
     # User bet docs + bet doc should be deleted (3 deletes total)
     assert mock_batch.delete.call_count == 3
@@ -370,7 +369,7 @@ async def test_delete_nonexistent_bet_fails():
 @pytest.mark.unit
 @pytest.mark.asyncio
 async def test_edit_open_bet_updates_question():
-    """Test editing an open bet's question resets votes and refunds points"""
+    """Test editing an open bet's question resets votes and refunds points atomically"""
     bet = Bet(
         bet_id="bet1",
         room_code="AAAA",
@@ -384,8 +383,6 @@ async def test_edit_open_bet_updates_question():
     user_bets = [
         UserBet(user_id="u1", bet_id="bet1", room_code="AAAA", selected_option="A"),
     ]
-
-    user = User(user_id="u1", room_code="AAAA", nickname="U1", points=900)
 
     mock_db = MagicMock()
     mock_batch = MagicMock()
@@ -410,8 +407,7 @@ async def test_edit_open_bet_updates_question():
 
     with patch("services.bet_service.get_db", return_value=mock_db), \
          patch("services.bet_service.get_bet", return_value=bet), \
-         patch("services.bet_service.get_user_bets_for_bet", return_value=user_bets), \
-         patch("services.user_service.get_user", return_value=user):
+         patch("services.bet_service.get_user_bets_for_bet", return_value=user_bets):
 
         updated = await bet_service.edit_bet("bet1", question="New question?")
 
@@ -419,9 +415,10 @@ async def test_edit_open_bet_updates_question():
     assert updated.options == ["A", "B"]  # Unchanged
     assert updated.version == 2
 
-    # User refunded: 900 + 100 = 1000
+    # User refunded atomically via Increment(100)
     update_calls = [c for c in mock_batch.update.call_args_list if "points" in c.args[1]]
-    assert update_calls[0].args[1]["points"] == 1000
+    assert len(update_calls) == 1
+    assert isinstance(update_calls[0].args[1]["points"], FirestoreIncrement)
 
     # User bet deleted + bet updated
     mock_batch.delete.assert_called_once()

@@ -282,10 +282,35 @@ async def get_user_bets_for_bet(bet_id: str) -> List[UserBet]:
     return user_bets
 
 
+def _add_refund_ops_to_batch(
+    batch, user_bets: List[UserBet], room_code: str, points_value: int, db
+) -> None:
+    """Add point refund and user bet deletion operations to a batch.
+
+    Uses firestore.Increment() for atomic point updates (no read-then-write race).
+    """
+    for ub in user_bets:
+        # Atomically increment points in users collection
+        user_ref = db.collection("users").document(ub.user_id)
+        batch.update(user_ref, {"points": firestore.Increment(points_value)})
+
+        # Atomically increment points in roomUsers collection
+        room_user_doc_id = f"{room_code}_{ub.user_id}"
+        room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+        room_user_doc = room_user_ref.get()
+        if room_user_doc.exists:
+            batch.update(room_user_ref, {"points": firestore.Increment(points_value)})
+
+        # Delete the user bet document
+        ub_ref = db.collection("userBets").document(f"{ub.bet_id}_{ub.user_id}")
+        batch.delete(ub_ref)
+
+
 async def delete_bet(bet_id: str) -> None:
     """Delete an open bet, refunding points to all users who placed bets.
 
     Only OPEN bets can be deleted. Closed/resolved bets cannot be deleted.
+    Uses firestore.Increment() for atomic point refunds.
     """
     db = get_db()
 
@@ -300,26 +325,7 @@ async def delete_bet(bet_id: str) -> None:
 
     batch = db.batch()
 
-    # Refund points to each user who placed a bet
-    for ub in user_bets:
-        user = await user_service.get_user(ub.user_id)
-        if user:
-            new_points = user.points + bet.points_value
-            user_ref = db.collection("users").document(ub.user_id)
-            batch.update(user_ref, {"points": new_points})
-
-            # Also update roomUsers if exists
-            room_user_doc_id = f"{bet.room_code}_{ub.user_id}"
-            room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
-            room_user_doc = room_user_ref.get()
-            if room_user_doc.exists:
-                ru_data = room_user_doc.to_dict()
-                ru_new_points = ru_data["points"] + bet.points_value
-                batch.update(room_user_ref, {"points": ru_new_points})
-
-        # Delete the user bet document
-        ub_ref = db.collection("userBets").document(f"{bet_id}_{ub.user_id}")
-        batch.delete(ub_ref)
+    _add_refund_ops_to_batch(batch, user_bets, bet.room_code, bet.points_value, db)
 
     # Delete the bet document
     bet_ref = db.collection("bets").document(bet_id)
@@ -337,7 +343,7 @@ async def edit_bet(
     """Edit an open bet. Resets all votes and refunds points to users.
 
     Only OPEN bets can be edited. Any edit resets all existing user bets
-    and refunds their points.
+    and refunds their points. Uses firestore.Increment() for atomic refunds.
     """
     db = get_db()
 
@@ -353,26 +359,7 @@ async def edit_bet(
 
     batch = db.batch()
 
-    # Refund points and delete user bets
-    for ub in user_bets:
-        user = await user_service.get_user(ub.user_id)
-        if user:
-            new_points = user.points + bet.points_value
-            user_ref = db.collection("users").document(ub.user_id)
-            batch.update(user_ref, {"points": new_points})
-
-            # Also update roomUsers if exists
-            room_user_doc_id = f"{bet.room_code}_{ub.user_id}"
-            room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
-            room_user_doc = room_user_ref.get()
-            if room_user_doc.exists:
-                ru_data = room_user_doc.to_dict()
-                ru_new_points = ru_data["points"] + bet.points_value
-                batch.update(room_user_ref, {"points": ru_new_points})
-
-        # Delete the user bet document
-        ub_ref = db.collection("userBets").document(f"{bet_id}_{ub.user_id}")
-        batch.delete(ub_ref)
+    _add_refund_ops_to_batch(batch, user_bets, bet.room_code, bet.points_value, db)
 
     # Apply edits to the bet
     updates = {}
