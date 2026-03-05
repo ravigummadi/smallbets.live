@@ -94,10 +94,6 @@ vi.mock('@/services/api', () => ({
   },
 }));
 
-vi.mock('@/components/admin/AdminPanel', () => ({
-  default: () => <div data-testid="admin-panel">Admin Panel</div>,
-}));
-
 // Lazy-import RoomPage AFTER mocks are set up
 const { default: RoomPage } = await import('./RoomPage');
 

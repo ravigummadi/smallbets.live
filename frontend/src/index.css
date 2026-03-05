@@ -673,6 +673,154 @@ select:focus {
   color: var(--color-text-muted);
 }
 
+/* ===== BetCard Component ===== */
+.bet-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.bet-card-header {
+  padding: var(--spacing-md);
+  cursor: pointer;
+}
+
+.bet-card-header--expanded {
+  background-color: var(--color-bg-elevated);
+}
+
+.bet-card-header-layout {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+}
+
+.bet-card-header-content { flex: 1; }
+
+.bet-card-question {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.bet-card-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0;
+}
+
+.bet-card-winner { margin-left: 0.5rem; color: var(--color-primary); font-weight: 600; }
+.bet-card-placed { margin-left: 0.5rem; color: var(--color-success); font-weight: 600; }
+
+.bet-card-actions { display: flex; align-items: center; gap: 0.5rem; }
+.bet-card-expand-icon { font-size: 1.25rem; color: var(--color-text-secondary); }
+
+.bet-card-body { padding: var(--spacing-md); padding-top: 0; }
+
+.bet-card-user-bet {
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-elevated);
+  border-left: 3px solid var(--color-success);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-md);
+}
+.bet-card-user-bet--won { border-left-color: var(--color-success); }
+.bet-card-user-bet--lost { border-left-color: var(--color-error); }
+.bet-card-user-bet-text { margin-bottom: 0; font-size: 0.875rem; }
+.bet-card-result { margin-left: 0.5rem; font-weight: 600; }
+
+.bet-card-error {
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-elevated);
+  border-left: 3px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-md);
+}
+.bet-card-error-text { margin-bottom: 0; font-size: 0.875rem; }
+
+.bet-card-options { display: grid; gap: 0.75rem; }
+.bet-card-option { text-align: left; padding: 1rem; border-left: 3px solid var(--color-primary); }
+.bet-card-placing { font-size: 0.875rem; text-align: center; color: var(--color-text-secondary); margin-top: var(--spacing-md); }
+.bet-card-closed-text { font-size: 0.875rem; }
+
+.bet-card-admin {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+.bet-card-admin-open { display: grid; gap: var(--spacing-xs); }
+.bet-card-admin-row { display: flex; gap: var(--spacing-xs); }
+.bet-card-admin-btn { flex: 1; font-size: 0.875rem; padding: 0.5rem 1rem; }
+.bet-card-close-btn { font-size: 0.875rem; padding: 0.5rem 1rem; }
+
+.bet-card-resolve-label { font-size: 0.875rem; font-weight: 600; margin-bottom: var(--spacing-xs); }
+.bet-card-resolve-options { display: flex; gap: var(--spacing-xs); flex-wrap: wrap; }
+.bet-card-resolving { font-size: 0.875rem; text-align: center; margin-bottom: 0; margin-top: var(--spacing-xs); color: var(--color-text-secondary); }
+
+/* ===== RoomHeader Component ===== */
+.room-header-layout { display: flex; justify-content: space-between; align-items: center; }
+.room-header-title { margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.room-header-status { color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 0; display: flex; align-items: center; gap: 0.5rem; }
+.room-header-points { margin-bottom: 0.25rem; }
+.room-header-points-label { color: var(--color-text-muted); font-size: 0.875rem; margin-bottom: 0; }
+
+.room-header-role-badge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.room-header-role-badge--host { background: var(--color-primary); color: #fff; border: none; }
+.room-header-finish { margin-top: var(--spacing-md); padding-top: 0.75rem; border-top: 1px solid var(--color-border); }
+.room-header-finish-btn { font-size: var(--font-size-sm); }
+
+/* ===== HostActionBar Component ===== */
+.sticky-action-bar-spacer { height: 70px; }
+.host-action-bar { flex-direction: column; gap: var(--spacing-xs); }
+.host-action-bar-row { display: flex; gap: var(--spacing-xs); width: 100%; }
+.host-action-bar-btn { flex: 1; font-size: 0.875rem; padding: 0.625rem 1rem; }
+
+/* ===== SessionRestoreFlow ===== */
+.session-restore-buttons { display: flex; gap: var(--spacing-sm); }
+.session-restore-btn { flex: 1; }
+.container-padded-top { padding-top: var(--spacing-2xl); }
+
+/* ===== Shared Utilities ===== */
+.btn-xs { font-size: 0.75rem; padding: 0.25rem 0.5rem; min-height: auto; }
+.btn-share { font-size: 0.7rem; padding: 0.15rem 0.4rem; min-height: auto; line-height: 1.2; font-weight: 500; }
+.btn-modal-close { font-size: 0.875rem; padding: 0.25rem 0.75rem; min-height: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); }
+.modal-title { margin-bottom: 0; }
+.text-right { text-align: right; }
+
+.admin-error-toast {
+  padding: var(--spacing-md);
+  background-color: var(--color-bg-elevated);
+  border-left: 3px solid var(--color-error);
+  border-radius: var(--radius-sm);
+}
+.admin-error-text { margin-bottom: 0; font-size: 0.875rem; }
+
+.bet-count-badge {
+  background: var(--color-primary);
+  color: #000;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 0.5rem;
+}
+
+.bet-list { display: grid; gap: var(--spacing-md); }
+.match-create-form { display: grid; gap: 0.75rem; }
+.match-create-buttons { display: flex; gap: 0.5rem; }
+
 /* Responsive */
 @media (max-width: 640px) {
   :root {

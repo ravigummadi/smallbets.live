@@ -14,48 +14,20 @@ smallbets.live/
 └── ARCHITECTURE.md   # Architecture documentation
 ```
 
-## Implementation Status
+## Features
 
-### Phase 1: Core Infrastructure ✅ COMPLETED
-- [x] Project structure (frontend + backend)
-- [x] Pydantic data models with FCIS compliance (7 models, 100% pure)
-- [x] Firebase configuration and initialization
-- [x] FastAPI application (17 endpoints)
-- [x] Game logic (pure functions for scoring and validation)
-- [x] Firestore services (room, user, bet operations)
+- **Single Event Rooms**: Create/join rooms for ceremonies (Oscars, Grammys, Super Bowl)
+- **Tournament Mode**: Multi-match tournaments (IPL, T20 World Cup) with aggregate leaderboard
+- **Cricket Quick-Fire Templates**: One-tap bet creation for live cricket matches
+- **Real-time Sync**: All participants see live updates via Firestore listeners
+- **Session Restoration**: Unique user links for rejoining without accounts
+- **Animated Leaderboard**: Position changes, point deltas, and medal rankings
+- **Host Tools**: Auto-lock on timer, one-tap resolve, bet queue, sticky action bar
+- **Bet Resolution Feedback**: Win/loss animations with confetti and point overlays
+- **Onboarding**: First-time user guide and host tutorial
+- **Cricket Theming**: IPL team colors, match headers, cricket-specific UI
 
-### Phase 2: Player Experience ✅ COMPLETED
-- [x] React application with routing
-- [x] Firebase hooks for real-time sync
-- [x] Session management (sessionStorage)
-- [x] Home page (room code entry)
-- [x] Create room page
-- [x] Join room page
-- [x] Room page (basic UI with participants)
-- [x] Mobile-first CSS (dark theme, touch-friendly)
-
-### Phase 3: Automation Engine ✅ COMPLETED
-- [x] Transcript ingestion webhook API (POST /api/rooms/{code}/transcript)
-- [x] Bet trigger engine (keyword matching with regex + fuzzy fallback)
-- [x] Winner extraction engine (fuzzy matching with confidence scoring)
-- [x] Manual live feed UI (LiveFeedPanel + AdminPanel)
-- [ ] YouTube Live captions integration (optional - not MVP)
-
-### Phase 4: Admin Controls ✅ COMPLETED
-- [x] Admin control panel (AdminPanel component)
-- [x] Automation monitoring (live feed with result feedback)
-- [x] Manual override controls (toggle automation, manual bet controls)
-- [x] Event template management (templates created, integration pending)
-
-### Phase 5: Templates & Testing 📋 TODO
-- [x] Grammy Awards 2026 template (with trigger config)
-- [x] Oscars 2026 + Super Bowl LIX templates
-- [ ] Scoring logic integration
-- [ ] End-to-end testing
-- [ ] Load testing (20+ concurrent users)
-- [ ] Firebase Hosting deployment
-
-See [CLAUDE.md](./CLAUDE.md) for architectural context and [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
+See [CLAUDE.md](./CLAUDE.md) for architectural context, [ARCHITECTURE.md](./ARCHITECTURE.md) for architecture documentation, and [specs/AUDIT-quality-review.md](./specs/AUDIT-quality-review.md) for the quality audit and improvement plan.
 
 ## Quick Start
 
@@ -147,7 +119,7 @@ You should see:
 4. Select **"Grammy Awards 2026"** template
 5. Click **"Create Room"**
 6. You should see the room page with 1000 points
-7. Click **"Show Admin Panel"** to control the event
+7. Use the sticky action bar at the bottom to control the event (host only)
 
 **Test with multiple users:**
 - Open http://localhost:5173 in an incognito/private window
@@ -202,8 +174,7 @@ You should see:
 
 See [SPEC.md](./SPEC.md) for implementation plan and [ARCHITECTURE.md](./ARCHITECTURE.md) for architecture patterns and review workflow.
 
-## Target MVP
+## Target Events
 
-- Grammy Awards 2026 (Feb 2, 2026)
-- Basic automation with manual fallback
-- 2-week development timeline
+- **T20 World Cup Final**: March 11-12, 2026
+- **IPL 2026**: March 28 onwards

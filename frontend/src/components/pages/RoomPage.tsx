@@ -14,24 +14,18 @@ import { useParticipants } from '@/hooks/useParticipants';
 import BetCreationForm from '@/components/admin/BetCreationForm';
 import EditBetModal from '@/components/admin/EditBetModal';
 import LiveFeedPanel from '@/components/admin/LiveFeedPanel';
-import BetTimer from '@/components/BetTimer';
 import BetResolutionFeedback from '@/components/BetResolutionFeedback';
 import MatchRoomDiscovery from '@/components/MatchRoomDiscovery';
 import BetQueue from '@/components/BetQueue';
 import AnimatedLeaderboard from '@/components/AnimatedLeaderboard';
 import CricketMatchHeader from '@/components/CricketMatchHeader';
 import OnboardingModal from '@/components/OnboardingModal';
+import BetCard from '@/components/BetCard';
+import RoomHeader, { EVENT_TEMPLATE_NAMES } from '@/components/RoomHeader';
+import HostActionBar from '@/components/HostActionBar';
+import SessionRestoreFlow from '@/components/SessionRestoreFlow';
 import { betApi, roomApi } from '@/services/api';
-import type { Room, Bet, UserBet, User, ParticipantWithLink } from '@/types';
-
-// Map template IDs to friendly names
-const EVENT_TEMPLATE_NAMES: Record<string, string> = {
-  'grammys-2026': 'Grammy Awards 2026',
-  'oscars-2026': 'Oscars 2026',
-  'superbowl-lix': 'Super Bowl LIX',
-  'ipl-2026': 'IPL 2026',
-  'custom': 'Custom Event',
-};
+import type { Room, Bet, ParticipantWithLink } from '@/types';
 
 export default function RoomPage() {
   const { code, userKey } = useParams<{ code: string; userKey?: string }>();
@@ -56,22 +50,14 @@ export default function RoomPage() {
   // Inline bet management state (host only)
   const [closingBetId, setClosingBetId] = useState<string | null>(null);
   const [resolvingBetId, setResolvingBetId] = useState<string | null>(null);
-  const [showResolveOptions, setShowResolveOptions] = useState<string | null>(null);
   const [adminError, setAdminError] = useState<string | null>(null);
   const [deletingBetId, setDeletingBetId] = useState<string | null>(null);
   const [editingBet, setEditingBet] = useState<Bet | null>(null);
 
   // Participant links state (host only)
   const [participantLinks, setParticipantLinks] = useState<ParticipantWithLink[]>([]);
-  const [linksLoaded, setLinksLoaded] = useState(false);
   const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
   const [copiedRoomLink, setCopiedRoomLink] = useState(false);
-
-  // Session restoration state
-  const [restoreUser, setRestoreUser] = useState<User | null>(null);
-  const [restoreLoading, setRestoreLoading] = useState(false);
-  const [restoreError, setRestoreError] = useState<string | null>(null);
-  const [showRestoreModal, setShowRestoreModal] = useState(false);
 
   // Resolution feedback state
   const [resolutionFeedback, setResolutionFeedback] = useState<{
@@ -91,134 +77,22 @@ export default function RoomPage() {
   const [creatingMatch, setCreatingMatch] = useState(false);
 
   // Session restoration via userKey link
-  // Only trigger restoration if we don't already have a matching session
   const needsRestore = userKey && code && (!session || session.roomCode !== code);
 
-  useEffect(() => {
-    if (!needsRestore) return;
-
-    setRestoreLoading(true);
-    setRestoreError(null);
-
-    roomApi.getUserByKey(code!, userKey!)
-      .then((userData) => {
-        // Check if there's an existing session for a DIFFERENT room
-        const hasConflictingSession = session && session.roomCode !== code;
-        if (hasConflictingSession) {
-          // Show confirmation before replacing existing session
-          setRestoreUser(userData);
-          setShowRestoreModal(true);
-        } else {
-          // No conflicting session — auto-restore immediately
-          saveSession({
-            userId: userData.userId,
-            roomCode: code!,
-            hostId: userData.isAdmin ? userData.userId : undefined,
-            nickname: userData.nickname,
-          });
-        }
-      })
-      .catch((err: any) => {
-        if (err.status === 429) {
-          setRestoreError('Too many requests. Please try again later.');
-        } else if (err.status === 404) {
-          setRestoreError('This link is invalid or the user was not found.');
-        } else if (err.status === 400) {
-          setRestoreError('Invalid link format.');
-        } else {
-          setRestoreError('Failed to restore session. Please try again.');
-        }
-      })
-      .finally(() => {
-        setRestoreLoading(false);
-      });
-  }, [needsRestore, userKey, code]);
-
-  const handleConfirmRestore = () => {
-    if (!restoreUser || !code) return;
-
-    saveSession({
-      userId: restoreUser.userId,
-      roomCode: code,
-      hostId: restoreUser.isAdmin ? restoreUser.userId : undefined,
-      nickname: restoreUser.nickname,
-    });
-
-    setShowRestoreModal(false);
-    setRestoreUser(null);
-    // Stay on /u/:userKey URL - the session is now restored and the page will render normally
-  };
-
-  const handleCancelRestore = () => {
-    setShowRestoreModal(false);
-    setRestoreUser(null);
-    if (session && session.roomCode === code) {
-      // Already have a session for this room, just stay
-    } else {
-      navigate(`/join/${code}`, { replace: true });
-    }
-  };
-
-  // Show restore modal/loading/error when restoration is needed
   if (needsRestore) {
-    if (restoreLoading) {
-      return (
-        <div className="container" style={{ paddingTop: '3rem' }}>
-          <div className="spinner" />
-          <p className="text-center text-muted">Restoring session...</p>
-        </div>
-      );
-    }
-
-    if (restoreError) {
-      return (
-        <div className="container" style={{ paddingTop: '3rem' }}>
-          <div className="card text-center">
-            <p className="text-error">{restoreError}</p>
-            <button
-              className="btn btn-secondary mt-md"
-              onClick={() => navigate(`/join/${code}`)}
-            >
-              Join Room Instead
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    if (showRestoreModal && restoreUser) {
-      return (
-        <div className="container" style={{ paddingTop: '3rem' }}>
-          <div className="card">
-            <h3 style={{ marginBottom: 'var(--spacing-md)' }}>Restore Session</h3>
-            <p style={{ marginBottom: 'var(--spacing-md)' }}>
-              Continue as <strong>{restoreUser.nickname}</strong>? You have{' '}
-              <strong>{restoreUser.points}</strong> points.
-            </p>
-            <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleConfirmRestore}>
-                Continue as {restoreUser.nickname}
-              </button>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={handleCancelRestore}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Still loading/processing, show spinner
     return (
-      <div className="container" style={{ paddingTop: '3rem' }}>
-        <div className="spinner" />
-      </div>
+      <SessionRestoreFlow
+        code={code!}
+        userKey={userKey!}
+        existingSession={session}
+        onSessionRestored={saveSession}
+      />
     );
   }
 
   // Redirect if no session for this room (and not on a userKey URL)
   useEffect(() => {
-    if (userKey) return; // userKey URLs handle their own auth via restoration
+    if (userKey) return;
     if (!session || session.roomCode !== code) {
       navigate(`/join/${code}`, {
         state: session ? {
@@ -241,23 +115,16 @@ export default function RoomPage() {
     if (localRoom?.roomType === 'tournament') {
       roomApi.getMatchRooms(localRoom.code)
         .then(res => setMatchRooms(res.matches))
-        .catch(() => {});
+        .catch(err => console.error('Failed to load match rooms:', err));
     }
   }, [localRoom?.roomType, localRoom?.code]);
 
-  // Load participant links for host (for Copy Link buttons)
-  // Re-fetch when participant count changes to pick up new joiners
+  // Load participant links for host
   useEffect(() => {
     if (!session?.hostId || !code) return;
-
     roomApi.getParticipantsWithLinks(code, session.hostId)
-      .then((res) => {
-        setParticipantLinks(res.participants);
-        setLinksLoaded(true);
-      })
-      .catch(() => {
-        setLinksLoaded(true);
-      });
+      .then((res) => setParticipantLinks(res.participants))
+      .catch(err => console.error('Failed to load participant links:', err));
   }, [session?.hostId, code, participants.length]);
 
   const handleCopyRoomLink = async () => {
@@ -294,7 +161,6 @@ export default function RoomPage() {
     setTimeout(() => setCopiedUserId(null), 2000);
   };
 
-  // Admin actions (host only)
   const handleStartRoom = async () => {
     if (!code || !session?.hostId) return;
     try {
@@ -334,7 +200,6 @@ export default function RoomPage() {
     setAdminError(null);
     try {
       await betApi.resolveBet(code, session.hostId, betId, winningOption);
-      setShowResolveOptions(null);
     } catch (err: any) {
       setAdminError(err.detail || 'Failed to resolve bet');
     } finally {
@@ -354,16 +219,13 @@ export default function RoomPage() {
 
   const handlePlaceBet = async (betId: string, option: string) => {
     if (!code || !session?.userId) return;
-
     setPlacingBets(new Set(placingBets).add(betId));
     setBetErrors({ ...betErrors, [betId]: '' });
-
     try {
       await betApi.placeBet(code, session.userId, {
         bet_id: betId,
         selected_option: option,
       });
-
       const newErrors = { ...betErrors };
       delete newErrors[betId];
       setBetErrors(newErrors);
@@ -379,7 +241,6 @@ export default function RoomPage() {
 
   const handleCreateMatchRoom = async () => {
     if (!code || !session?.hostId || !matchTeam1.trim() || !matchTeam2.trim()) return;
-
     setCreatingMatch(true);
     try {
       const response = await roomApi.createMatchRoom(code, session.hostId, {
@@ -388,9 +249,6 @@ export default function RoomPage() {
         match_date_time: matchDate ? new Date(matchDate).toISOString() : new Date().toISOString(),
         title: matchTitle.trim() || undefined,
       });
-
-      // Navigate to join the match room, passing tournament context
-      // so the host is recognized as admin in the match room
       navigate(`/join/${response.match_room_code}`, {
         state: {
           fromTournament: code,
@@ -414,16 +272,14 @@ export default function RoomPage() {
     }
   }, [code, session?.hostId]);
 
-  // Auto-lock handler for timer expiry (host only)
   const handleTimerExpired = useCallback(async (betId: string) => {
     if (!code || !session?.hostId) return;
-    // Prevent double auto-lock
     if (autoLockingRef.current.has(betId)) return;
     autoLockingRef.current.add(betId);
     try {
       await betApi.lockBet(code, session.hostId, betId);
     } catch {
-      // Bet may already be locked by server or another client
+      // Bet may already be locked
     } finally {
       autoLockingRef.current.delete(betId);
     }
@@ -432,15 +288,12 @@ export default function RoomPage() {
   // Detect bet resolutions and trigger feedback
   useEffect(() => {
     if (!bets.length) return;
-
     const currentMap = new Map(bets.map(b => [b.betId, b]));
     const prevMap = prevBetsRef.current;
     const ubMap = new Map(userBets.map(ub => [ub.betId, ub]));
-
     for (const [betId, bet] of currentMap) {
       const prev = prevMap.get(betId);
       if (prev && prev.status !== 'resolved' && bet.status === 'resolved') {
-        // This bet just resolved — show feedback
         const userBet = ubMap.get(betId);
         if (userBet) {
           const won = userBet.selectedOption === bet.winningOption;
@@ -449,7 +302,6 @@ export default function RoomPage() {
         }
       }
     }
-
     prevBetsRef.current = currentMap;
   }, [bets, userBets]);
 
@@ -466,10 +318,14 @@ export default function RoomPage() {
     }
   };
 
+  const canUndo = (bet: Bet) => {
+    if (bet.status !== 'resolved' || !bet.canUndoUntil) return false;
+    return new Date() < new Date(bet.canUndoUntil);
+  };
 
   if (roomLoading || userLoading) {
     return (
-      <div className="container" style={{ paddingTop: '3rem' }}>
+      <div className="container container-padded-top">
         <div className="spinner" />
         <p className="text-center text-muted">Loading room...</p>
       </div>
@@ -478,13 +334,10 @@ export default function RoomPage() {
 
   if (!localRoom || !user) {
     return (
-      <div className="container" style={{ paddingTop: '3rem' }}>
+      <div className="container container-padded-top">
         <div className="card">
           <p className="text-error">Room not found</p>
-          <button
-            className="btn btn-secondary mt-md"
-            onClick={() => navigate('/')}
-          >
+          <button className="btn btn-secondary mt-md" onClick={() => navigate('/')}>
             Go Home
           </button>
         </div>
@@ -496,237 +349,39 @@ export default function RoomPage() {
   const displayRoom = localRoom;
   const isTournament = displayRoom.roomType === 'tournament';
   const isMatch = displayRoom.roomType === 'match';
-
-  // Get event name
   const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
 
-  // Filter bets by type
   const openBets = bets.filter(bet => bet.status === 'open');
   const pendingBets = bets.filter(bet => bet.status === 'pending');
   const resolvedBets = bets.filter(bet => bet.status === 'resolved');
   const tournamentBets = bets.filter(bet => bet.betType === 'tournament');
   const matchBets = bets.filter(bet => bet.betType !== 'tournament');
 
-  // Create a map of user bets by betId
-  const userBetMap = new Map<string, UserBet>();
-  userBets.forEach(ub => userBetMap.set(ub.betId, ub));
+  const userBetMap = new Map(userBets.map(ub => [ub.betId, ub]));
 
-  // Check if a resolved bet can be undone
-  const canUndo = (bet: Bet) => {
-    if (bet.status !== 'resolved' || !bet.canUndoUntil) return false;
-    return new Date() < new Date(bet.canUndoUntil);
-  };
-
-  const renderBetCard = (bet: Bet) => {
-    const isExpanded = expandedBets.has(bet.betId);
-    const userBet = userBetMap.get(bet.betId);
-    const hasPlacedBet = !!userBet;
-    const isPlacing = placingBets.has(bet.betId);
-    const error = betErrors[bet.betId];
-
-    return (
-      <div
-        key={bet.betId}
-        style={{
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-md)',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Bet Header */}
-        <div
-          style={{
-            padding: 'var(--spacing-md)',
-            cursor: 'pointer',
-            backgroundColor: isExpanded ? 'var(--color-bg-elevated)' : 'transparent',
-          }}
-          onClick={() => toggleBetExpanded(bet.betId)}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontWeight: '600', marginBottom: 'var(--spacing-xs)' }}>
-                {bet.question}
-              </p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: 0 }}>
-                {bet.options.length} options • {bet.pointsValue} points
-                {bet.status === 'resolved' && bet.winningOption && (
-                  <span style={{ marginLeft: '0.5rem', color: 'var(--color-primary)', fontWeight: '600' }}>
-                    • Winner: {bet.winningOption}
-                  </span>
-                )}
-                {hasPlacedBet && bet.status !== 'resolved' && (
-                  <span style={{ marginLeft: '0.5rem', color: 'var(--color-success)', fontWeight: '600' }}>
-                    • Bet placed
-                  </span>
-                )}
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {bet.status === 'open' && bet.openedAt && bet.timerDuration > 0 && (
-                <BetTimer
-                  openedAt={bet.openedAt}
-                  timerDuration={bet.timerDuration}
-                  status={bet.status}
-                  onExpired={isHost ? () => handleTimerExpired(bet.betId) : undefined}
-                />
-              )}
-              {bet.status === 'resolved' && canUndo(bet) && isHost && (
-                <button
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                  onClick={(e) => { e.stopPropagation(); handleUndoBet(bet.betId); }}
-                >
-                  Undo
-                </button>
-              )}
-              <span style={{ fontSize: '1.25rem', color: 'var(--color-text-secondary)' }}>
-                {isExpanded ? '−' : '+'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bet Content (collapsible) */}
-        {isExpanded && (
-          <div style={{ padding: 'var(--spacing-md)', paddingTop: 0 }}>
-            {hasPlacedBet ? (
-              <div
-                style={{
-                  padding: 'var(--spacing-md)',
-                  backgroundColor: 'var(--color-bg-elevated)',
-                  borderLeft: `3px solid ${bet.status === 'resolved'
-                    ? (userBet.selectedOption === bet.winningOption ? 'var(--color-success)' : 'var(--color-error)')
-                    : 'var(--color-success)'}`,
-                  borderRadius: 'var(--radius-sm)',
-                  marginBottom: 'var(--spacing-md)',
-                }}
-              >
-                <p style={{ marginBottom: 0, fontSize: '0.875rem' }}>
-                  Your bet: <strong>{userBet.selectedOption}</strong>
-                  {bet.status === 'resolved' && userBet.pointsWon !== null && (
-                    <span style={{ marginLeft: '0.5rem', fontWeight: '600' }}>
-                      {userBet.pointsWon > 0
-                        ? <span style={{ color: 'var(--color-success)' }}>Won {userBet.pointsWon} pts</span>
-                        : <span style={{ color: 'var(--color-error)' }}>Lost</span>}
-                    </span>
-                  )}
-                </p>
-              </div>
-            ) : bet.status === 'open' ? (
-              <>
-                {error && (
-                  <div
-                    style={{
-                      padding: 'var(--spacing-md)',
-                      backgroundColor: 'var(--color-bg-elevated)',
-                      borderLeft: '3px solid var(--color-error)',
-                      borderRadius: 'var(--radius-sm)',
-                      marginBottom: 'var(--spacing-md)',
-                    }}
-                  >
-                    <p className="text-error" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
-                      {error}
-                    </p>
-                  </div>
-                )}
-
-                <div style={{ display: 'grid', gap: '0.75rem' }}>
-                  {bet.options.map((option) => (
-                    <button
-                      key={option}
-                      className="btn btn-secondary"
-                      style={{
-                        textAlign: 'left',
-                        padding: '1rem',
-                        borderLeft: '3px solid var(--color-primary)',
-                      }}
-                      disabled={isPlacing}
-                      onClick={() => handlePlaceBet(bet.betId, option)}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-
-                {isPlacing && (
-                  <p className="text-secondary mt-md" style={{ fontSize: '0.875rem', textAlign: 'center' }}>
-                    Placing bet...
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-                {bet.status === 'locked' ? 'Betting is closed' : 'Bet resolved'}
-              </p>
-            )}
-
-            {/* Inline admin controls (host only) */}
-            {isHost && (bet.status === 'open' || bet.status === 'locked') && (
-              <div style={{
-                marginTop: 'var(--spacing-md)',
-                paddingTop: 'var(--spacing-sm)',
-                borderTop: '1px solid var(--color-border)',
-              }}>
-                {bet.status === 'open' && (
-                  <div style={{ display: 'grid', gap: 'var(--spacing-xs)' }}>
-                    <button
-                      className="btn btn-secondary btn-full"
-                      onClick={(e) => { e.stopPropagation(); handleCloseBet(bet.betId); }}
-                      disabled={closingBetId === bet.betId}
-                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-                    >
-                      {closingBetId === bet.betId ? 'Closing...' : 'Close Bet'}
-                    </button>
-                    <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
-                      <button
-                        className="btn btn-secondary"
-                        onClick={(e) => { e.stopPropagation(); setEditingBet(bet); }}
-                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1 }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-danger"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteBet(bet.betId); }}
-                        disabled={deletingBetId === bet.betId}
-                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', flex: 1 }}
-                      >
-                        {deletingBetId === bet.betId ? 'Deleting...' : 'Delete'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {bet.status === 'locked' && (
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: 'var(--spacing-xs)' }}>
-                      Tap the winner:
-                    </p>
-                    <div style={{ display: 'flex', gap: 'var(--spacing-xs)', flexWrap: 'wrap' }}>
-                      {bet.options.map((option) => (
-                        <button
-                          key={option}
-                          className="quick-resolve-btn"
-                          onClick={() => handleResolveBet(bet.betId, option)}
-                          disabled={resolvingBetId === bet.betId}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                    {resolvingBetId === bet.betId && (
-                      <p className="text-secondary" style={{ fontSize: '0.875rem', textAlign: 'center', marginBottom: 0, marginTop: 'var(--spacing-xs)' }}>
-                        Resolving...
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderBetCard = (bet: Bet) => (
+    <BetCard
+      key={bet.betId}
+      bet={bet}
+      userBet={userBetMap.get(bet.betId)}
+      isExpanded={expandedBets.has(bet.betId)}
+      isPlacing={placingBets.has(bet.betId)}
+      error={betErrors[bet.betId]}
+      isHost={isHost}
+      closingBetId={closingBetId}
+      resolvingBetId={resolvingBetId}
+      deletingBetId={deletingBetId}
+      onToggleExpand={toggleBetExpanded}
+      onPlaceBet={handlePlaceBet}
+      onCloseBet={handleCloseBet}
+      onResolveBet={handleResolveBet}
+      onDeleteBet={handleDeleteBet}
+      onEditBet={setEditingBet}
+      onUndoBet={handleUndoBet}
+      onTimerExpired={handleTimerExpired}
+      canUndo={canUndo}
+    />
+  );
 
   return (
     <div className="container-full" style={{ paddingTop: '1rem' }}>
@@ -744,94 +399,22 @@ export default function RoomPage() {
         </div>
       )}
 
-      {/* Room Header */}
-      <div className="card mb-md">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h3 style={{ marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span>{isTournament && 'Tournament: '}{eventName} - Room {displayRoom.code}</span>
-              <button
-                className="btn btn-secondary"
-                style={{
-                  fontSize: '0.7rem',
-                  padding: '0.15rem 0.4rem',
-                  minHeight: 'auto',
-                  lineHeight: '1.2',
-                  fontWeight: 500,
-                }}
-                onClick={handleCopyRoomLink}
-              >
-                {copiedRoomLink ? 'Copied!' : 'Share'}
-              </button>
-            </h3>
-            <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {displayRoom.status === 'waiting' && <span>Waiting to start</span>}
-              {displayRoom.status === 'active' && (
-                <>
-                  <span>{isTournament ? 'Tournament in progress' : 'Event in progress'}</span>
-                  <span className="badge-live">LIVE</span>
-                </>
-              )}
-              {displayRoom.status === 'finished' && <span>{isTournament ? 'Tournament finished' : 'Event finished'}</span>}
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="points-display" style={{ marginBottom: '0.25rem' }}>
-              {user.points}
-            </p>
-            <p className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 0 }}>
-              points
-            </p>
-            <span
-              style={{
-                display: 'inline-block',
-                marginTop: '0.35rem',
-                fontSize: '0.7rem',
-                fontWeight: 600,
-                padding: '0.15rem 0.5rem',
-                borderRadius: '999px',
-                background: isHost ? 'var(--color-primary)' : 'var(--color-surface)',
-                color: isHost ? '#fff' : 'var(--color-text-muted)',
-                border: isHost ? 'none' : '1px solid var(--color-border)',
-                letterSpacing: '0.04em',
-                textTransform: 'uppercase',
-              }}
-            >
-              {isHost ? 'Host' : 'Guest'}
-            </span>
-          </div>
-        </div>
-        {isHost && displayRoom.status === 'active' && (
-          <div className="mt-md" style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
-            <button
-              className="btn btn-secondary btn-full"
-              onClick={handleFinishRoom}
-              style={{ fontSize: 'var(--font-size-sm)' }}
-            >
-              Finish {isTournament ? 'Tournament' : 'Event'}
-            </button>
-          </div>
-        )}
-      </div>
+      <RoomHeader
+        room={displayRoom}
+        user={user}
+        isHost={isHost}
+        isTournament={isTournament}
+        copiedRoomLink={copiedRoomLink}
+        onCopyRoomLink={handleCopyRoomLink}
+        onFinishRoom={handleFinishRoom}
+      />
 
-      {/* Admin error toast */}
       {adminError && (
-        <div
-          className="mb-md"
-          style={{
-            padding: 'var(--spacing-md)',
-            backgroundColor: 'var(--color-bg-elevated)',
-            borderLeft: '3px solid var(--color-error)',
-            borderRadius: 'var(--radius-sm)',
-          }}
-        >
-          <p className="text-error" style={{ marginBottom: 0, fontSize: '0.875rem' }}>
-            {adminError}
-          </p>
+        <div className="mb-md admin-error-toast">
+          <p className="text-error admin-error-text">{adminError}</p>
         </div>
       )}
 
-      {/* Cricket match header for match rooms */}
       {isMatch && displayRoom.matchDetails && (
         <CricketMatchHeader
           matchDetails={displayRoom.matchDetails}
@@ -840,7 +423,6 @@ export default function RoomPage() {
         />
       )}
 
-      {/* Tournament Match Rooms Section (2.1 - Match Room Discovery) */}
       {isTournament && displayRoom.status !== 'waiting' && (
         <>
           <MatchRoomDiscovery
@@ -851,53 +433,19 @@ export default function RoomPage() {
             isHost={isHost}
             onCreateMatch={isHost && displayRoom.status !== 'finished' ? () => setShowCreateMatch(true) : undefined}
           />
-          {/* Match creation form (shown when host clicks Create Match Room) */}
           {showCreateMatch && isHost && (
             <div className="card mb-md">
               <h4 className="mb-md">Create Match Room</h4>
-              <div style={{ display: 'grid', gap: '0.75rem' }}>
-                <input
-                  type="text"
-                  placeholder="Match Title (e.g., IPL Match 12 - Qualifier)"
-                  value={matchTitle}
-                  onChange={(e) => setMatchTitle(e.target.value)}
-                  maxLength={60}
-                />
-                <input
-                  type="date"
-                  placeholder="Match Date"
-                  value={matchDate}
-                  onChange={(e) => setMatchDate(e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Team 1 (e.g., RCB)"
-                  value={matchTeam1}
-                  onChange={(e) => setMatchTeam1(e.target.value)}
-                  maxLength={30}
-                />
-                <input
-                  type="text"
-                  placeholder="Team 2 (e.g., MI)"
-                  value={matchTeam2}
-                  onChange={(e) => setMatchTeam2(e.target.value)}
-                  maxLength={30}
-                />
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    className="btn btn-primary"
-                    style={{ flex: 1 }}
-                    disabled={creatingMatch || !matchTeam1.trim() || !matchTeam2.trim()}
-                    onClick={handleCreateMatchRoom}
-                  >
+              <div className="match-create-form">
+                <input type="text" placeholder="Match Title (e.g., IPL Match 12 - Qualifier)" value={matchTitle} onChange={(e) => setMatchTitle(e.target.value)} maxLength={60} />
+                <input type="date" placeholder="Match Date" value={matchDate} onChange={(e) => setMatchDate(e.target.value)} />
+                <input type="text" placeholder="Team 1 (e.g., RCB)" value={matchTeam1} onChange={(e) => setMatchTeam1(e.target.value)} maxLength={30} />
+                <input type="text" placeholder="Team 2 (e.g., MI)" value={matchTeam2} onChange={(e) => setMatchTeam2(e.target.value)} maxLength={30} />
+                <div className="match-create-buttons">
+                  <button className="btn btn-primary" style={{ flex: 1 }} disabled={creatingMatch || !matchTeam1.trim() || !matchTeam2.trim()} onClick={handleCreateMatchRoom}>
                     {creatingMatch ? 'Creating...' : 'Create Match Room'}
                   </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setShowCreateMatch(false)}
-                  >
-                    Cancel
-                  </button>
+                  <button className="btn btn-secondary" onClick={() => setShowCreateMatch(false)}>Cancel</button>
                 </div>
               </div>
             </div>
@@ -905,7 +453,6 @@ export default function RoomPage() {
         </>
       )}
 
-      {/* Main Content */}
       {displayRoom.status === 'waiting' && (
         <div className="card mb-md text-center">
           <h4 className="mb-md">Waiting for event to start</h4>
@@ -917,50 +464,32 @@ export default function RoomPage() {
 
       {displayRoom.status === 'active' && (
         <>
-          {/* Bet Queue for host (2.2 - Pre-Created Bets) */}
           {isHost && pendingBets.length > 0 && session?.hostId && (
-            <BetQueue
-              pendingBets={pendingBets}
-              roomCode={code!}
-              hostId={session.hostId}
-            />
+            <BetQueue pendingBets={pendingBets} roomCode={code!} hostId={session.hostId} />
           )}
 
-          {/* Tournament-level bets (only in tournament rooms) */}
           {isTournament && tournamentBets.length > 0 && (
             <div className="card mb-md">
-              <h4 className="mb-md">Season Bets <span style={{ background: 'var(--color-primary)', color: '#000', padding: '0.125rem 0.5rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, marginLeft: '0.5rem' }}>{tournamentBets.filter(b => b.status === 'open').length}</span></h4>
-              <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
-                {tournamentBets.map(renderBetCard)}
-              </div>
+              <h4 className="mb-md">Season Bets <span className="bet-count-badge">{tournamentBets.filter(b => b.status === 'open').length}</span></h4>
+              <div className="bet-list">{tournamentBets.map(renderBetCard)}</div>
             </div>
           )}
 
-          {/* Regular bets */}
           {betsLoading ? (
-            <div className="card mb-md text-center">
-              <p className="text-secondary">Loading bets...</p>
-            </div>
+            <div className="card mb-md text-center"><p className="text-secondary">Loading bets...</p></div>
           ) : openBets.length === 0 && (!isTournament || matchBets.length === 0) ? (
-            <div className="card mb-md text-center">
-              <p className="text-secondary">No open bets. Waiting for next bet...</p>
-            </div>
+            <div className="card mb-md text-center"><p className="text-secondary">No open bets. Waiting for next bet...</p></div>
           ) : !isTournament && openBets.length > 0 ? (
             <div className="card mb-md">
-              <h4 className="mb-md">Open Bets <span style={{ background: 'var(--color-primary)', color: '#000', padding: '0.125rem 0.5rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, marginLeft: '0.5rem' }}>{openBets.length}</span></h4>
-              <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
-                {openBets.map(renderBetCard)}
-              </div>
+              <h4 className="mb-md">Open Bets <span className="bet-count-badge">{openBets.length}</span></h4>
+              <div className="bet-list">{openBets.map(renderBetCard)}</div>
             </div>
           ) : null}
 
-          {/* Match bets in match rooms */}
           {isMatch && matchBets.length > 0 && (
             <div className="card mb-md">
-              <h4 className="mb-md">Match Bets <span style={{ background: 'var(--color-primary)', color: '#000', padding: '0.125rem 0.5rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700, marginLeft: '0.5rem' }}>{matchBets.filter(b => b.status === 'open').length} open</span></h4>
-              <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
-                {matchBets.map(renderBetCard)}
-              </div>
+              <h4 className="mb-md">Match Bets <span className="bet-count-badge">{matchBets.filter(b => b.status === 'open').length} open</span></h4>
+              <div className="bet-list">{matchBets.map(renderBetCard)}</div>
             </div>
           )}
         </>
@@ -970,19 +499,15 @@ export default function RoomPage() {
         <div className="card mb-md text-center">
           <h4 className="mb-md">{isTournament ? 'Tournament Finished' : 'Event Finished'}</h4>
           <p className="text-secondary">Check the leaderboard below to see final standings</p>
-
           {resolvedBets.length > 0 && (
             <div className="mt-md" style={{ textAlign: 'left' }}>
               <h4 className="mb-md">Results</h4>
-              <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
-                {resolvedBets.map(renderBetCard)}
-              </div>
+              <div className="bet-list">{resolvedBets.map(renderBetCard)}</div>
             </div>
           )}
         </div>
       )}
 
-      {/* Animated Leaderboard (2.3) */}
       <AnimatedLeaderboard
         participants={participants}
         currentUserId={session?.userId}
@@ -992,117 +517,51 @@ export default function RoomPage() {
         onCopyLink={handleCopyParticipantLink}
       />
 
-      {/* Bottom spacer for sticky action bar */}
-      {isHost && displayRoom.status !== 'finished' && (
-        <div style={{ height: '70px' }} />
+      {isHost && (
+        <HostActionBar
+          room={displayRoom}
+          isTournament={isTournament}
+          openBets={openBets}
+          closingBetId={closingBetId}
+          onStartRoom={handleStartRoom}
+          onCloseBet={handleCloseBet}
+          onShowBetModal={() => setShowBetModal(true)}
+          onShowFeedModal={() => setShowFeedModal(true)}
+        />
       )}
 
-      {/* Sticky Action Bar (host only) */}
-      {isHost && displayRoom.status !== 'finished' && (
-        <div className="sticky-action-bar" style={{ flexDirection: 'column', gap: 'var(--spacing-xs)' }}>
-          {/* Context-aware next action for open/locked bets */}
-          {displayRoom.status === 'active' && openBets.length > 0 && (
-            <div style={{ display: 'flex', gap: 'var(--spacing-xs)', width: '100%' }}>
-              <button
-                className="btn btn-secondary"
-                onClick={() => handleCloseBet(openBets[0].betId)}
-                disabled={closingBetId === openBets[0].betId}
-                style={{ flex: 1, fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-              >
-                {closingBetId === openBets[0].betId ? 'Locking...' : `Lock: ${openBets[0].question.substring(0, 25)}${openBets[0].question.length > 25 ? '...' : ''}`}
-              </button>
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 'var(--spacing-xs)', width: '100%' }}>
-            {displayRoom.status === 'waiting' && (
-              <button className="btn btn-primary" onClick={handleStartRoom}
-                style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
-                Start {isTournament ? 'Tournament' : 'Event'}
-              </button>
-            )}
-            {(displayRoom.status === 'waiting' || displayRoom.status === 'active') && (
-              <button className="btn btn-primary" onClick={() => setShowBetModal(true)}
-                style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
-                + New Bet
-              </button>
-            )}
-            {displayRoom.status === 'active' && (
-              <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)}
-                style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
-                Live Feed
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Create Bet Modal */}
       {showBetModal && session?.hostId && (
         <div className="modal-overlay" onClick={() => setShowBetModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-              <h4 style={{ marginBottom: 0 }}>Create New Bet</h4>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowBetModal(false)}
-                style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', minHeight: 'auto' }}
-              >
-                ✕
-              </button>
+            <div className="modal-header">
+              <h4 className="modal-title">Create New Bet</h4>
+              <button className="btn btn-secondary btn-modal-close" onClick={() => setShowBetModal(false)}>&#10005;</button>
             </div>
-            <BetCreationForm
-              roomCode={code!}
-              hostId={session.hostId}
-              onSuccess={() => setShowBetModal(false)}
-            />
+            <BetCreationForm roomCode={code!} hostId={session.hostId} onSuccess={() => setShowBetModal(false)} />
           </div>
         </div>
       )}
 
-      {/* Live Feed Modal */}
       {showFeedModal && session?.hostId && (
         <div className="modal-overlay" onClick={() => setShowFeedModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-              <h4 style={{ marginBottom: 0 }}>Live Transcript Feed</h4>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowFeedModal(false)}
-                style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', minHeight: 'auto' }}
-              >
-                ✕
-              </button>
+            <div className="modal-header">
+              <h4 className="modal-title">Live Transcript Feed</h4>
+              <button className="btn btn-secondary btn-modal-close" onClick={() => setShowFeedModal(false)}>&#10005;</button>
             </div>
-            <LiveFeedPanel
-              roomCode={code!}
-              hostId={session.hostId}
-              automationEnabled={automationEnabled}
-              onToggleAutomation={setAutomationEnabled}
-            />
+            <LiveFeedPanel roomCode={code!} hostId={session.hostId} automationEnabled={automationEnabled} onToggleAutomation={setAutomationEnabled} />
           </div>
         </div>
       )}
 
-      {/* Edit Bet Modal */}
       {editingBet && session?.hostId && (
-        <EditBetModal
-          bet={editingBet}
-          roomCode={code!}
-          hostId={session.hostId}
-          onClose={() => setEditingBet(null)}
-        />
+        <EditBetModal bet={editingBet} roomCode={code!} hostId={session.hostId} onClose={() => setEditingBet(null)} />
       )}
 
-      {/* Bet Resolution Feedback Overlay */}
       {resolutionFeedback && (
-        <BetResolutionFeedback
-          won={resolutionFeedback.won}
-          pointsDelta={resolutionFeedback.pointsDelta}
-          onDismiss={() => setResolutionFeedback(null)}
-        />
+        <BetResolutionFeedback won={resolutionFeedback.won} pointsDelta={resolutionFeedback.pointsDelta} onDismiss={() => setResolutionFeedback(null)} />
       )}
 
-      {/* Onboarding Modal (2.7) */}
       <OnboardingModal isHost={isHost} />
     </div>
   );
