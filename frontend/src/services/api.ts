@@ -112,6 +112,25 @@ export const roomApi = {
     return fetchApi(`/api/rooms/${tournamentCode}/matches`);
   },
 
+  async getTournamentStats(tournamentCode: string): Promise<{
+    matches: Array<{
+      roomCode: string;
+      title: string;
+      status: string;
+      teams: { team1: string | null; team2: string | null };
+      totalBets: number;
+      participants: number;
+    }>;
+    userStats: Record<string, {
+      nickname: string;
+      matchBreakdown: Record<string, number>;
+      totalBetsPlaced: number;
+      totalBetsWon: number;
+    }>;
+  }> {
+    return fetchApi(`/api/rooms/${tournamentCode}/tournament-stats`);
+  },
+
   async startRoom(code: string, hostId: string): Promise<{ status: string }> {
     return fetchApi(`/api/rooms/${code}/start`, {
       method: 'POST',
@@ -154,6 +173,13 @@ export const betApi = {
       method: 'POST',
       headers: { 'X-Host-Id': hostId },
       body: JSON.stringify(bet),
+    });
+  },
+
+  async openBet(roomCode: string, hostId: string, betId: string): Promise<Bet> {
+    return fetchApi(`/api/rooms/${roomCode}/bets/${betId}/open`, {
+      method: 'POST',
+      headers: { 'X-Host-Id': hostId },
     });
   },
 

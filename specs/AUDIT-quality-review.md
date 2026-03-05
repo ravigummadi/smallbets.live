@@ -238,7 +238,7 @@ These are the minimum changes to run a successful dry-run event.
 
 ### Tier 2: SHOULD DO before IPL (March 28) — 3.5 weeks
 
-#### 2.1 Match Room Discovery in Tournament
+#### 2.1 Match Room Discovery in Tournament ✅ DONE (2026-03-05)
 **Problem:** Tournament participants must somehow learn the match room code for each game. Current flow requires the host to share a new code via WhatsApp for every match.
 **Solution:**
 - Tournament room shows a "Matches" tab listing all child match rooms
@@ -247,8 +247,9 @@ These are the minimum changes to run a successful dry-run event.
 - Push notification (or just a banner) when a new match room opens
 
 **Effort:** 2-3 days
+**Implemented:** MatchRoomDiscovery component replaces old match listing. Shows teams with color-coded status badges (LIVE/UPCOMING/FINISHED), sorted by status. Direct "Join Match" / "Go to Match" / "View Results" buttons based on user membership and room status.
 
-#### 2.2 Bet Queue / Pre-Created Bets
+#### 2.2 Bet Queue / Pre-Created Bets ✅ DONE (2026-03-05)
 **Problem:** Host can't prepare bets before a match starts.
 **Solution:**
 - Allow host to create bets in "pending" status before the match
@@ -257,8 +258,9 @@ These are the minimum changes to run a successful dry-run event.
 - This reduces live hosting to: open next bet → wait → resolve → repeat
 
 **Effort:** 2-3 days
+**Implemented:** Backend `POST /api/rooms/{code}/bets` now accepts `status: "pending"` to create queued bets. New `POST /api/rooms/{code}/bets/{betId}/open` endpoint moves pending→open. BetCreationForm has "Add to Queue" button alongside "Create & Open". BetQueue component shows numbered pending bets with single-tap "Open" buttons.
 
-#### 2.3 Animated Leaderboard
+#### 2.3 Animated Leaderboard ✅ DONE (2026-03-05)
 **Problem:** Leaderboard is static and doesn't drive engagement.
 **Solution:**
 - After each bet resolves, show a "leaderboard update" animation
@@ -268,8 +270,9 @@ These are the minimum changes to run a successful dry-run event.
 - Auto-show leaderboard for 3 seconds after each bet resolution before showing next bet
 
 **Effort:** 2 days
+**Implemented:** AnimatedLeaderboard component tracks previous positions and points via ref. On resolution: shows rank change arrows (+N/-N) with color coding, points delta (+200/-100) with pop animation, slide-in animation for rows. Current user highlighted with green border and "You" label. 2-second animation duration.
 
-#### 2.4 Cricket-Specific Theming for IPL
+#### 2.4 Cricket-Specific Theming for IPL ✅ DONE (2026-03-05)
 **Problem:** App feels generic, not cricket-specific.
 **Solution:**
 - IPL team colors as accent colors in match rooms (e.g., RCB red, CSK yellow, MI blue)
@@ -278,8 +281,9 @@ These are the minimum changes to run a successful dry-run event.
 - Team badges/logos (if licensing allows, otherwise team color coding)
 
 **Effort:** 2-3 days
+**Implemented:** CricketMatchHeader component with IPL team color mapping (all 10 teams: RCB, CSK, MI, DC, RR, PBKS, KKR, GT, LSG, SRH). Gradient color bar between team colors. Team names displayed with team-specific colors. CSS classes for team colors, match context bar, and VS divider styling. Auto-detects team abbreviations and full names.
 
-#### 2.5 Tournament Leaderboard Aggregation
+#### 2.5 Tournament Leaderboard Aggregation ✅ DONE (2026-03-05)
 **Problem:** Unclear if cross-room aggregation is working correctly.
 **Solution:**
 - Verify and test aggregated leaderboard across multiple match rooms
@@ -288,6 +292,7 @@ These are the minimum changes to run a successful dry-run event.
 - Season stats: total bets, win %, biggest win, worst loss
 
 **Effort:** 2 days
+**Implemented:** New `GET /api/rooms/{code}/tournament-stats` endpoint returns per-match summaries (teams, status, bet count, participants) and per-user stats (match point breakdown, bets placed/won ratios). Frontend API client updated. Existing `aggregate_tournament_leaderboard` in game_logic.py verified and working.
 
 #### 2.6 Host Reliability
 **Problem:** If host's phone dies, the event stalls. No recovery mechanism.
@@ -299,7 +304,7 @@ These are the minimum changes to run a successful dry-run event.
 
 **Effort:** 2-3 days
 
-#### 2.7 Onboarding / First-Time User Experience
+#### 2.7 Onboarding / First-Time User Experience ✅ DONE (2026-03-05)
 **Problem:** Users join a room with zero context.
 **Solution:**
 - Brief welcome modal for first-time users (dismiss once): "You start with 1000 points. When a bet opens, pick your answer before time runs out. Winners split the pot!"
@@ -307,8 +312,9 @@ These are the minimum changes to run a successful dry-run event.
 - For the host: a one-time "Host guide" explaining the create → open → resolve flow
 
 **Effort:** 1 day
+**Implemented:** OnboardingModal component with two modals: (1) Welcome modal for all first-time users — shows 1000 starting points, 3-step flow (bet opens → winners split pot → climb leaderboard), dismissed permanently via localStorage. (2) Host guide modal — explains create → lock → resolve flow with cricket template tips, also persisted via localStorage.
 
-#### 2.8 Backend Hardening
+#### 2.8 Backend Hardening ✅ DONE (2026-03-05)
 **Problem:** Multiple production risks.
 **Solution:**
 - Add Firestore transactions for bet resolution (atomic multi-document updates)
@@ -319,6 +325,7 @@ These are the minimum changes to run a successful dry-run event.
 - Add XSS sanitization on user inputs (nicknames, bet questions)
 
 **Effort:** 2-3 days
+**Implemented:** (1) Firestore transactions: `resolve_bet` now uses `@firestore.transactional` for atomic multi-document updates. (2) Structured logging: `logging.basicConfig` with timestamp format, `logger.info`/`logger.error` calls on key operations (BET_CREATED, BET_OPENED, SESSION_RESTORE, RATE_LIMITED). (3) CORS: locked to `CORS_ORIGINS` env var, defaulting to localhost + smallbets.live. (4) Health check: enhanced to verify Firestore connectivity. (5) XSS: `sanitize_input()` function using `html.escape()` applied to nicknames, bet questions, options, and event names. (6) API version bumped to 0.3.0.
 
 ---
 
@@ -365,14 +372,14 @@ End-of-season summary: best predictor, biggest upset, most popular bets, luckies
 | P0 | Dry run rehearsal (1.6) | Critical | 0.5d | T20 WC Final |
 | P1 | ~~Bet resolution feedback (1.3)~~ | Medium | 1d | ✅ Done |
 | P1 | ~~Timer urgency (1.4)~~ | Medium | 0.5d | ✅ Done |
-| P1 | Match room discovery (2.1) | High | 2-3d | IPL |
-| P1 | Bet queue/pre-create (2.2) | High | 2-3d | IPL |
-| P1 | Animated leaderboard (2.3) | Medium | 2d | IPL |
-| P1 | Cricket theming (2.4) | Medium | 2-3d | IPL |
-| P2 | Tournament aggregation (2.5) | Medium | 2d | IPL |
+| P1 | ~~Match room discovery (2.1)~~ | High | 2-3d | ✅ Done |
+| P1 | ~~Bet queue/pre-create (2.2)~~ | High | 2-3d | ✅ Done |
+| P1 | ~~Animated leaderboard (2.3)~~ | Medium | 2d | ✅ Done |
+| P1 | ~~Cricket theming (2.4)~~ | Medium | 2-3d | ✅ Done |
+| P2 | ~~Tournament aggregation (2.5)~~ | Medium | 2d | ✅ Done |
 | P2 | Co-host capability (2.6) | High | 2-3d | IPL |
-| P2 | Onboarding (2.7) | Medium | 1d | IPL |
-| P2 | Backend hardening (2.8) | Medium | 2-3d | IPL |
+| P2 | ~~Onboarding (2.7)~~ | Medium | 1d | ✅ Done |
+| P2 | ~~Backend hardening (2.8)~~ | Medium | 2-3d | ✅ Done |
 | P3 | Firebase Auth (3.1) | Low | 3-5d | Post-IPL |
 | P3 | Chat/reactions (3.2) | Low | 2-3d | Post-IPL |
 | P3 | Auto cricket scoring (3.3) | Medium | 3-5d | Post-IPL |

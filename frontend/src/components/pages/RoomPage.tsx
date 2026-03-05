@@ -16,6 +16,11 @@ import EditBetModal from '@/components/admin/EditBetModal';
 import LiveFeedPanel from '@/components/admin/LiveFeedPanel';
 import BetTimer from '@/components/BetTimer';
 import BetResolutionFeedback from '@/components/BetResolutionFeedback';
+import MatchRoomDiscovery from '@/components/MatchRoomDiscovery';
+import BetQueue from '@/components/BetQueue';
+import AnimatedLeaderboard from '@/components/AnimatedLeaderboard';
+import CricketMatchHeader from '@/components/CricketMatchHeader';
+import OnboardingModal from '@/components/OnboardingModal';
 import { betApi, roomApi } from '@/services/api';
 import type { Room, Bet, UserBet, User, ParticipantWithLink } from '@/types';
 
@@ -497,6 +502,7 @@ export default function RoomPage() {
 
   // Filter bets by type
   const openBets = bets.filter(bet => bet.status === 'open');
+  const pendingBets = bets.filter(bet => bet.status === 'pending');
   const resolvedBets = bets.filter(bet => bet.status === 'resolved');
   const tournamentBets = bets.filter(bet => bet.betType === 'tournament');
   const matchBets = bets.filter(bet => bet.betType !== 'tournament');
@@ -825,105 +831,78 @@ export default function RoomPage() {
         </div>
       )}
 
-      {/* Tournament Match Rooms Section */}
-      {isTournament && displayRoom.status !== 'waiting' && (
-        <div className="card mb-md">
-          <h4 className="mb-md">Match Rooms ({matchRooms.length})</h4>
-          {matchRooms.length > 0 ? (
-            <div style={{ display: 'grid', gap: '0.5rem' }}>
-              {matchRooms.map(matchRoom => (
-                <Link
-                  key={matchRoom.code}
-                  to={`/room/${matchRoom.code}`}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem',
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    borderRadius: 'var(--radius-md)',
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    borderLeft: `3px solid ${matchRoom.status === 'active' ? 'var(--color-success)' : 'var(--color-text-muted)'}`,
-                  }}
-                >
-                  <div>
-                    <span>{matchRoom.matchDetails?.title || matchRoom.eventName || `Match ${matchRoom.code}`}</span>
-                    {matchRoom.matchDetails?.matchDateTime && (
-                      <span style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.125rem' }}>
-                        {new Date(matchRoom.matchDetails.matchDateTime).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                    {matchRoom.status === 'active' ? 'LIVE' : matchRoom.status}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted" style={{ fontSize: '0.875rem' }}>No match rooms yet</p>
-          )}
+      {/* Cricket match header for match rooms */}
+      {isMatch && displayRoom.matchDetails && (
+        <CricketMatchHeader
+          matchDetails={displayRoom.matchDetails}
+          status={displayRoom.status}
+          eventName={displayRoom.eventName}
+        />
+      )}
 
-          {isHost && displayRoom.status !== 'finished' && (
-            <div className="mt-md" style={{ paddingTop: '0.75rem', borderTop: '1px solid var(--color-border)' }}>
-              {showCreateMatch ? (
-                <div style={{ display: 'grid', gap: '0.75rem' }}>
-                  <input
-                    type="text"
-                    placeholder="Match Title (e.g., IPL Match 12 - Qualifier)"
-                    value={matchTitle}
-                    onChange={(e) => setMatchTitle(e.target.value)}
-                    maxLength={60}
-                  />
-                  <input
-                    type="date"
-                    placeholder="Match Date"
-                    value={matchDate}
-                    onChange={(e) => setMatchDate(e.target.value)}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Team 1 (e.g., RCB)"
-                    value={matchTeam1}
-                    onChange={(e) => setMatchTeam1(e.target.value)}
-                    maxLength={30}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Team 2 (e.g., MI)"
-                    value={matchTeam2}
-                    onChange={(e) => setMatchTeam2(e.target.value)}
-                    maxLength={30}
-                  />
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      className="btn btn-primary"
-                      style={{ flex: 1 }}
-                      disabled={creatingMatch || !matchTeam1.trim() || !matchTeam2.trim()}
-                      onClick={handleCreateMatchRoom}
-                    >
-                      {creatingMatch ? 'Creating...' : 'Create Match Room'}
-                    </button>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setShowCreateMatch(false)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
+      {/* Tournament Match Rooms Section (2.1 - Match Room Discovery) */}
+      {isTournament && displayRoom.status !== 'waiting' && (
+        <>
+          <MatchRoomDiscovery
+            matchRooms={matchRooms}
+            tournamentCode={displayRoom.code}
+            userId={session?.userId}
+            nickname={user?.nickname}
+            isHost={isHost}
+            onCreateMatch={isHost && displayRoom.status !== 'finished' ? () => setShowCreateMatch(true) : undefined}
+          />
+          {/* Match creation form (shown when host clicks Create Match Room) */}
+          {showCreateMatch && isHost && (
+            <div className="card mb-md">
+              <h4 className="mb-md">Create Match Room</h4>
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                <input
+                  type="text"
+                  placeholder="Match Title (e.g., IPL Match 12 - Qualifier)"
+                  value={matchTitle}
+                  onChange={(e) => setMatchTitle(e.target.value)}
+                  maxLength={60}
+                />
+                <input
+                  type="date"
+                  placeholder="Match Date"
+                  value={matchDate}
+                  onChange={(e) => setMatchDate(e.target.value)}
+                />
+                <input
+                  type="text"
+                  placeholder="Team 1 (e.g., RCB)"
+                  value={matchTeam1}
+                  onChange={(e) => setMatchTeam1(e.target.value)}
+                  maxLength={30}
+                />
+                <input
+                  type="text"
+                  placeholder="Team 2 (e.g., MI)"
+                  value={matchTeam2}
+                  onChange={(e) => setMatchTeam2(e.target.value)}
+                  maxLength={30}
+                />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ flex: 1 }}
+                    disabled={creatingMatch || !matchTeam1.trim() || !matchTeam2.trim()}
+                    onClick={handleCreateMatchRoom}
+                  >
+                    {creatingMatch ? 'Creating...' : 'Create Match Room'}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setShowCreateMatch(false)}
+                  >
+                    Cancel
+                  </button>
                 </div>
-              ) : (
-                <button
-                  className="btn btn-secondary btn-full"
-                  onClick={() => setShowCreateMatch(true)}
-                >
-                  + Create Match Room
-                </button>
-              )}
+              </div>
             </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Main Content */}
@@ -938,6 +917,15 @@ export default function RoomPage() {
 
       {displayRoom.status === 'active' && (
         <>
+          {/* Bet Queue for host (2.2 - Pre-Created Bets) */}
+          {isHost && pendingBets.length > 0 && session?.hostId && (
+            <BetQueue
+              pendingBets={pendingBets}
+              roomCode={code!}
+              hostId={session.hostId}
+            />
+          )}
+
           {/* Tournament-level bets (only in tournament rooms) */}
           {isTournament && tournamentBets.length > 0 && (
             <div className="card mb-md">
@@ -994,61 +982,15 @@ export default function RoomPage() {
         </div>
       )}
 
-      {/* Participants List */}
-      <div className="card">
-        <h4 className="mb-md">Participants ({participants.length})</h4>
-        <div style={{ display: 'grid', gap: '0.5rem' }}>
-          {participants
-            .sort((a, b) => b.points - a.points)
-            .map((participant, index) => {
-              const linkData = participantLinks.find(p => p.userId === participant.userId);
-              return (
-                <div
-                  key={participant.userId}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem',
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    borderRadius: 'var(--radius-md)',
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center' }}>
-                    {index < 3 ? (
-                      <span className={`rank-badge rank-${index + 1}`}>{index + 1}</span>
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', marginRight: '0.5rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>{index + 1}</span>
-                    )}
-                    {participant.nickname}
-                    {participant.isAdmin && (
-                      <span className="text-muted" style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>
-                        (Host)
-                      </span>
-                    )}
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontWeight: '600' }}>{participant.points}</span>
-                    {isHost && linkData && (
-                      <button
-                        className="btn btn-secondary"
-                        style={{
-                          fontSize: '0.7rem',
-                          padding: '0.2rem 0.4rem',
-                          minHeight: 'auto',
-                          lineHeight: '1.2',
-                        }}
-                        onClick={() => handleCopyParticipantLink(linkData)}
-                      >
-                        {copiedUserId === participant.userId ? 'Copied!' : 'Copy Link'}
-                      </button>
-                    )}
-                  </span>
-                </div>
-              );
-            })}
-        </div>
-      </div>
+      {/* Animated Leaderboard (2.3) */}
+      <AnimatedLeaderboard
+        participants={participants}
+        currentUserId={session?.userId}
+        isHost={isHost}
+        participantLinks={participantLinks}
+        copiedUserId={copiedUserId}
+        onCopyLink={handleCopyParticipantLink}
+      />
 
       {/* Bottom spacer for sticky action bar */}
       {isHost && displayRoom.status !== 'finished' && (
@@ -1159,6 +1101,9 @@ export default function RoomPage() {
           onDismiss={() => setResolutionFeedback(null)}
         />
       )}
+
+      {/* Onboarding Modal (2.7) */}
+      <OnboardingModal isHost={isHost} />
     </div>
   );
 }

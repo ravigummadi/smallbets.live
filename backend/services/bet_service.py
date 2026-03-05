@@ -28,17 +28,25 @@ async def create_bet(
     created_from: str = "custom",
     template_id: Optional[str] = None,
     timer_duration: int = 60,
+    initial_status: str = "open",
 ) -> Bet:
-    """Create a new bet"""
+    """Create a new bet
+
+    Args:
+        initial_status: "open" to create and open immediately, "pending" to add to bet queue
+    """
     db = get_db()
     bet_id = str(uuid.uuid4())
+
+    status = BetStatus.PENDING if initial_status == "pending" else BetStatus.OPEN
 
     bet = Bet(
         bet_id=bet_id,
         room_code=room_code,
         question=question,
         options=options,
-        status=BetStatus.OPEN,
+        status=status,
+        opened_at=datetime.utcnow() if status == BetStatus.OPEN else None,
         points_value=points_value,
         resolve_patterns=resolve_patterns,
         bet_type=bet_type,
@@ -50,6 +58,20 @@ async def create_bet(
     bet_ref = db.collection("bets").document(bet_id)
     bet_ref.set(bet.to_dict())
     return bet
+
+
+async def open_bet(bet_id: str) -> Bet:
+    """Open a pending bet (move from queue to active)"""
+    bet = await get_bet(bet_id)
+    if not bet:
+        raise ValueError(f"Bet not found: {bet_id}")
+
+    if bet.status != BetStatus.PENDING:
+        raise ValueError(f"Only pending bets can be opened (current: {bet.status.value})")
+
+    opened_bet = bet.open_bet()
+    await update_bet(opened_bet)
+    return opened_bet
 
 
 async def get_bet(bet_id: str) -> Optional[Bet]:
@@ -93,8 +115,9 @@ async def lock_bet(bet_id: str) -> Bet:
 
 
 async def resolve_bet(bet_id: str, winning_option: str) -> None:
-    """Resolve a bet and distribute points
+    """Resolve a bet and distribute points using Firestore transaction.
 
+    Uses a transaction to ensure atomic multi-document updates.
     Uses RoomUser for point updates if they exist, falls back to legacy User collection.
     """
     db = get_db()
@@ -116,37 +139,46 @@ async def resolve_bet(bet_id: str, winning_option: str) -> None:
     # Calculate scores (pure - delegates to game_logic)
     scores = game_logic.calculate_scores(user_bets, users, winning_option, bet.points_value)
 
-    # Update user points and user bets in batch
-    batch = db.batch()
+    # Use Firestore transaction for atomic multi-document updates
+    @firestore.transactional
+    def resolve_in_transaction(transaction):
+        # Phase 1: ALL READS first (Firestore requires reads before writes)
+        room_user_data = {}
+        for user_id in scores:
+            room_user_doc_id = f"{bet.room_code}_{user_id}"
+            room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+            room_user_doc = room_user_ref.get(transaction=transaction)
+            if room_user_doc.exists:
+                room_user_data[user_id] = room_user_doc.to_dict()
 
-    for user_id, points_won in scores.items():
-        user = users[user_id]
-        new_points = user.points + points_won
+        # Phase 2: ALL WRITES
+        for user_id, points_won in scores.items():
+            user = users[user_id]
+            new_points = user.points + points_won
 
-        user_ref = db.collection("users").document(user_id)
-        batch.update(user_ref, {"points": new_points})
+            user_ref = db.collection("users").document(user_id)
+            transaction.update(user_ref, {"points": new_points})
 
-        # Also update roomUsers if exists
-        room_user_doc_id = f"{bet.room_code}_{user_id}"
-        room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
-        room_user_doc = room_user_ref.get()
-        if room_user_doc.exists:
-            ru_data = room_user_doc.to_dict()
-            ru_new_points = ru_data["points"] + points_won
-            batch.update(room_user_ref, {"points": ru_new_points})
+            # Also update roomUsers if exists
+            if user_id in room_user_data:
+                room_user_doc_id = f"{bet.room_code}_{user_id}"
+                room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+                ru_new_points = room_user_data[user_id]["points"] + points_won
+                transaction.update(room_user_ref, {"points": ru_new_points})
 
-        # Update user bet with points won
-        user_bet = next(ub for ub in user_bets if ub.user_id == user_id)
-        updated_user_bet = user_bet.with_points_won(points_won)
+            # Update user bet with points won
+            user_bet = next(ub for ub in user_bets if ub.user_id == user_id)
+            updated_user_bet = user_bet.with_points_won(points_won)
 
-        user_bet_ref = db.collection("userBets").document(f"{bet_id}_{user_id}")
-        batch.set(user_bet_ref, updated_user_bet.to_dict())
+            user_bet_ref = db.collection("userBets").document(f"{bet_id}_{user_id}")
+            transaction.set(user_bet_ref, updated_user_bet.to_dict())
 
-    # Update bet status
-    bet_ref = db.collection("bets").document(bet_id)
-    batch.set(bet_ref, resolved_bet.to_dict())
+        # Update bet status
+        bet_ref = db.collection("bets").document(bet_id)
+        transaction.set(bet_ref, resolved_bet.to_dict())
 
-    batch.commit()
+    transaction = db.transaction()
+    resolve_in_transaction(transaction)
 
 
 async def undo_resolve_bet(bet_id: str) -> Bet:
@@ -280,6 +312,27 @@ async def get_user_bets_for_bet(bet_id: str) -> List[UserBet]:
     user_bets_docs = user_bets_ref.stream()
     user_bets = [UserBet.from_dict(doc.to_dict()) for doc in user_bets_docs]
     return user_bets
+
+
+async def get_user_bets_for_bets(bet_ids: List[str]) -> List[UserBet]:
+    """Get all user bets for multiple bets in batched queries.
+
+    Firestore 'in' queries support up to 30 values, so we batch accordingly.
+    """
+    if not bet_ids:
+        return []
+
+    db = get_db()
+    all_user_bets: List[UserBet] = []
+    batch_size = 30
+
+    for i in range(0, len(bet_ids), batch_size):
+        chunk = bet_ids[i:i + batch_size]
+        query = db.collection("userBets").where("betId", "in", chunk)
+        docs = query.stream()
+        all_user_bets.extend(UserBet.from_dict(doc.to_dict()) for doc in docs)
+
+    return all_user_bets
 
 
 def _add_refund_ops_to_batch(

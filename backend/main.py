@@ -5,7 +5,9 @@ IMPERATIVE SHELL: This module handles HTTP requests/responses
 - No business logic in endpoints
 """
 
+import html
 import logging
+import os
 import re
 import time
 from collections import defaultdict
@@ -24,17 +26,29 @@ from models.bet import Bet
 import game_logic
 
 
+# Structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+
 # Initialize FastAPI app
 app = FastAPI(
     title="SmallBets.live API",
     description="Real-time micro-betting platform API",
-    version="0.2.0",
+    version="0.3.0",
 )
 
-# CORS middleware
+# CORS middleware - restrict to known origins in production
+ALLOWED_ORIGINS = os.environ.get(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://localhost:3000,https://smallbets.live,https://www.smallbets.live",
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly for production
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,6 +56,14 @@ app.add_middleware(
 
 
 logger = logging.getLogger(__name__)
+
+
+def sanitize_input(text: str, max_length: int = 200) -> str:
+    """Sanitize user input to prevent XSS.
+
+    Escapes HTML entities and strips leading/trailing whitespace.
+    """
+    return html.escape(text.strip()[:max_length])
 
 
 # ============================================================================
@@ -170,6 +192,7 @@ class CreateBetRequest(BaseModel):
     createdFrom: str = "custom"
     templateId: Optional[str] = None
     timerDuration: int = 60
+    status: str = "open"  # "open" (default) or "pending" for bet queue
 
 
 class EditBetRequest(BaseModel):
@@ -225,15 +248,18 @@ HostRoomDep = Annotated[Room, Depends(require_host)]
 async def create_room(request: CreateRoomRequest):
     """Create a new room"""
     try:
+        nickname = sanitize_input(request.host_nickname, 20)
+        event_name = sanitize_input(request.event_name, 100) if request.event_name else None
+
         room = await room_service.create_room(
             event_template=request.event_template,
-            event_name=request.event_name,
+            event_name=event_name,
             host_id="",
         )
 
         host_user = await user_service.create_user(
             room_code=room.code,
-            nickname=request.host_nickname,
+            nickname=nickname,
             is_admin=True,
         )
 
@@ -367,6 +393,8 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
     user will be set as admin in this room.
     """
     try:
+        nickname = sanitize_input(request.nickname, 20)
+
         # Determine if this user should be admin based on parent room context
         is_admin = False
         if request.parent_user_id and room.room_type in ("tournament", "match"):
@@ -382,7 +410,7 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
 
         # Check if a user with this nickname already exists in the room
         # to prevent duplicate participants on re-join
-        existing_user = await user_service.find_user_by_nickname(code, request.nickname)
+        existing_user = await user_service.find_user_by_nickname(code, nickname)
         if existing_user:
             # Return existing user — update admin status if needed
             if is_admin and not existing_user.is_admin:
@@ -410,7 +438,7 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
 
         user = await user_service.create_user(
             room_code=code,
-            nickname=request.nickname,
+            nickname=nickname,
             is_admin=is_admin,
         )
 
@@ -419,7 +447,7 @@ async def join_room(code: str, request: JoinRoomRequest, room: RoomDep):
             await room_service.create_room_user(
                 room_code=code,
                 user_id=user.user_id,
-                nickname=request.nickname,
+                nickname=nickname,
                 is_host=is_admin,
             )
             await room_service.add_participant(code, user.user_id)
@@ -607,24 +635,35 @@ async def finish_room(code: str, room: HostRoomDep):
 
 @app.post("/api/rooms/{code}/bets")
 async def create_bet(code: str, room: HostRoomDep, request: CreateBetRequest):
-    """Create a new bet (admin only)"""
+    """Create a new bet (admin only)
+
+    Pass status="pending" to create in the bet queue without opening immediately.
+    """
     try:
         existing_bets = await bet_service.get_bets_in_room(code)
         is_valid, error = game_logic.validate_bet_count(len(existing_bets), room.room_type)
         if not is_valid:
             raise HTTPException(status_code=400, detail=error)
 
+        # Sanitize user inputs
+        question = sanitize_input(request.question, 200)
+        options = [sanitize_input(opt, 100) for opt in request.options]
+
+        initial_status = request.status if request.status in ("open", "pending") else "open"
+
         bet = await bet_service.create_bet(
             room_code=code,
-            question=request.question,
-            options=request.options,
+            question=question,
+            options=options,
             points_value=request.pointsValue,
             bet_type=request.betType,
             created_from=request.createdFrom,
             template_id=request.templateId,
             timer_duration=request.timerDuration,
+            initial_status=initial_status,
         )
 
+        logger.info("BET_CREATED: room=%s bet=%s status=%s", code, bet.bet_id, initial_status)
         return bet.to_dict()
 
     except HTTPException:
@@ -632,7 +671,28 @@ async def create_bet(code: str, room: HostRoomDep, request: CreateBetRequest):
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Missing field: {e}")
     except Exception as e:
+        logger.error("BET_CREATE_FAILED: room=%s error=%s", code, str(e))
         raise HTTPException(status_code=500, detail=f"Failed to create bet: {str(e)}")
+
+
+@app.post("/api/rooms/{code}/bets/{bet_id}/open")
+async def open_bet(code: str, bet_id: str, room: HostRoomDep):
+    """Open a pending bet (move from queue to active) (admin only)"""
+    try:
+        # Verify bet belongs to this room before opening
+        bet_check = await bet_service.get_bet(bet_id)
+        if not bet_check or bet_check.room_code != code:
+            raise HTTPException(status_code=404, detail="Bet not found in this room")
+
+        bet = await bet_service.open_bet(bet_id)
+        logger.info("BET_OPENED: room=%s bet=%s", code, bet_id)
+        return bet.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("BET_OPEN_FAILED: room=%s bet=%s error=%s", code, bet_id, str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to open bet: {str(e)}")
 
 
 @app.post("/api/rooms/{code}/bets/lock")
@@ -796,6 +856,63 @@ async def get_tournament_aggregated_leaderboard(tournament_code: str) -> list:
     )
 
 
+@app.get("/api/rooms/{code}/tournament-stats")
+async def get_tournament_stats(code: str, room: RoomDep):
+    """Get detailed tournament stats with per-match breakdown"""
+    if not room.is_tournament():
+        raise HTTPException(status_code=400, detail="Not a tournament room")
+
+    child_rooms = await room_service.get_child_rooms(code)
+
+    # Aggregate per-user stats across all matches
+    user_stats: dict = {}
+    match_summaries = []
+
+    for match_room in child_rooms:
+        match_bets = await bet_service.get_bets_in_room(match_room.code)
+        match_users = await room_service.get_room_users(match_room.code)
+
+        resolved_bets = [b for b in match_bets if b.status.value == "resolved"]
+        total_bets = len(resolved_bets)
+
+        match_summaries.append({
+            "roomCode": match_room.code,
+            "title": match_room.event_name or "Match",
+            "status": match_room.status,
+            "teams": {
+                "team1": match_room.match_details.team1 if match_room.match_details else None,
+                "team2": match_room.match_details.team2 if match_room.match_details else None,
+            },
+            "totalBets": total_bets,
+            "participants": len(match_users),
+        })
+
+        # Collect per-user per-match points for breakdown
+        for mu in match_users:
+            if mu.user_id not in user_stats:
+                user_stats[mu.user_id] = {
+                    "nickname": mu.nickname,
+                    "matchBreakdown": {},
+                    "totalBetsPlaced": 0,
+                    "totalBetsWon": 0,
+                }
+            user_stats[mu.user_id]["matchBreakdown"][match_room.code] = mu.points
+
+        # Count bets won/placed per user (batched query)
+        resolved_bet_ids = [b.bet_id for b in resolved_bets]
+        all_user_bets = await bet_service.get_user_bets_for_bets(resolved_bet_ids)
+        for ub in all_user_bets:
+            if ub.user_id in user_stats:
+                user_stats[ub.user_id]["totalBetsPlaced"] += 1
+                if ub.points_won is not None and ub.points_won > 0:
+                    user_stats[ub.user_id]["totalBetsWon"] += 1
+
+    return {
+        "matches": match_summaries,
+        "userStats": user_stats,
+    }
+
+
 # ============================================================================
 # Transcript & Automation Endpoints
 # ============================================================================
@@ -868,8 +985,16 @@ async def toggle_automation(
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "smallbets-api"}
+    """Health check endpoint with Firebase connectivity test"""
+    try:
+        from firebase_config import get_db
+        db = get_db()
+        # Quick read to verify Firestore is reachable
+        db.collection("rooms").limit(1).get()
+        return {"status": "healthy", "service": "smallbets-api", "firestore": "connected"}
+    except Exception as e:
+        logger.error("HEALTH_CHECK_FAILED: firestore error=%s", str(e))
+        return {"status": "degraded", "service": "smallbets-api", "firestore": "error"}
 
 
 @app.get("/")
