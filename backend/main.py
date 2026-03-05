@@ -63,7 +63,7 @@ def sanitize_input(text: str, max_length: int = 200) -> str:
 
     Escapes HTML entities and strips leading/trailing whitespace.
     """
-    return html.escape(text.strip())[:max_length]
+    return html.escape(text.strip()[:max_length])
 
 
 # ============================================================================
@@ -679,6 +679,11 @@ async def create_bet(code: str, room: HostRoomDep, request: CreateBetRequest):
 async def open_bet(code: str, bet_id: str, room: HostRoomDep):
     """Open a pending bet (move from queue to active) (admin only)"""
     try:
+        # Verify bet belongs to this room before opening
+        bet_check = await bet_service.get_bet(bet_id)
+        if not bet_check or bet_check.room_code != code:
+            raise HTTPException(status_code=404, detail="Bet not found in this room")
+
         bet = await bet_service.open_bet(bet_id)
         logger.info("BET_OPENED: room=%s bet=%s", code, bet_id)
         return bet.to_dict()
@@ -893,14 +898,14 @@ async def get_tournament_stats(code: str, room: RoomDep):
                 }
             user_stats[mu.user_id]["matchBreakdown"][match_room.code] = mu.points
 
-        # Count bets won/placed per user
-        for bet in resolved_bets:
-            user_bets = await bet_service.get_user_bets_for_bet(bet.bet_id)
-            for ub in user_bets:
-                if ub.user_id in user_stats:
-                    user_stats[ub.user_id]["totalBetsPlaced"] += 1
-                    if ub.points_won is not None and ub.points_won > 0:
-                        user_stats[ub.user_id]["totalBetsWon"] += 1
+        # Count bets won/placed per user (batched query)
+        resolved_bet_ids = [b.bet_id for b in resolved_bets]
+        all_user_bets = await bet_service.get_user_bets_for_bets(resolved_bet_ids)
+        for ub in all_user_bets:
+            if ub.user_id in user_stats:
+                user_stats[ub.user_id]["totalBetsPlaced"] += 1
+                if ub.points_won is not None and ub.points_won > 0:
+                    user_stats[ub.user_id]["totalBetsWon"] += 1
 
     return {
         "matches": match_summaries,

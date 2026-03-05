@@ -46,8 +46,12 @@ function getTeamColor(teamName: string): string {
   const upper = teamName.toUpperCase();
   if (IPL_TEAM_COLORS[upper]) return IPL_TEAM_COLORS[upper];
 
-  // Check if team name contains a known team
-  for (const [key, color] of Object.entries(IPL_TEAM_COLORS)) {
+  // Check if team name contains a known team (longest match first to avoid
+  // ambiguity, e.g. "Punjab Kings" should match before "Kings")
+  const entries = Object.entries(IPL_TEAM_COLORS).sort(
+    ([a], [b]) => b.length - a.length
+  );
+  for (const [key, color] of entries) {
     if (teamName.toLowerCase().includes(key.toLowerCase())) return color;
   }
 

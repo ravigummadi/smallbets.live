@@ -314,6 +314,27 @@ async def get_user_bets_for_bet(bet_id: str) -> List[UserBet]:
     return user_bets
 
 
+async def get_user_bets_for_bets(bet_ids: List[str]) -> List[UserBet]:
+    """Get all user bets for multiple bets in batched queries.
+
+    Firestore 'in' queries support up to 30 values, so we batch accordingly.
+    """
+    if not bet_ids:
+        return []
+
+    db = get_db()
+    all_user_bets: List[UserBet] = []
+    batch_size = 30
+
+    for i in range(0, len(bet_ids), batch_size):
+        chunk = bet_ids[i:i + batch_size]
+        query = db.collection("userBets").where("betId", "in", chunk)
+        docs = query.stream()
+        all_user_bets.extend(UserBet.from_dict(doc.to_dict()) for doc in docs)
+
+    return all_user_bets
+
+
 def _add_refund_ops_to_batch(
     batch, user_bets: List[UserBet], room_code: str, points_value: int, db
 ) -> None:

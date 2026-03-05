@@ -10,7 +10,7 @@
  * Dismissed permanently via localStorage.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface OnboardingModalProps {
   isHost: boolean;
@@ -20,24 +20,12 @@ const ONBOARDING_KEY = 'smallbets_onboarding_seen';
 const HOST_GUIDE_KEY = 'smallbets_host_guide_seen';
 
 export default function OnboardingModal({ isHost }: OnboardingModalProps) {
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [showHostGuide, setShowHostGuide] = useState(false);
-
-  useEffect(() => {
-    const seen = localStorage.getItem(ONBOARDING_KEY);
-    if (!seen) {
-      setShowWelcome(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isHost) {
-      const seen = localStorage.getItem(HOST_GUIDE_KEY);
-      if (!seen) {
-        setShowHostGuide(true);
-      }
-    }
-  }, [isHost]);
+  const [showWelcome, setShowWelcome] = useState(
+    () => !localStorage.getItem(ONBOARDING_KEY)
+  );
+  const [showHostGuide, setShowHostGuide] = useState(
+    () => isHost && !localStorage.getItem(HOST_GUIDE_KEY)
+  );
 
   const dismissWelcome = () => {
     localStorage.setItem(ONBOARDING_KEY, '1');
