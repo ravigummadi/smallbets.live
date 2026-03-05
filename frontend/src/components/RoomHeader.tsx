@@ -74,9 +74,8 @@ export default function RoomHeader({
       {isHost && room.status === 'active' && (
         <div className="room-header-finish">
           <button
-            className="btn btn-secondary btn-full"
+            className="btn btn-secondary btn-full room-header-finish-btn"
             onClick={onFinishRoom}
-            style={{ fontSize: 'var(--font-size-sm)' }}
           >
             Finish {isTournament ? 'Tournament' : 'Event'}
           </button>

@@ -160,10 +160,9 @@ export default function BetCard({
               {bet.status === 'open' && (
                 <div className="bet-card-admin-open">
                   <button
-                    className="btn btn-secondary btn-full"
+                    className="btn btn-secondary btn-full bet-card-close-btn"
                     onClick={(e) => { e.stopPropagation(); onCloseBet(bet.betId); }}
                     disabled={closingBetId === bet.betId}
-                    style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
                   >
                     {closingBetId === bet.betId ? 'Closing...' : 'Close Bet'}
                   </button>

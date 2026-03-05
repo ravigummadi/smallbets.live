@@ -60,7 +60,7 @@ export default function SessionRestoreFlow({
       .finally(() => {
         setLoading(false);
       });
-  }, [userKey, code]);
+  }, [userKey, code, existingSession, onSessionRestored, navigate]);
 
   const handleConfirmRestore = () => {
     if (!restoreUser) return;
@@ -86,7 +86,7 @@ export default function SessionRestoreFlow({
 
   if (loading) {
     return (
-      <div className="container" style={{ paddingTop: '3rem' }}>
+      <div className="container container-padded-top">
         <div className="spinner" />
         <p className="text-center text-muted">Restoring session...</p>
       </div>
@@ -95,7 +95,7 @@ export default function SessionRestoreFlow({
 
   if (error) {
     return (
-      <div className="container" style={{ paddingTop: '3rem' }}>
+      <div className="container container-padded-top">
         <div className="card text-center">
           <p className="text-error">{error}</p>
           <button
@@ -111,7 +111,7 @@ export default function SessionRestoreFlow({
 
   if (showModal && restoreUser) {
     return (
-      <div className="container" style={{ paddingTop: '3rem' }}>
+      <div className="container container-padded-top">
         <div className="card">
           <h3 className="mb-md">Restore Session</h3>
           <p className="mb-md">
@@ -133,7 +133,7 @@ export default function SessionRestoreFlow({
 
   // Still loading/processing
   return (
-    <div className="container" style={{ paddingTop: '3rem' }}>
+    <div className="container container-padded-top">
       <div className="spinner" />
     </div>
   );

@@ -115,7 +115,7 @@ export default function RoomPage() {
     if (localRoom?.roomType === 'tournament') {
       roomApi.getMatchRooms(localRoom.code)
         .then(res => setMatchRooms(res.matches))
-        .catch(() => {});
+        .catch(err => console.error('Failed to load match rooms:', err));
     }
   }, [localRoom?.roomType, localRoom?.code]);
 
@@ -124,7 +124,7 @@ export default function RoomPage() {
     if (!session?.hostId || !code) return;
     roomApi.getParticipantsWithLinks(code, session.hostId)
       .then((res) => setParticipantLinks(res.participants))
-      .catch(() => {});
+      .catch(err => console.error('Failed to load participant links:', err));
   }, [session?.hostId, code, participants.length]);
 
   const handleCopyRoomLink = async () => {
@@ -325,7 +325,7 @@ export default function RoomPage() {
 
   if (roomLoading || userLoading) {
     return (
-      <div className="container" style={{ paddingTop: '3rem' }}>
+      <div className="container container-padded-top">
         <div className="spinner" />
         <p className="text-center text-muted">Loading room...</p>
       </div>
@@ -334,7 +334,7 @@ export default function RoomPage() {
 
   if (!localRoom || !user) {
     return (
-      <div className="container" style={{ paddingTop: '3rem' }}>
+      <div className="container container-padded-top">
         <div className="card">
           <p className="text-error">Room not found</p>
           <button className="btn btn-secondary mt-md" onClick={() => navigate('/')}>

@@ -31,7 +31,7 @@ export default function HostActionBar({
   return (
     <>
       {/* Bottom spacer */}
-      <div style={{ height: '70px' }} />
+      <div className="sticky-action-bar-spacer" />
 
       {/* Sticky Action Bar */}
       <div className="sticky-action-bar host-action-bar">

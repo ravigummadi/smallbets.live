@@ -750,6 +750,7 @@ select:focus {
 .bet-card-admin-open { display: grid; gap: var(--spacing-xs); }
 .bet-card-admin-row { display: flex; gap: var(--spacing-xs); }
 .bet-card-admin-btn { flex: 1; font-size: 0.875rem; padding: 0.5rem 1rem; }
+.bet-card-close-btn { font-size: 0.875rem; padding: 0.5rem 1rem; }
 
 .bet-card-resolve-label { font-size: 0.875rem; font-weight: 600; margin-bottom: var(--spacing-xs); }
 .bet-card-resolve-options { display: flex; gap: var(--spacing-xs); flex-wrap: wrap; }
@@ -777,8 +778,10 @@ select:focus {
 }
 .room-header-role-badge--host { background: var(--color-primary); color: #fff; border: none; }
 .room-header-finish { margin-top: var(--spacing-md); padding-top: 0.75rem; border-top: 1px solid var(--color-border); }
+.room-header-finish-btn { font-size: var(--font-size-sm); }
 
 /* ===== HostActionBar Component ===== */
+.sticky-action-bar-spacer { height: 70px; }
 .host-action-bar { flex-direction: column; gap: var(--spacing-xs); }
 .host-action-bar-row { display: flex; gap: var(--spacing-xs); width: 100%; }
 .host-action-bar-btn { flex: 1; font-size: 0.875rem; padding: 0.625rem 1rem; }
@@ -786,6 +789,7 @@ select:focus {
 /* ===== SessionRestoreFlow ===== */
 .session-restore-buttons { display: flex; gap: var(--spacing-sm); }
 .session-restore-btn { flex: 1; }
+.container-padded-top { padding-top: var(--spacing-2xl); }
 
 /* ===== Shared Utilities ===== */
 .btn-xs { font-size: 0.75rem; padding: 0.25rem 0.5rem; min-height: auto; }
