@@ -195,8 +195,8 @@ async def test_resolve_bet_does_not_double_deduct_points():
     }
 
     mock_db = MagicMock()
-    mock_batch = MagicMock()
-    mock_db.batch.return_value = mock_batch
+    mock_transaction = MagicMock()
+    mock_db.transaction.return_value = mock_transaction
 
     # Set up collection mocks: roomUsers docs should not exist (legacy room)
     mock_room_user_doc = MagicMock()
@@ -218,16 +218,22 @@ async def test_resolve_bet_does_not_double_deduct_points():
 
     mock_db.collection.side_effect = collection_side_effect
 
+    def passthrough_transactional(func):
+        def wrapper(transaction, *args, **kwargs):
+            return func(transaction, *args, **kwargs)
+        return wrapper
+
     with patch("services.bet_service.get_db", return_value=mock_db), \
          patch("services.bet_service.get_bet", return_value=bet), \
          patch("services.bet_service.get_user_bets_for_bet", return_value=user_bets), \
-         patch("services.user_service.get_users_by_ids", return_value=users):
+         patch("services.user_service.get_users_by_ids", return_value=users), \
+         patch("google.cloud.firestore.transactional", passthrough_transactional):
 
         await bet_service.resolve_bet("bet1", "A")
 
     # Expect winner to get pot (200) added to already-deducted balance
     # Loser should remain at 900 (no extra deduction)
-    updated_points = sorted(call.args[1]["points"] for call in mock_batch.update.call_args_list)
+    updated_points = sorted(call.args[1]["points"] for call in mock_transaction.update.call_args_list)
     assert updated_points == [900, 1100]
 
 

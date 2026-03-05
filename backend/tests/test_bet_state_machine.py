@@ -271,20 +271,42 @@ async def test_resolve_bet_idempotent_same_winner():
 
     # Mock the database operations
     mock_db = MagicMock()
-    mock_batch = MagicMock()
-    mock_db.batch.return_value = mock_batch
+    mock_transaction = MagicMock()
+    mock_db.transaction.return_value = mock_transaction
+
+    # roomUsers docs don't exist (legacy room)
+    mock_room_user_doc = MagicMock()
+    mock_room_user_doc.exists = False
+
+    def collection_side_effect(name):
+        col = MagicMock()
+        if name == "roomUsers":
+            doc_ref = MagicMock()
+            doc_ref.get.return_value = mock_room_user_doc
+            col.document.return_value = doc_ref
+        else:
+            col.document.return_value = MagicMock()
+        return col
+
+    mock_db.collection.side_effect = collection_side_effect
+
+    def passthrough_transactional(func):
+        def wrapper(transaction, *args, **kwargs):
+            return func(transaction, *args, **kwargs)
+        return wrapper
 
     with patch("services.bet_service.get_db", return_value=mock_db), \
          patch("services.bet_service.get_bet") as mock_get_bet, \
          patch("services.bet_service.get_user_bets_for_bet", return_value=[user_bet1, user_bet2]), \
-         patch("services.user_service.get_users_by_ids", return_value={"user1": user1, "user2": user2}):
+         patch("services.user_service.get_users_by_ids", return_value={"user1": user1, "user2": user2}), \
+         patch("google.cloud.firestore.transactional", passthrough_transactional):
 
         # First call - should process resolution
         mock_get_bet.return_value = locked_bet
         await bet_service.resolve_bet("test-bet-id", "Option 1")
 
-        # Verify batch commit was called once
-        assert mock_batch.commit.call_count == 1
+        # Verify transaction was used for writes
+        assert mock_transaction.update.call_count >= 1
 
         # Second call - should be idempotent (already resolved with same winner)
         resolved_bet = Bet(
@@ -299,7 +321,7 @@ async def test_resolve_bet_idempotent_same_winner():
         )
 
         mock_get_bet.return_value = resolved_bet
-        mock_batch.reset_mock()
+        mock_transaction.reset_mock()
 
         # TODO: Implement idempotency check in bet_service.resolve_bet()
         # Current implementation will try to resolve again, but it should
@@ -307,7 +329,7 @@ async def test_resolve_bet_idempotent_same_winner():
 
         # Expected behavior (not yet implemented):
         # await bet_service.resolve_bet("test-bet-id", "Option 1")
-        # assert mock_batch.commit.call_count == 0  # No new writes
+        # assert mock_transaction.update.call_count == 0  # No new writes
 
 
 @pytest.mark.unit
