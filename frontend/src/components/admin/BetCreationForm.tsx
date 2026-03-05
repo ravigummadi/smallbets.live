@@ -2,27 +2,46 @@
  * BetCreationForm - Form for admins to create new bets
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { betApi } from '@/services/api';
 import { MAX_BET_OPTIONS } from '@/constants';
+
+export interface BetFormPrefill {
+  question: string;
+  options: string[];
+  pointsValue?: number;
+  timerDuration?: number;
+}
 
 interface BetCreationFormProps {
   roomCode: string;
   hostId: string;
   onSuccess: () => void;
+  prefill?: BetFormPrefill | null;
 }
 
 export default function BetCreationForm({
   roomCode,
   hostId,
   onSuccess,
+  prefill,
 }: BetCreationFormProps) {
-  const [question, setQuestion] = useState('');
-  const [options, setOptions] = useState(['', '']);
-  const [pointsValue, setPointsValue] = useState(100);
+  const [question, setQuestion] = useState(prefill?.question ?? '');
+  const [options, setOptions] = useState(prefill?.options?.length ? [...prefill.options] : ['', '']);
+  const [pointsValue, setPointsValue] = useState(prefill?.pointsValue ?? 100);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Update form when prefill changes (e.g., user taps a different quick-fire template)
+  useEffect(() => {
+    if (prefill) {
+      setQuestion(prefill.question);
+      setOptions([...prefill.options]);
+      setPointsValue(prefill.pointsValue ?? 100);
+      setError(null);
+    }
+  }, [prefill]);
 
   const handleAddOption = () => {
     if (options.length < MAX_BET_OPTIONS) {
@@ -88,6 +107,7 @@ export default function BetCreationForm({
         question: question.trim(),
         options: validOptions.map(opt => opt.trim()),
         pointsValue,
+        ...(prefill?.timerDuration != null && { timerDuration: prefill.timerDuration }),
       });
 
       setSuccess(true);
