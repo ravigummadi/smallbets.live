@@ -478,7 +478,7 @@ describe('Frontend Resilience: Stale session data', () => {
     expect(result.current.isHost).toBe(true);
 
     // In the real app, the room's hostId from Firestore would differ,
-    // and the AdminPanel wouldn't show because it checks room.hostId
+    // and host controls wouldn't show because it checks room.hostId
   });
 
   it('should handle rapid session switches between rooms', () => {

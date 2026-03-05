@@ -8,10 +8,10 @@ Real-time micro-betting platform for friends watching live events (Oscars, Super
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for comprehensive architecture documentation, review workflow, and the 9 red flags to avoid.
 
 ### Tech Stack
-- **Frontend**: React + TypeScript, mobile-first design
-- **Backend**: Firebase (Firestore + Cloud Functions + Hosting)
-- **Real-time**: Firebase Realtime Database for live sync
-- **Deployment**: Firebase Hosting
+- **Frontend**: React + TypeScript + Vite, mobile-first design
+- **Backend**: FastAPI + Python on Cloud Run, Firestore for persistence
+- **Real-time**: Firestore listeners for live sync
+- **Deployment**: Firebase Hosting (frontend) + Cloud Run (backend)
 
 ### Design Principles
 - **Simplicity over features**: No accounts, no app install, minimal UI
@@ -55,6 +55,7 @@ smallbets.live/
 ├── README.md                    # Project overview and setup
 ├── frontend/                    # React + TypeScript + Vite
 │   ├── src/
+│   │   ├── components/          # Shared components (BetCard, RoomHeader, HostActionBar, SessionRestoreFlow)
 │   │   ├── components/pages/    # Page components (Home, CreateRoom, JoinRoom, Room)
 │   │   ├── hooks/               # React hooks (useRoom, useUser, useBet, useSession)
 │   │   ├── services/            # API client and Firestore listeners

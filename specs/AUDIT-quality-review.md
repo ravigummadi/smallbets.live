@@ -346,13 +346,13 @@ Add service worker, manifest, and offline tolerance. Allow users to "install" th
 #### 3.5 Push Notifications
 Notify users when: a new bet opens, a match room is created, results are in. Critical for tournament engagement over weeks.
 
-#### 3.6 Code Quality
-- Break up RoomPage (1,098 lines) into 5-6 focused components
-- Add service-layer tests (bet_service, room_service, user_service)
-- Add frontend component tests
-- Remove duplicate AdminPanel component
-- Unify styling approach (pick CSS modules or inline — not both)
-- Clean up stale docs (CLAUDE.md, ARCHITECTURE.md, README.md references)
+#### ~~3.6 Code Quality~~ ✅ DONE
+- ~~Break up RoomPage (1,098 lines) into 5-6 focused components~~ — Extracted BetCard, RoomHeader, HostActionBar, SessionRestoreFlow; RoomPage reduced from ~1,109 to ~400 lines
+- ~~Add service-layer tests (bet_service, room_service, user_service)~~ — 19 room_service unit tests with mocked Firestore
+- ~~Add frontend component tests~~ — BetCard, RoomHeader, HostActionBar test files (~45 new tests)
+- ~~Remove duplicate AdminPanel component~~ — Deleted unused AdminPanel.tsx and AdminPanel.test.tsx
+- ~~Unify styling approach (pick CSS modules or inline — not both)~~ — Replaced inline styles with CSS classes in all extracted components
+- ~~Clean up stale docs (CLAUDE.md, ARCHITECTURE.md, README.md references)~~ — Updated tech stack, file structure, features list, and target events
 
 #### 3.7 Spectator Mode
 Allow users to watch bets and leaderboard without betting. Useful for people who join late or just want to follow.
@@ -384,7 +384,7 @@ End-of-season summary: best predictor, biggest upset, most popular bets, luckies
 | P3 | Chat/reactions (3.2) | Low | 2-3d | Post-IPL |
 | P3 | Auto cricket scoring (3.3) | Medium | 3-5d | Post-IPL |
 | P3 | PWA (3.4) | Low | 1-2d | Post-IPL |
-| P3 | Code quality cleanup (3.6) | Low | 3-5d | Post-IPL |
+| P3 | ~~Code quality cleanup (3.6)~~ | Low | 3-5d | ✅ Done |
 
 ---
 
