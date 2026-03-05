@@ -158,6 +158,7 @@ export interface CreateBetRequest {
   createdFrom?: string;
   templateId?: string;
   timerDuration?: number;
+  status?: 'open' | 'pending';
 }
 
 export interface EditBetRequest {

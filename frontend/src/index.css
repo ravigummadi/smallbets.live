@@ -579,6 +579,100 @@ select:focus {
   cursor: not-allowed;
 }
 
+/* ===== Animated Leaderboard ===== */
+.leaderboard-slide {
+  animation: leaderboard-slide-in 0.5s ease;
+}
+
+@keyframes leaderboard-slide-in {
+  0% { transform: translateX(-10px); opacity: 0.5; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+/* ===== IPL Team Colors ===== */
+.team-color-rcb { --team-color: #ec1c24; }
+.team-color-csk { --team-color: #f9cd05; }
+.team-color-mi { --team-color: #004ba0; }
+.team-color-dc { --team-color: #0078bc; }
+.team-color-rr { --team-color: #ea1a85; }
+.team-color-pbks { --team-color: #ed1b24; }
+.team-color-kkr { --team-color: #3a225d; }
+.team-color-gt { --team-color: #1c1c1c; }
+.team-color-lsg { --team-color: #a72056; }
+.team-color-srh { --team-color: #ff822a; }
+
+.match-header-cricket {
+  position: relative;
+  overflow: hidden;
+}
+
+.match-header-cricket::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--team1-color, var(--color-primary)), var(--team2-color, var(--color-accent-blue)));
+}
+
+.team-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.team-vs .team-name {
+  font-weight: 800;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.team-vs .vs-divider {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: var(--color-bg-elevated);
+}
+
+/* ===== Match Context Bar ===== */
+.match-context-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.match-context-bar .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.match-context-bar .stat-value {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.match-context-bar .stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   :root {

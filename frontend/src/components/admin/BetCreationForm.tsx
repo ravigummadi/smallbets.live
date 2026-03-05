@@ -87,9 +87,7 @@ export default function BetCreationForm({
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const createBet = async (status: 'open' | 'pending') => {
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
@@ -107,6 +105,7 @@ export default function BetCreationForm({
         question: question.trim(),
         options: validOptions.map(opt => opt.trim()),
         pointsValue,
+        status,
         ...(prefill?.timerDuration != null && { timerDuration: prefill.timerDuration }),
       });
 
@@ -129,6 +128,11 @@ export default function BetCreationForm({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createBet('open');
   };
 
   return (
@@ -244,14 +248,26 @@ export default function BetCreationForm({
         </div>
       )}
 
-      {/* Submit Button */}
-      <button
-        type="submit"
-        className="btn btn-primary btn-full"
-        disabled={submitting}
-      >
-        {submitting ? 'Creating Bet...' : 'Create Bet'}
-      </button>
+      {/* Submit Buttons */}
+      <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={submitting}
+          style={{ flex: 2 }}
+        >
+          {submitting ? 'Creating...' : 'Create & Open'}
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled={submitting}
+          onClick={() => createBet('pending')}
+          style={{ flex: 1, fontSize: '0.85rem' }}
+        >
+          Add to Queue
+        </button>
+      </div>
     </form>
   );
 }
