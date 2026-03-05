@@ -9,11 +9,18 @@
 import { useEffect, useState } from 'react';
 
 interface BetResolutionFeedbackProps {
-  betId: string;
   won: boolean | null; // null = didn't participate
   pointsDelta: number; // positive for wins, negative for losses
   onDismiss: () => void;
 }
+
+const CONFETTI_COLORS = [
+  'var(--color-primary)',
+  'var(--color-accent-blue)',
+  'var(--color-warning)',
+  'var(--color-error)',
+  '#a855f7',
+];
 
 export default function BetResolutionFeedback({
   won,
@@ -58,7 +65,7 @@ export default function BetResolutionFeedback({
             style={{
               left: `${Math.random() * 100}%`,
               animationDelay: `${Math.random() * 0.5}s`,
-              backgroundColor: ['#34d399', '#3b82f6', '#eab308', '#f43f5e', '#a855f7'][i % 5],
+              backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
             }}
           />
         ))}

@@ -30,8 +30,9 @@ export default function BetTimer({ openedAt, timerDuration, status, onExpired }:
       return;
     }
 
+    const startTime = new Date(openedAt).getTime();
     const calculate = () => {
-      const elapsed = (Date.now() - new Date(openedAt).getTime()) / 1000;
+      const elapsed = (Date.now() - startTime) / 1000;
       const remaining = Math.max(0, Math.ceil(timerDuration - elapsed));
       setSecondsLeft(remaining);
 

@@ -430,12 +430,13 @@ export default function RoomPage() {
 
     const currentMap = new Map(bets.map(b => [b.betId, b]));
     const prevMap = prevBetsRef.current;
+    const ubMap = new Map(userBets.map(ub => [ub.betId, ub]));
 
     for (const [betId, bet] of currentMap) {
       const prev = prevMap.get(betId);
       if (prev && prev.status !== 'resolved' && bet.status === 'resolved') {
         // This bet just resolved — show feedback
-        const userBet = userBets.find(ub => ub.betId === betId);
+        const userBet = ubMap.get(betId);
         if (userBet) {
           const won = userBet.selectedOption === bet.winningOption;
           const pointsDelta = won ? (userBet.pointsWon ?? bet.pointsValue) : -bet.pointsValue;
@@ -1153,7 +1154,6 @@ export default function RoomPage() {
       {/* Bet Resolution Feedback Overlay */}
       {resolutionFeedback && (
         <BetResolutionFeedback
-          betId={resolutionFeedback.betId}
           won={resolutionFeedback.won}
           pointsDelta={resolutionFeedback.pointsDelta}
           onDismiss={() => setResolutionFeedback(null)}
