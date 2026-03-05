@@ -4,11 +4,13 @@
 
 import { useState, useEffect } from 'react';
 import LiveFeedPanel from './LiveFeedPanel';
-import BetCreationForm from './BetCreationForm';
+import BetCreationForm, { type BetFormPrefill } from './BetCreationForm';
 import BetListPanel from './BetListPanel';
+import QuickFireTemplates from './QuickFireTemplates';
 import { roomApi } from '@/services/api';
 import { useBets } from '@/hooks/useBets';
 import type { Room, ParticipantWithLink } from '@/types';
+import type { QuickFireTemplate } from '@/data/cricketQuickFireTemplates';
 
 interface AdminPanelProps {
   room: Room;
@@ -24,6 +26,16 @@ export default function AdminPanel({
   const [automationEnabled, setAutomationEnabled] = useState(room.automationEnabled);
   const [showModal, setShowModal] = useState(false);
   const [showFeedModal, setShowFeedModal] = useState(false);
+  const [betPrefill, setBetPrefill] = useState<BetFormPrefill | null>(null);
+
+  const handleQuickFire = (template: QuickFireTemplate) => {
+    setBetPrefill({
+      question: template.question,
+      options: [...template.options],
+      pointsValue: template.pointsValue,
+    });
+    setShowModal(true);
+  };
   const { bets, loading: betsLoading } = useBets(room.code);
 
   // Participant links state
@@ -136,13 +148,18 @@ export default function AdminPanel({
         {(room.status === 'waiting' || room.status === 'active') && (
           <button
             className="btn btn-primary"
-            onClick={() => setShowModal(true)}
+            onClick={() => { setBetPrefill(null); setShowModal(true); }}
             style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
           >
             + Create New Bet
           </button>
         )}
       </div>
+
+      {/* Cricket Quick-Fire Templates */}
+      {(room.status === 'waiting' || room.status === 'active') && (
+        <QuickFireTemplates onSelect={handleQuickFire} />
+      )}
 
       {/* Participant Links Section */}
       <div className="card">
@@ -216,13 +233,15 @@ export default function AdminPanel({
 
       {/* Create Bet Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowModal(false); setBetPrefill(null); }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-              <h4 style={{ marginBottom: 0 }}>Create New Bet</h4>
+              <h4 style={{ marginBottom: 0 }}>
+                {betPrefill ? 'Quick-Fire Bet' : 'Create New Bet'}
+              </h4>
               <button
                 className="btn btn-secondary"
-                onClick={() => setShowModal(false)}
+                onClick={() => { setShowModal(false); setBetPrefill(null); }}
                 style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', minHeight: 'auto' }}
               >
                 ✕
@@ -231,7 +250,8 @@ export default function AdminPanel({
             <BetCreationForm
               roomCode={room.code}
               hostId={hostId}
-              onSuccess={() => setShowModal(false)}
+              onSuccess={() => { setShowModal(false); setBetPrefill(null); }}
+              prefill={betPrefill}
             />
           </div>
         </div>
