@@ -167,7 +167,7 @@ The "Kahoot for live betting" positioning is strong and validated. Kahoot proved
 
 These are the minimum changes to run a successful dry-run event.
 
-#### 1.1 Cricket Quick-Fire Bet Templates
+#### 1.1 Cricket Quick-Fire Bet Templates ✅ DONE (2026-03-04)
 **Problem:** Host must type every bet from scratch during a live T20 match. This is untenable.
 **Solution:** Pre-built cricket bet templates that the host can trigger with 1-2 taps.
 - "Toss winner" → [Team A, Team B]
@@ -180,8 +180,9 @@ These are the minimum changes to run a successful dry-run event.
 - Host taps template → auto-fills question and options → host hits "Open Bet" → done in 2 taps
 
 **Effort:** 1-2 days
+**Implemented:** CricketQuickFireBar component with 6 cricket bet templates, scrollable button row in host admin bar, 1-tap prefill into BetCreationForm.
 
-#### 1.2 Host UX Simplification for Live Cricket
+#### 1.2 Host UX Simplification for Live Cricket ✅ DONE (2026-03-05)
 **Problem:** During a live match, the host performs 4 steps per bet: create → wait → lock → resolve. Too many clicks.
 **Solution:**
 - **Auto-lock on timer expiry.** When timer hits 0, the bet locks automatically. Host doesn't need to manually lock.
@@ -190,8 +191,9 @@ These are the minimum changes to run a successful dry-run event.
 - **Keyboard shortcut / quick-resolve.** If bet has 2 options, show two big buttons: "Option A wins" / "Option B wins"
 
 **Effort:** 1-2 days
+**Implemented:** Auto-lock via BetTimer `onExpired` callback (host only), one-tap resolve with `quick-resolve-btn` styled buttons shown directly on locked bets (removed intermediate "Resolve Bet" click), contextual "Lock" button in sticky action bar.
 
-#### 1.3 Bet Resolution Feedback
+#### 1.3 Bet Resolution Feedback ✅ DONE (2026-03-05)
 **Problem:** When a bet resolves, there's no visual celebration or commiseration.
 **Solution:**
 - Winners: green flash + "+X points" animation + brief confetti (CSS-only)
@@ -199,8 +201,9 @@ These are the minimum changes to run a successful dry-run event.
 - Show the updated leaderboard immediately after resolution with position changes highlighted
 
 **Effort:** 1 day
+**Implemented:** BetResolutionFeedback overlay component — green flash + CSS confetti (20 pieces, 5 colors) + "+X pts" for winners, red flash + "-X pts" for losers. Auto-detects resolution via `prevBetsRef` diffing. Auto-dismisses after 2.5s. Mobile vibration on result.
 
-#### 1.4 Timer Urgency Polish
+#### 1.4 Timer Urgency Polish ✅ DONE (2026-03-05)
 **Problem:** Timer exists but lacks urgency.
 **Solution:**
 - Last 10 seconds: timer turns red, pulses
@@ -209,6 +212,7 @@ These are the minimum changes to run a successful dry-run event.
 - Sound optional (vibration on mobile if supported)
 
 **Effort:** 0.5 days
+**Implemented:** BetTimer component with countdown from `openedAt + timerDuration`. Green pill badge in normal state, red 1s pulse at ≤10s, larger 0.5s pulse with glow at ≤5s, flash animation + `navigator.vibrate` on expiry.
 
 #### 1.5 Basic Deployment
 **Problem:** No way to deploy and test with real users on phones.
@@ -355,12 +359,12 @@ End-of-season summary: best predictor, biggest upset, most popular bets, luckies
 
 | Priority | Item | Impact | Effort | Target |
 |----------|------|--------|--------|--------|
-| P0 | Cricket quick-fire templates (1.1) | High | 1-2d | T20 WC Final |
-| P0 | Host UX simplification (1.2) | High | 1-2d | T20 WC Final |
+| P0 | ~~Cricket quick-fire templates (1.1)~~ | High | 1-2d | ✅ Done |
+| P0 | ~~Host UX simplification (1.2)~~ | High | 1-2d | ✅ Done |
 | P0 | Basic deployment (1.5) | Critical | 1-2d | T20 WC Final |
 | P0 | Dry run rehearsal (1.6) | Critical | 0.5d | T20 WC Final |
-| P1 | Bet resolution feedback (1.3) | Medium | 1d | T20 WC Final |
-| P1 | Timer urgency (1.4) | Medium | 0.5d | T20 WC Final |
+| P1 | ~~Bet resolution feedback (1.3)~~ | Medium | 1d | ✅ Done |
+| P1 | ~~Timer urgency (1.4)~~ | Medium | 0.5d | ✅ Done |
 | P1 | Match room discovery (2.1) | High | 2-3d | IPL |
 | P1 | Bet queue/pre-create (2.2) | High | 2-3d | IPL |
 | P1 | Animated leaderboard (2.3) | Medium | 2d | IPL |
