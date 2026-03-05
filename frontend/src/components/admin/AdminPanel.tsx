@@ -28,11 +28,17 @@ export default function AdminPanel({
   const [showFeedModal, setShowFeedModal] = useState(false);
   const [betPrefill, setBetPrefill] = useState<BetFormPrefill | null>(null);
 
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setBetPrefill(null);
+  };
+
   const handleQuickFire = (template: QuickFireTemplate) => {
     setBetPrefill({
       question: template.question,
       options: [...template.options],
       pointsValue: template.pointsValue,
+      timerDuration: template.timerDuration,
     });
     setShowModal(true);
   };
@@ -148,7 +154,7 @@ export default function AdminPanel({
         {(room.status === 'waiting' || room.status === 'active') && (
           <button
             className="btn btn-primary"
-            onClick={() => { setBetPrefill(null); setShowModal(true); }}
+            onClick={() => { handleCloseModal(); setShowModal(true); }}
             style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
           >
             + Create New Bet
@@ -233,7 +239,7 @@ export default function AdminPanel({
 
       {/* Create Bet Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => { setShowModal(false); setBetPrefill(null); }}>
+        <div className="modal-overlay" onClick={handleCloseModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
               <h4 style={{ marginBottom: 0 }}>
@@ -241,7 +247,7 @@ export default function AdminPanel({
               </h4>
               <button
                 className="btn btn-secondary"
-                onClick={() => { setShowModal(false); setBetPrefill(null); }}
+                onClick={handleCloseModal}
                 style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem', minHeight: 'auto' }}
               >
                 ✕
@@ -250,7 +256,7 @@ export default function AdminPanel({
             <BetCreationForm
               roomCode={room.code}
               hostId={hostId}
-              onSuccess={() => { setShowModal(false); setBetPrefill(null); }}
+              onSuccess={handleCloseModal}
               prefill={betPrefill}
             />
           </div>

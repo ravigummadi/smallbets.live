@@ -10,6 +10,7 @@ export interface BetFormPrefill {
   question: string;
   options: string[];
   pointsValue?: number;
+  timerDuration?: number;
 }
 
 interface BetCreationFormProps {
@@ -26,7 +27,7 @@ export default function BetCreationForm({
   prefill,
 }: BetCreationFormProps) {
   const [question, setQuestion] = useState(prefill?.question ?? '');
-  const [options, setOptions] = useState(prefill?.options?.length ? prefill.options : ['', '']);
+  const [options, setOptions] = useState(prefill?.options?.length ? [...prefill.options] : ['', '']);
   const [pointsValue, setPointsValue] = useState(prefill?.pointsValue ?? 100);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export default function BetCreationForm({
   useEffect(() => {
     if (prefill) {
       setQuestion(prefill.question);
-      setOptions(prefill.options);
+      setOptions([...prefill.options]);
       setPointsValue(prefill.pointsValue ?? 100);
       setError(null);
     }
@@ -106,6 +107,7 @@ export default function BetCreationForm({
         question: question.trim(),
         options: validOptions.map(opt => opt.trim()),
         pointsValue,
+        ...(prefill?.timerDuration != null && { timerDuration: prefill.timerDuration }),
       });
 
       setSuccess(true);
