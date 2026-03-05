@@ -4,7 +4,7 @@
  */
 
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from '@/hooks/useSession';
 import { useRoom } from '@/hooks/useRoom';
 import { useUser } from '@/hooks/useUser';
@@ -14,6 +14,8 @@ import { useParticipants } from '@/hooks/useParticipants';
 import BetCreationForm from '@/components/admin/BetCreationForm';
 import EditBetModal from '@/components/admin/EditBetModal';
 import LiveFeedPanel from '@/components/admin/LiveFeedPanel';
+import BetTimer from '@/components/BetTimer';
+import BetResolutionFeedback from '@/components/BetResolutionFeedback';
 import { betApi, roomApi } from '@/services/api';
 import type { Room, Bet, UserBet, User, ParticipantWithLink } from '@/types';
 
@@ -65,6 +67,15 @@ export default function RoomPage() {
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
+
+  // Resolution feedback state
+  const [resolutionFeedback, setResolutionFeedback] = useState<{
+    betId: string;
+    won: boolean | null;
+    pointsDelta: number;
+  } | null>(null);
+  const prevBetsRef = useRef<Map<string, Bet>>(new Map());
+  const autoLockingRef = useRef<Set<string>>(new Set());
 
   // Match room creation state
   const [showCreateMatch, setShowCreateMatch] = useState(false);
@@ -398,6 +409,45 @@ export default function RoomPage() {
     }
   }, [code, session?.hostId]);
 
+  // Auto-lock handler for timer expiry (host only)
+  const handleTimerExpired = useCallback(async (betId: string) => {
+    if (!code || !session?.hostId) return;
+    // Prevent double auto-lock
+    if (autoLockingRef.current.has(betId)) return;
+    autoLockingRef.current.add(betId);
+    try {
+      await betApi.lockBet(code, session.hostId, betId);
+    } catch {
+      // Bet may already be locked by server or another client
+    } finally {
+      autoLockingRef.current.delete(betId);
+    }
+  }, [code, session?.hostId]);
+
+  // Detect bet resolutions and trigger feedback
+  useEffect(() => {
+    if (!bets.length) return;
+
+    const currentMap = new Map(bets.map(b => [b.betId, b]));
+    const prevMap = prevBetsRef.current;
+    const ubMap = new Map(userBets.map(ub => [ub.betId, ub]));
+
+    for (const [betId, bet] of currentMap) {
+      const prev = prevMap.get(betId);
+      if (prev && prev.status !== 'resolved' && bet.status === 'resolved') {
+        // This bet just resolved — show feedback
+        const userBet = ubMap.get(betId);
+        if (userBet) {
+          const won = userBet.selectedOption === bet.winningOption;
+          const pointsDelta = won ? (userBet.pointsWon ?? bet.pointsValue) : -bet.pointsValue;
+          setResolutionFeedback({ betId, won, pointsDelta });
+        }
+      }
+    }
+
+    prevBetsRef.current = currentMap;
+  }, [bets, userBets]);
+
   const handleDeleteBet = async (betId: string) => {
     if (!code || !session?.hostId) return;
     setDeletingBetId(betId);
@@ -506,6 +556,14 @@ export default function RoomPage() {
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {bet.status === 'open' && bet.openedAt && bet.timerDuration > 0 && (
+                <BetTimer
+                  openedAt={bet.openedAt}
+                  timerDuration={bet.timerDuration}
+                  status={bet.status}
+                  onExpired={isHost ? () => handleTimerExpired(bet.betId) : undefined}
+                />
+              )}
               {bet.status === 'resolved' && canUndo(bet) && isHost && (
                 <button
                   className="btn btn-secondary"
@@ -632,41 +690,25 @@ export default function RoomPage() {
                     </div>
                   </div>
                 )}
-                {bet.status === 'locked' && showResolveOptions !== bet.betId && (
-                  <button
-                    className="btn btn-primary btn-full"
-                    onClick={(e) => { e.stopPropagation(); setShowResolveOptions(bet.betId); }}
-                    style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-                  >
-                    Resolve Bet
-                  </button>
-                )}
-                {bet.status === 'locked' && showResolveOptions === bet.betId && (
-                  <div style={{ display: 'grid', gap: 'var(--spacing-xs)' }} onClick={(e) => e.stopPropagation()}>
-                    <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: 0 }}>
-                      Select winner:
+                {bet.status === 'locked' && (
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: 'var(--spacing-xs)' }}>
+                      Tap the winner:
                     </p>
-                    {bet.options.map((option) => (
-                      <button
-                        key={option}
-                        className="btn btn-secondary"
-                        onClick={() => handleResolveBet(bet.betId, option)}
-                        disabled={resolvingBetId === bet.betId}
-                        style={{ fontSize: '0.875rem', padding: '0.5rem 1rem', textAlign: 'left' }}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setShowResolveOptions(null)}
-                      disabled={resolvingBetId === bet.betId}
-                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-                    >
-                      Cancel
-                    </button>
+                    <div style={{ display: 'flex', gap: 'var(--spacing-xs)', flexWrap: 'wrap' }}>
+                      {bet.options.map((option) => (
+                        <button
+                          key={option}
+                          className="quick-resolve-btn"
+                          onClick={() => handleResolveBet(bet.betId, option)}
+                          disabled={resolvingBetId === bet.betId}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
                     {resolvingBetId === bet.betId && (
-                      <p className="text-secondary" style={{ fontSize: '0.875rem', textAlign: 'center', marginBottom: 0 }}>
+                      <p className="text-secondary" style={{ fontSize: '0.875rem', textAlign: 'center', marginBottom: 0, marginTop: 'var(--spacing-xs)' }}>
                         Resolving...
                       </p>
                     )}
@@ -1015,25 +1057,40 @@ export default function RoomPage() {
 
       {/* Sticky Action Bar (host only) */}
       {isHost && displayRoom.status !== 'finished' && (
-        <div className="sticky-action-bar">
-          {displayRoom.status === 'waiting' && (
-            <button className="btn btn-primary" onClick={handleStartRoom}
-              style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
-              Start {isTournament ? 'Tournament' : 'Event'}
-            </button>
+        <div className="sticky-action-bar" style={{ flexDirection: 'column', gap: 'var(--spacing-xs)' }}>
+          {/* Context-aware next action for open/locked bets */}
+          {displayRoom.status === 'active' && openBets.length > 0 && (
+            <div style={{ display: 'flex', gap: 'var(--spacing-xs)', width: '100%' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => handleCloseBet(openBets[0].betId)}
+                disabled={closingBetId === openBets[0].betId}
+                style={{ flex: 1, fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+              >
+                {closingBetId === openBets[0].betId ? 'Locking...' : `Lock: ${openBets[0].question.substring(0, 25)}${openBets[0].question.length > 25 ? '...' : ''}`}
+              </button>
+            </div>
           )}
-          {(displayRoom.status === 'waiting' || displayRoom.status === 'active') && (
-            <button className="btn btn-primary" onClick={() => setShowBetModal(true)}
-              style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
-              + New Bet
-            </button>
-          )}
-          {displayRoom.status === 'active' && (
-            <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)}
-              style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
-              Live Feed
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 'var(--spacing-xs)', width: '100%' }}>
+            {displayRoom.status === 'waiting' && (
+              <button className="btn btn-primary" onClick={handleStartRoom}
+                style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
+                Start {isTournament ? 'Tournament' : 'Event'}
+              </button>
+            )}
+            {(displayRoom.status === 'waiting' || displayRoom.status === 'active') && (
+              <button className="btn btn-primary" onClick={() => setShowBetModal(true)}
+                style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
+                + New Bet
+              </button>
+            )}
+            {displayRoom.status === 'active' && (
+              <button className="btn btn-secondary" onClick={() => setShowFeedModal(true)}
+                style={{ flex: 1, fontSize: '0.875rem', padding: '0.625rem 1rem' }}>
+                Live Feed
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1091,6 +1148,15 @@ export default function RoomPage() {
           roomCode={code!}
           hostId={session.hostId}
           onClose={() => setEditingBet(null)}
+        />
+      )}
+
+      {/* Bet Resolution Feedback Overlay */}
+      {resolutionFeedback && (
+        <BetResolutionFeedback
+          won={resolutionFeedback.won}
+          pointsDelta={resolutionFeedback.pointsDelta}
+          onDismiss={() => setResolutionFeedback(null)}
         />
       )}
     </div>
