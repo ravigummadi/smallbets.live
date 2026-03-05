@@ -142,7 +142,16 @@ async def resolve_bet(bet_id: str, winning_option: str) -> None:
     # Use Firestore transaction for atomic multi-document updates
     @firestore.transactional
     def resolve_in_transaction(transaction):
-        # Update user points and user bets
+        # Phase 1: ALL READS first (Firestore requires reads before writes)
+        room_user_data = {}
+        for user_id in scores:
+            room_user_doc_id = f"{bet.room_code}_{user_id}"
+            room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+            room_user_doc = room_user_ref.get(transaction=transaction)
+            if room_user_doc.exists:
+                room_user_data[user_id] = room_user_doc.to_dict()
+
+        # Phase 2: ALL WRITES
         for user_id, points_won in scores.items():
             user = users[user_id]
             new_points = user.points + points_won
@@ -151,12 +160,10 @@ async def resolve_bet(bet_id: str, winning_option: str) -> None:
             transaction.update(user_ref, {"points": new_points})
 
             # Also update roomUsers if exists
-            room_user_doc_id = f"{bet.room_code}_{user_id}"
-            room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
-            room_user_doc = room_user_ref.get(transaction=transaction)
-            if room_user_doc.exists:
-                ru_data = room_user_doc.to_dict()
-                ru_new_points = ru_data["points"] + points_won
+            if user_id in room_user_data:
+                room_user_doc_id = f"{bet.room_code}_{user_id}"
+                room_user_ref = db.collection("roomUsers").document(room_user_doc_id)
+                ru_new_points = room_user_data[user_id]["points"] + points_won
                 transaction.update(room_user_ref, {"points": ru_new_points})
 
             # Update user bet with points won
