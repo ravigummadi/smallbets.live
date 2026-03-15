@@ -24,9 +24,22 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+// Mock useMyRooms hook
+const mockRemoveRoom = vi.fn();
+let mockMyRooms: any[] = [];
+vi.mock('@/hooks/useMyRooms', () => ({
+  useMyRooms: () => ({
+    rooms: mockMyRooms,
+    saveRoom: vi.fn(),
+    removeRoom: mockRemoveRoom,
+  }),
+}));
+
 describe('HomePage', () => {
   beforeEach(() => {
     mockNavigate.mockClear();
+    mockRemoveRoom.mockClear();
+    mockMyRooms = [];
   });
 
   describe('Rendering', () => {
@@ -257,6 +270,95 @@ describe('HomePage', () => {
       const h1 = screen.getByRole('heading', { level: 1 });
 
       expect(h1).toHaveTextContent('SmallBets.live');
+    });
+  });
+
+  describe('My Rooms section', () => {
+    it('should not show My Rooms section when no rooms saved', () => {
+      mockMyRooms = [];
+      render(<HomePage />);
+      expect(screen.queryByText('My Rooms')).not.toBeInTheDocument();
+    });
+
+    it('should show My Rooms section when rooms exist', () => {
+      mockMyRooms = [{
+        roomCode: 'ABCD',
+        userKey: 'key12345',
+        hostLink: 'http://localhost/room/ABCD/u/key12345',
+        joinLink: 'http://localhost/join/ABCD',
+        eventName: 'Grammy Awards 2026',
+        isTournament: false,
+        isHost: true,
+        createdAt: Date.now(),
+      }];
+      render(<HomePage />);
+      expect(screen.getByText('My Rooms')).toBeInTheDocument();
+      expect(screen.getByText('Grammy Awards 2026')).toBeInTheDocument();
+      expect(screen.getByText('Code: ABCD')).toBeInTheDocument();
+    });
+
+    it('should show Host badge for host rooms', () => {
+      mockMyRooms = [{
+        roomCode: 'ABCD',
+        userKey: 'key12345',
+        hostLink: 'http://localhost/room/ABCD/u/key12345',
+        joinLink: 'http://localhost/join/ABCD',
+        eventName: 'Test Room',
+        isTournament: false,
+        isHost: true,
+        createdAt: Date.now(),
+      }];
+      render(<HomePage />);
+      expect(screen.getByText('Host')).toBeInTheDocument();
+    });
+
+    it('should show Tournament badge for tournament rooms', () => {
+      mockMyRooms = [{
+        roomCode: 'TOUR42',
+        userKey: 'key12345',
+        hostLink: 'http://localhost/room/TOUR42/u/key12345',
+        joinLink: 'http://localhost/join/TOUR42',
+        eventName: 'IPL 2026',
+        isTournament: true,
+        isHost: true,
+        createdAt: Date.now(),
+      }];
+      render(<HomePage />);
+      expect(screen.getByText('Tournament')).toBeInTheDocument();
+    });
+
+    it('should have Open link pointing to room with user key', () => {
+      mockMyRooms = [{
+        roomCode: 'ABCD',
+        userKey: 'key12345',
+        hostLink: 'http://localhost/room/ABCD/u/key12345',
+        joinLink: 'http://localhost/join/ABCD',
+        eventName: 'Test Room',
+        isTournament: false,
+        isHost: true,
+        createdAt: Date.now(),
+      }];
+      render(<HomePage />);
+      const openLink = screen.getByRole('link', { name: /open/i });
+      expect(openLink).toHaveAttribute('href', '/room/ABCD/u/key12345');
+    });
+
+    it('should call removeRoom when remove button is clicked', async () => {
+      const user = userEvent.setup();
+      mockMyRooms = [{
+        roomCode: 'ABCD',
+        userKey: 'key12345',
+        hostLink: 'http://localhost/room/ABCD/u/key12345',
+        joinLink: 'http://localhost/join/ABCD',
+        eventName: 'Test Room',
+        isTournament: false,
+        isHost: true,
+        createdAt: Date.now(),
+      }];
+      render(<HomePage />);
+      const removeBtn = screen.getByTitle('Remove from list');
+      await user.click(removeBtn);
+      expect(mockRemoveRoom).toHaveBeenCalledWith('ABCD');
     });
   });
 
