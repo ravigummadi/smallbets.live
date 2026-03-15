@@ -6,10 +6,12 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMyRooms } from '@/hooks/useMyRooms';
 
 export default function HomePage() {
   const [roomCode, setRoomCode] = useState('');
   const navigate = useNavigate();
+  const { rooms: myRooms, removeRoom } = useMyRooms();
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +67,46 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* My Rooms */}
+      {myRooms.length > 0 && (
+        <section className="container my-rooms-section">
+          <h2 className="section-title">My Rooms</h2>
+          <div className="my-rooms-list">
+            {myRooms.map((room) => (
+              <div key={room.roomCode} className="my-room-card">
+                <div className="my-room-info">
+                  <div className="my-room-name">
+                    {room.eventName}
+                    {room.isTournament && (
+                      <span className="my-room-badge">Tournament</span>
+                    )}
+                    {room.isHost && (
+                      <span className="my-room-badge my-room-badge--host">Host</span>
+                    )}
+                  </div>
+                  <div className="my-room-code">Code: {room.roomCode}</div>
+                </div>
+                <div className="my-room-actions">
+                  <Link
+                    to={`/room/${room.roomCode}/u/${room.userKey}`}
+                    className="btn btn-primary btn-xs"
+                  >
+                    Open
+                  </Link>
+                  <button
+                    className="btn btn-secondary btn-xs"
+                    onClick={() => removeRoom(room.roomCode)}
+                    title="Remove from list"
+                  >
+                    &times;
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* How It Works */}
       <section id="how-it-works" className="container how-it-works">

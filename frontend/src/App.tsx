@@ -7,6 +7,7 @@ import HomePage from './components/pages/HomePage';
 import CreateRoomPage from './components/pages/CreateRoomPage';
 import JoinRoomPage from './components/pages/JoinRoomPage';
 import RoomPage from './components/pages/RoomPage';
+import RoomCreatedPage from './components/pages/RoomCreatedPage';
 import AppHeader from './components/AppHeader';
 import AppFooter from './components/AppFooter';
 
@@ -18,6 +19,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/create" element={<CreateRoomPage />} />
+          <Route path="/room-created" element={<RoomCreatedPage />} />
           <Route path="/join/:code?" element={<JoinRoomPage />} />
           <Route path="/room/:code" element={<RoomPage />} />
           <Route path="/room/:code/u/:userKey" element={<RoomPage />} />
