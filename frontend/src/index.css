@@ -177,6 +177,23 @@ button {
   transform: translateY(-1px);
 }
 
+.btn-cohost-action {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.35rem;
+  min-height: auto;
+  line-height: 1.2;
+}
+
+.btn-promote-cohost {
+  color: var(--color-accent-warm);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.btn-demote-cohost {
+  color: var(--color-error);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
 .btn-danger {
   background-color: rgba(248, 113, 113, 0.1);
   color: var(--color-error);
@@ -892,6 +909,11 @@ select:focus {
   color: #fff;
   border: none;
 }
+.room-header-role-badge--cohost {
+  background: linear-gradient(135deg, var(--color-accent-warm), #F59E0B);
+  color: #fff;
+  border: none;
+}
 .room-header-finish { margin-top: var(--spacing-md); padding-top: 0.75rem; border-top: 1px solid var(--color-border); }
 .room-header-finish-btn { font-size: var(--font-size-sm); }
 
@@ -1058,7 +1080,7 @@ select:focus {
 .hero-section {
   position: relative;
   overflow: hidden;
-  padding: 4rem 0 3rem;
+  padding: 3rem 0 2rem;
   text-align: center;
 }
 
@@ -1075,19 +1097,19 @@ select:focus {
 }
 
 .hero-icon {
-  font-size: 3rem;
-  margin-bottom: var(--spacing-lg);
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-md);
   display: inline-block;
   background: rgba(255, 255, 255, 0.08);
-  width: 80px;
-  height: 80px;
-  line-height: 80px;
+  width: 68px;
+  height: 68px;
+  line-height: 68px;
   border-radius: var(--radius-xl);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .hero-title {
-  font-size: 2.75rem;
+  font-size: 2.5rem;
   margin-bottom: var(--spacing-md);
 }
 
@@ -1097,10 +1119,10 @@ select:focus {
 
 .hero-subtitle {
   color: var(--color-text-secondary);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   max-width: 480px;
-  margin: 0 auto var(--spacing-xl);
-  line-height: 1.6;
+  margin: 0 auto var(--spacing-lg);
+  line-height: 1.5;
 }
 
 .hero-actions {
@@ -1169,6 +1191,38 @@ select:focus {
 
 .hero-create-btn {
   font-size: 0.95rem;
+}
+
+.scroll-hint {
+  margin-top: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  animation: bounce 2s infinite;
+  cursor: pointer;
+  text-shadow: 0 0 12px rgba(20, 184, 166, 0.4);
+  transition: color 0.2s ease;
+}
+
+.scroll-hint:hover {
+  color: var(--color-accent-warm);
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+.scroll-hint-chevron {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40% { transform: translateY(8px) scale(1.15); }
+  60% { transform: translateY(4px) scale(1.05); }
 }
 
 /* ===== Section Titles ===== */
@@ -1309,22 +1363,22 @@ select:focus {
   }
 
   .hero-section {
-    padding: 2.5rem 0 2rem;
+    padding: 2rem 0 1.5rem;
   }
 
   .hero-title {
-    font-size: 2rem;
+    font-size: 1.85rem;
   }
 
   .hero-subtitle {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .hero-icon {
-    width: 64px;
-    height: 64px;
-    line-height: 64px;
-    font-size: 2.25rem;
+    width: 56px;
+    height: 56px;
+    line-height: 56px;
+    font-size: 2rem;
   }
 
   .steps-grid {

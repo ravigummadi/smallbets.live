@@ -12,9 +12,13 @@ interface AnimatedLeaderboardProps {
   participants: User[];
   currentUserId?: string;
   isHost: boolean;
+  isPrimaryHost: boolean;
+  coHostIds: string[];
   participantLinks?: ParticipantWithLink[];
   copiedUserId: string | null;
   onCopyLink?: (participant: ParticipantWithLink) => void;
+  onPromoteCoHost?: (userId: string) => void;
+  onDemoteCoHost?: (userId: string) => void;
 }
 
 interface RankedParticipant extends User {
@@ -27,9 +31,13 @@ export default function AnimatedLeaderboard({
   participants,
   currentUserId,
   isHost,
+  isPrimaryHost,
+  coHostIds,
   participantLinks = [],
   copiedUserId,
   onCopyLink,
+  onPromoteCoHost,
+  onDemoteCoHost,
 }: AnimatedLeaderboardProps) {
   const prevParticipantsRef = useRef<Map<string, { rank: number; points: number }>>(new Map());
   const [rankedParticipants, setRankedParticipants] = useState<RankedParticipant[]>([]);
@@ -122,6 +130,11 @@ export default function AnimatedLeaderboard({
                       (Host)
                     </span>
                   )}
+                  {!participant.isAdmin && coHostIds.includes(participant.userId) && (
+                    <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--color-accent-warm)' }}>
+                      Co-Host
+                    </span>
+                  )}
                   {isCurrentUser && (
                     <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--color-primary)' }}>
                       You
@@ -167,6 +180,27 @@ export default function AnimatedLeaderboard({
                   >
                     {copiedUserId === participant.userId ? 'Copied!' : 'Copy Link'}
                   </button>
+                )}
+                {isPrimaryHost && !participant.isAdmin && participant.userId !== currentUserId && (
+                  coHostIds.includes(participant.userId) ? (
+                    onDemoteCoHost && (
+                      <button
+                        className="btn btn-secondary btn-cohost-action btn-demote-cohost"
+                        onClick={() => onDemoteCoHost(participant.userId)}
+                      >
+                        Remove Co-Host
+                      </button>
+                    )
+                  ) : (
+                    onPromoteCoHost && (
+                      <button
+                        className="btn btn-secondary btn-cohost-action btn-promote-cohost"
+                        onClick={() => onPromoteCoHost(participant.userId)}
+                      >
+                        Make Co-Host
+                      </button>
+                    )
+                  )
                 )}
               </span>
             </div>

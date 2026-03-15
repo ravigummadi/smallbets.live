@@ -201,6 +201,10 @@ class EditBetRequest(BaseModel):
     pointsValue: Optional[int] = None
 
 
+class CoHostRequest(BaseModel):
+    user_id: str
+
+
 # ============================================================================
 # Dependency Injection
 # ============================================================================
@@ -225,11 +229,24 @@ async def require_host(
     code: str,
     x_host_id: Annotated[str, Header(alias="X-Host-Id")],
 ) -> Room:
-    """Dependency: Verify user is room host"""
+    """Dependency: Verify user is room host or co-host"""
+    room = await get_room_or_404(code)
+
+    if room.host_id != x_host_id and x_host_id not in room.co_host_ids:
+        raise HTTPException(status_code=403, detail="Not the room host")
+
+    return room
+
+
+async def require_primary_host(
+    code: str,
+    x_host_id: Annotated[str, Header(alias="X-Host-Id")],
+) -> Room:
+    """Dependency: Verify user is the primary room host (not co-host)"""
     room = await get_room_or_404(code)
 
     if room.host_id != x_host_id:
-        raise HTTPException(status_code=403, detail="Not the room host")
+        raise HTTPException(status_code=403, detail="Only the primary host can manage co-hosts")
 
     return room
 
@@ -238,6 +255,7 @@ async def require_host(
 RoomDep = Annotated[Room, Depends(get_room_or_404)]
 UserDep = Annotated[User, Depends(get_user_or_404)]
 HostRoomDep = Annotated[Room, Depends(require_host)]
+PrimaryHostRoomDep = Annotated[Room, Depends(require_primary_host)]
 
 
 # ============================================================================
@@ -627,6 +645,51 @@ async def finish_room(code: str, room: HostRoomDep):
         "status": "finished",
         "leaderboard": leaderboard,
     }
+
+
+# ============================================================================
+# Co-Host Endpoints
+# ============================================================================
+
+@app.post("/api/rooms/{code}/co-host")
+async def add_co_host(code: str, room: PrimaryHostRoomDep, request: CoHostRequest):
+    """Promote a participant to co-host (primary host only)"""
+    user_id = request.user_id
+
+    if user_id == room.host_id:
+        raise HTTPException(status_code=400, detail="User is already the primary host")
+
+    if user_id in room.co_host_ids:
+        raise HTTPException(status_code=400, detail="User is already a co-host")
+
+    # Verify user exists in this room
+    user = await user_service.get_user(user_id)
+    if not user or user.room_code != code:
+        raise HTTPException(status_code=404, detail="User not found in this room")
+
+    if room.room_type in ("tournament", "match") and user_id not in room.participants:
+        raise HTTPException(status_code=400, detail="User is not a participant in this room")
+
+    updated_co_hosts = room.co_host_ids + [user_id]
+    updated_room = room.model_copy(update={"co_host_ids": updated_co_hosts})
+    await room_service.update_room(updated_room)
+
+    logger.info("CO_HOST_ADDED: room=%s user=%s", code, user_id)
+    return {"status": "added", "userId": user_id, "coHostIds": updated_co_hosts}
+
+
+@app.delete("/api/rooms/{code}/co-host/{user_id}")
+async def remove_co_host(code: str, user_id: str, room: PrimaryHostRoomDep):
+    """Remove a co-host (primary host only)"""
+    if user_id not in room.co_host_ids:
+        raise HTTPException(status_code=404, detail="User is not a co-host")
+
+    updated_co_hosts = [uid for uid in room.co_host_ids if uid != user_id]
+    updated_room = room.model_copy(update={"co_host_ids": updated_co_hosts})
+    await room_service.update_room(updated_room)
+
+    logger.info("CO_HOST_REMOVED: room=%s user=%s", code, user_id)
+    return {"status": "removed", "userId": user_id, "coHostIds": updated_co_hosts}
 
 
 # ============================================================================
