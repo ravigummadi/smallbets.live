@@ -87,19 +87,9 @@ export default function RoomPage() {
   // Session restoration via userKey link
   const needsRestore = userKey && code && (!session || session.roomCode !== code);
 
-  if (needsRestore) {
-    return (
-      <SessionRestoreFlow
-        code={code!}
-        userKey={userKey!}
-        existingSession={session}
-        onSessionRestored={saveSession}
-      />
-    );
-  }
-
   // Redirect if no session for this room (and not on a userKey URL)
   useEffect(() => {
+    if (needsRestore) return;
     if (userKey) return;
     if (!session || session.roomCode !== code) {
       navigate(`/join/${code}`, {
@@ -381,6 +371,18 @@ export default function RoomPage() {
   const awaitingUserData = !roomLoading && localRoom && !user
     && session && session.roomCode === code;
   const stillLoading = roomLoading || userLoading || awaitingUserData;
+
+  // Session restore must be rendered AFTER all hooks to avoid "rendered more hooks" error
+  if (needsRestore) {
+    return (
+      <SessionRestoreFlow
+        code={code!}
+        userKey={userKey!}
+        existingSession={session}
+        onSessionRestored={saveSession}
+      />
+    );
+  }
 
   if (stillLoading) {
     return (
