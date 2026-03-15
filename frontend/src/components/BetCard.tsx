@@ -20,6 +20,7 @@ interface BetCardProps {
   onToggleExpand: (betId: string) => void;
   onPlaceBet: (betId: string, option: string) => void;
   onCloseBet: (betId: string) => void;
+  onToggleBettingLock: (betId: string, locked: boolean) => void;
   onResolveBet: (betId: string, winningOption: string) => void;
   onDeleteBet: (betId: string) => void;
   onEditBet: (bet: Bet) => void;
@@ -42,6 +43,7 @@ export default function BetCard({
   onToggleExpand,
   onPlaceBet,
   onCloseBet,
+  onToggleBettingLock,
   onResolveBet,
   onDeleteBet,
   onEditBet,
@@ -52,6 +54,7 @@ export default function BetCard({
 }: BetCardProps) {
   const hasPlacedBet = !!userBet;
   const [isChanging, setIsChanging] = useState(false);
+  const isBettingLocked = bet.status === 'open' && bet.bettingLocked;
 
   // Close "change" UI when the bet selection updates (async operation completed)
   useEffect(() => {
@@ -80,6 +83,11 @@ export default function BetCard({
               {hasPlacedBet && bet.status !== 'resolved' && (
                 <span className="bet-card-placed">
                   &bull; Bet placed
+                </span>
+              )}
+              {isBettingLocked && (
+                <span className="text-error">
+                  &bull; Locked
                 </span>
               )}
             </p>
@@ -126,7 +134,7 @@ export default function BetCard({
                       : <span className="text-error">Lost</span>}
                   </span>
                 )}
-                {bet.status === 'open' && !isChanging && (
+                {bet.status === 'open' && !isBettingLocked && !isChanging && (
                   <button
                     className="btn-link bet-card-change-btn"
                     onClick={() => setIsChanging(true)}
@@ -135,7 +143,12 @@ export default function BetCard({
                   </button>
                 )}
               </p>
-              {isChanging && bet.status === 'open' && (
+              {isBettingLocked && (
+                <p className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                  Betting is locked by host
+                </p>
+              )}
+              {isChanging && bet.status === 'open' && !isBettingLocked && (
                 <>
                   {error && (
                     <div className="bet-card-error">
@@ -165,31 +178,39 @@ export default function BetCard({
             </div>
           ) : bet.status === 'open' ? (
             <>
-              {error && (
-                <div className="bet-card-error">
-                  <p className="text-error bet-card-error-text">
-                    {error}
-                  </p>
-                </div>
-              )}
-
-              <div className="bet-card-options">
-                {bet.options.map((option) => (
-                  <button
-                    key={option}
-                    className="btn btn-secondary bet-card-option"
-                    disabled={isPlacing}
-                    onClick={() => onPlaceBet(bet.betId, option)}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-
-              {isPlacing && (
-                <p className="bet-card-placing">
-                  Placing bet...
+              {isBettingLocked ? (
+                <p className="text-muted bet-card-closed-text">
+                  Betting is locked by host
                 </p>
+              ) : (
+                <>
+                  {error && (
+                    <div className="bet-card-error">
+                      <p className="text-error bet-card-error-text">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="bet-card-options">
+                    {bet.options.map((option) => (
+                      <button
+                        key={option}
+                        className="btn btn-secondary bet-card-option"
+                        disabled={isPlacing}
+                        onClick={() => onPlaceBet(bet.betId, option)}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+
+                  {isPlacing && (
+                    <p className="bet-card-placing">
+                      Placing bet...
+                    </p>
+                  )}
+                </>
               )}
             </>
           ) : (
@@ -213,6 +234,12 @@ export default function BetCard({
             <div className="bet-card-admin">
               {bet.status === 'open' && (
                 <div className="bet-card-admin-open">
+                  <button
+                    className="btn btn-secondary btn-full mb-sm"
+                    onClick={(e) => { e.stopPropagation(); onToggleBettingLock(bet.betId, !bet.bettingLocked); }}
+                  >
+                    {bet.bettingLocked ? 'Unlock Betting' : 'Lock Betting'}
+                  </button>
                   <button
                     className="btn btn-secondary btn-full bet-card-close-btn"
                     onClick={(e) => { e.stopPropagation(); onCloseBet(bet.betId); }}

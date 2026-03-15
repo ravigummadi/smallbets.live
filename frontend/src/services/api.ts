@@ -218,6 +218,14 @@ export const betApi = {
     });
   },
 
+  async toggleBettingLock(roomCode: string, hostId: string, betId: string, locked: boolean): Promise<Bet> {
+    return fetchApi(`/api/rooms/${roomCode}/bets/${betId}/toggle-lock`, {
+      method: 'POST',
+      headers: { 'X-Host-Id': hostId },
+      body: JSON.stringify({ locked }),
+    });
+  },
+
   async resolveBet(
     roomCode: string,
     hostId: string,

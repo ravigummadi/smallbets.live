@@ -212,6 +212,17 @@ export default function RoomPage() {
     }
   };
 
+  const handleToggleBettingLock = async (betId: string, locked: boolean) => {
+    const hostId = effectiveHostId;
+    if (!code || !hostId) return;
+    setAdminError(null);
+    try {
+      await betApi.toggleBettingLock(code, hostId, betId, locked);
+    } catch (err: any) {
+      setAdminError(err.detail || `Failed to ${locked ? 'lock' : 'unlock'} betting`);
+    }
+  };
+
   const handleResolveBet = async (betId: string, winningOption: string) => {
     const hostId = effectiveHostId;
     if (!code || !hostId) return;
@@ -440,6 +451,7 @@ export default function RoomPage() {
       onToggleExpand={toggleBetExpanded}
       onPlaceBet={handlePlaceBet}
       onCloseBet={handleCloseBet}
+      onToggleBettingLock={handleToggleBettingLock}
       onResolveBet={handleResolveBet}
       onDeleteBet={handleDeleteBet}
       onEditBet={setEditingBet}

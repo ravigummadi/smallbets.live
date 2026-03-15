@@ -73,6 +73,7 @@ export interface Bet {
   timerDuration: number;
   canUndoUntil: Date | null;
   version: number;
+  bettingLocked: boolean;
 }
 
 export interface UserBet {

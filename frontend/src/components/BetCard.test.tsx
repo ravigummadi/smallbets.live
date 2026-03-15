@@ -37,6 +37,7 @@ const baseProps = {
   onToggleExpand: vi.fn(),
   onPlaceBet: vi.fn(),
   onCloseBet: vi.fn(),
+  onToggleBettingLock: vi.fn(),
   onResolveBet: vi.fn(),
   onDeleteBet: vi.fn(),
   onEditBet: vi.fn(),
