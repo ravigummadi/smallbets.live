@@ -25,6 +25,7 @@ interface BetCardProps {
   onEditBet: (bet: Bet) => void;
   onUndoBet: (betId: string) => void;
   onTimerExpired?: (betId: string) => void;
+  onViewBets: (bet: Bet) => void;
   canUndo: (bet: Bet) => boolean;
 }
 
@@ -46,6 +47,7 @@ export default function BetCard({
   onEditBet,
   onUndoBet,
   onTimerExpired,
+  onViewBets,
   canUndo,
 }: BetCardProps) {
   const hasPlacedBet = !!userBet;
@@ -189,6 +191,16 @@ export default function BetCard({
             <p className="text-muted bet-card-closed-text">
               {bet.status === 'locked' ? 'Betting is closed' : 'Bet resolved'}
             </p>
+          )}
+
+          {/* View all bets button */}
+          {(bet.status !== 'pending') && (
+            <button
+              className="btn btn-secondary btn-xs bet-card-view-bets"
+              onClick={(e) => { e.stopPropagation(); onViewBets(bet); }}
+            >
+              View All Bets
+            </button>
           )}
 
           {/* Inline admin controls (host only) */}

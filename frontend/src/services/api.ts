@@ -285,4 +285,11 @@ export const betApi = {
       body: JSON.stringify(request),
     });
   },
+
+  async getBetUserBets(
+    roomCode: string,
+    betId: string,
+  ): Promise<{ userBets: (UserBet & { nickname: string })[] }> {
+    return fetchApi(`/api/rooms/${roomCode}/bets/${betId}/user-bets`);
+  },
 };
