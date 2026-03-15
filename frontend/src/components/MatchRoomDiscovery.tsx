@@ -5,7 +5,9 @@
  * and direct "Join Match" buttons for participants.
  */
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { roomApi } from '@/services/api';
 import type { Room } from '@/types';
 
 interface MatchRoomDiscoveryProps {
@@ -26,15 +28,27 @@ export default function MatchRoomDiscovery({
   onCreateMatch,
 }: MatchRoomDiscoveryProps) {
   const navigate = useNavigate();
+  const [navigatingCode, setNavigatingCode] = useState<string | null>(null);
 
-  const handleJoinMatch = (matchRoom: Room) => {
-    navigate(`/join/${matchRoom.code}`, {
-      state: {
-        fromTournament: tournamentCode,
-        parentUserId: userId,
-        nickname,
-      },
-    });
+  const handleGoToMatch = async (matchRoom: Room) => {
+    if (!nickname) {
+      navigate(`/join/${matchRoom.code}`, {
+        state: { fromTournament: tournamentCode, parentUserId: userId, nickname },
+      });
+      return;
+    }
+    setNavigatingCode(matchRoom.code);
+    try {
+      const res = await roomApi.getUserKeyByNickname(matchRoom.code, nickname);
+      navigate(`/room/${matchRoom.code}/u/${res.userKey}`);
+    } catch {
+      // User not in this match room yet — send to join
+      navigate(`/join/${matchRoom.code}`, {
+        state: { fromTournament: tournamentCode, parentUserId: userId, nickname },
+      });
+    } finally {
+      setNavigatingCode(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -106,7 +120,7 @@ export default function MatchRoomDiscovery({
           {sortedRooms.map(matchRoom => {
             const teams = matchRoom.matchDetails;
             const title = matchRoom.eventName || (teams ? `${teams.team1} vs ${teams.team2}` : `Match ${matchRoom.code}`);
-            const isUserInMatch = matchRoom.participants?.includes(userId || '');
+            const isNavigating = navigatingCode === matchRoom.code;
 
             return (
               <div
@@ -142,31 +156,14 @@ export default function MatchRoomDiscovery({
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  {isUserInMatch ? (
-                    <button
-                      className="btn btn-primary"
-                      style={{ flex: 1, fontSize: '0.8rem', padding: '0.4rem 0.75rem', minHeight: '36px' }}
-                      onClick={() => navigate(`/room/${matchRoom.code}`)}
-                    >
-                      {matchRoom.status === 'active' ? 'Go to Match' : 'View Match'}
-                    </button>
-                  ) : matchRoom.status !== 'finished' ? (
-                    <button
-                      className="btn btn-primary"
-                      style={{ flex: 1, fontSize: '0.8rem', padding: '0.4rem 0.75rem', minHeight: '36px' }}
-                      onClick={() => handleJoinMatch(matchRoom)}
-                    >
-                      Join Match
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-secondary"
-                      style={{ flex: 1, fontSize: '0.8rem', padding: '0.4rem 0.75rem', minHeight: '36px' }}
-                      onClick={() => navigate(`/room/${matchRoom.code}`)}
-                    >
-                      View Results
-                    </button>
-                  )}
+                  <button
+                    className={`btn ${matchRoom.status === 'finished' ? 'btn-secondary' : 'btn-primary'}`}
+                    style={{ flex: 1, fontSize: '0.8rem', padding: '0.4rem 0.75rem', minHeight: '36px' }}
+                    disabled={isNavigating}
+                    onClick={() => handleGoToMatch(matchRoom)}
+                  >
+                    {isNavigating ? 'Loading...' : matchRoom.status === 'active' ? 'Go to Match' : matchRoom.status === 'finished' ? 'View Results' : 'Join Match'}
+                  </button>
                 </div>
               </div>
             );
