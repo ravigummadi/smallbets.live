@@ -41,6 +41,7 @@ const baseProps = {
   onDeleteBet: vi.fn(),
   onEditBet: vi.fn(),
   onUndoBet: vi.fn(),
+  onViewBets: vi.fn(),
   canUndo: () => false,
 };
 
