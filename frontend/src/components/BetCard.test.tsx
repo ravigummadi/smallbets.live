@@ -162,9 +162,9 @@ describe('BetCard', () => {
   });
 
   describe('Host admin controls', () => {
-    it('should show Close Bet button for host on open bet', () => {
+    it('should show Lock Bet button for host on open bet', () => {
       render(<BetCard {...baseProps} isHost={true} isExpanded={true} />);
-      expect(screen.getByText('Close Bet')).toBeDefined();
+      expect(screen.getByText('Lock Bet')).toBeDefined();
     });
 
     it('should show Edit and Delete buttons for host on open bet', () => {
@@ -183,15 +183,15 @@ describe('BetCard', () => {
 
     it('should not show admin controls for non-host', () => {
       render(<BetCard {...baseProps} isHost={false} isExpanded={true} />);
-      expect(screen.queryByText('Close Bet')).toBeNull();
+      expect(screen.queryByText('Lock Bet')).toBeNull();
     });
 
-    it('should call onCloseBet when Close Bet is clicked', async () => {
+    it('should call onCloseBet when Lock Bet is clicked', async () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
       render(<BetCard {...baseProps} isHost={true} isExpanded={true} onCloseBet={onClose} />);
 
-      await user.click(screen.getByText('Close Bet'));
+      await user.click(screen.getByText('Lock Bet'));
       expect(onClose).toHaveBeenCalledWith('bet-1');
     });
 

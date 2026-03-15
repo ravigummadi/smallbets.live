@@ -218,6 +218,13 @@ export const betApi = {
     });
   },
 
+  async unlockBet(roomCode: string, hostId: string, betId: string): Promise<Bet> {
+    return fetchApi(`/api/rooms/${roomCode}/bets/${betId}/unlock`, {
+      method: 'POST',
+      headers: { 'X-Host-Id': hostId },
+    });
+  },
+
   async resolveBet(
     roomCode: string,
     hostId: string,

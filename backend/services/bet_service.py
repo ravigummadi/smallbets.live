@@ -114,6 +114,20 @@ async def lock_bet(bet_id: str) -> Bet:
     return locked_bet
 
 
+async def unlock_bet(bet_id: str) -> Bet:
+    """Unlock a bet (reopen betting)"""
+    bet = await get_bet(bet_id)
+    if not bet:
+        raise ValueError(f"Bet not found: {bet_id}")
+
+    if bet.status != BetStatus.LOCKED:
+        raise ValueError(f"Only locked bets can be unlocked (current: {bet.status.value})")
+
+    unlocked_bet = bet.unlock_bet()
+    await update_bet(unlocked_bet)
+    return unlocked_bet
+
+
 async def resolve_bet(bet_id: str, winning_option: str) -> None:
     """Resolve a bet and distribute points using Firestore transaction.
 

@@ -136,6 +136,13 @@ class Bet(BaseModel):
             "can_undo_until": now + timedelta(seconds=10),
         })
 
+    def unlock_bet(self) -> "Bet":
+        """Return new Bet instance with reopened status (locked -> open)"""
+        return self.model_copy(update={
+            "status": BetStatus.OPEN,
+            "locked_at": None,
+        })
+
     def undo_resolve(self) -> "Bet":
         """Return new Bet instance with resolution undone (back to locked)"""
         if not self.can_undo():

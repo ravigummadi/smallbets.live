@@ -788,6 +788,19 @@ async def lock_bet(code: str, room: HostRoomDep, request: LockBetRequest):
         raise HTTPException(status_code=500, detail=f"Failed to lock bet: {str(e)}")
 
 
+@app.post("/api/rooms/{code}/bets/{bet_id}/unlock")
+async def unlock_bet(code: str, bet_id: str, room: HostRoomDep):
+    """Unlock a bet (reopen betting) (admin only)"""
+    try:
+        bet = await bet_service.unlock_bet(bet_id)
+        return bet.to_dict()
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to unlock bet: {str(e)}")
+
+
 @app.post("/api/rooms/{code}/bets/{bet_id}/resolve")
 async def resolve_bet(
     code: str,

@@ -20,6 +20,7 @@ interface BetCardProps {
   onToggleExpand: (betId: string) => void;
   onPlaceBet: (betId: string, option: string) => void;
   onCloseBet: (betId: string) => void;
+  onUnlockBet: (betId: string) => void;
   onResolveBet: (betId: string, winningOption: string) => void;
   onDeleteBet: (betId: string) => void;
   onEditBet: (bet: Bet) => void;
@@ -42,6 +43,7 @@ export default function BetCard({
   onToggleExpand,
   onPlaceBet,
   onCloseBet,
+  onUnlockBet,
   onResolveBet,
   onDeleteBet,
   onEditBet,
@@ -218,7 +220,7 @@ export default function BetCard({
                     onClick={(e) => { e.stopPropagation(); onCloseBet(bet.betId); }}
                     disabled={closingBetId === bet.betId}
                   >
-                    {closingBetId === bet.betId ? 'Closing...' : 'Close Bet'}
+                    {closingBetId === bet.betId ? 'Locking...' : 'Lock Bet'}
                   </button>
                   <div className="bet-card-admin-row">
                     <button
@@ -239,6 +241,12 @@ export default function BetCard({
               )}
               {bet.status === 'locked' && (
                 <div onClick={(e) => e.stopPropagation()}>
+                  <button
+                    className="btn btn-secondary btn-full mb-sm"
+                    onClick={() => onUnlockBet(bet.betId)}
+                  >
+                    Unlock Bet
+                  </button>
                   <p className="bet-card-resolve-label">
                     Tap the winner:
                   </p>
