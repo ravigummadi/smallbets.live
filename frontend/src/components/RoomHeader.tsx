@@ -62,13 +62,13 @@ export default function RoomHeader({
           </div>
         </div>
         <div className="text-right">
+          <p className="room-header-nickname">{user.nickname}</p>
           <p className="points-display room-header-points">
             {user.points}
           </p>
           <p className="room-header-points-label">
             points
           </p>
-          <p className="room-header-nickname">{user.nickname}</p>
           <span className={`room-header-role-badge ${isCoHost ? 'room-header-role-badge--cohost' : isHost ? 'room-header-role-badge--host' : ''}`}>
             {isCoHost ? 'Co-Host' : isHost ? 'Host' : 'Guest'}
           </span>
