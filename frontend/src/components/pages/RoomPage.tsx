@@ -21,6 +21,7 @@ import AnimatedLeaderboard from '@/components/AnimatedLeaderboard';
 import CricketMatchHeader from '@/components/CricketMatchHeader';
 import OnboardingModal from '@/components/OnboardingModal';
 import BetCard from '@/components/BetCard';
+import BetUsersModal from '@/components/BetUsersModal';
 import RoomHeader, { EVENT_TEMPLATE_NAMES } from '@/components/RoomHeader';
 import HostActionBar from '@/components/HostActionBar';
 import SessionRestoreFlow from '@/components/SessionRestoreFlow';
@@ -55,6 +56,7 @@ export default function RoomPage() {
   const [adminError, setAdminError] = useState<string | null>(null);
   const [deletingBetId, setDeletingBetId] = useState<string | null>(null);
   const [editingBet, setEditingBet] = useState<Bet | null>(null);
+  const [viewingBetUsers, setViewingBetUsers] = useState<Bet | null>(null);
 
   // Participant links state (host only)
   const [participantLinks, setParticipantLinks] = useState<ParticipantWithLink[]>([]);
@@ -443,6 +445,7 @@ export default function RoomPage() {
       onEditBet={setEditingBet}
       onUndoBet={handleUndoBet}
       onTimerExpired={handleTimerExpired}
+      onViewBets={setViewingBetUsers}
       canUndo={canUndo}
     />
   );
@@ -635,6 +638,15 @@ export default function RoomPage() {
 
       {editingBet && effectiveHostId && (
         <EditBetModal bet={editingBet} roomCode={code!} hostId={effectiveHostId} onClose={() => setEditingBet(null)} />
+      )}
+
+      {viewingBetUsers && (
+        <BetUsersModal
+          bet={viewingBetUsers}
+          roomCode={code!}
+          participants={participants}
+          onClose={() => setViewingBetUsers(null)}
+        />
       )}
 
       {resolutionFeedback && (

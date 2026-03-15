@@ -916,6 +916,30 @@ async def get_bet(code: str, bet_id: str, room: RoomDep):
     return bet.to_dict()
 
 
+@app.get("/api/rooms/{code}/bets/{bet_id}/user-bets")
+async def get_bet_user_bets(code: str, bet_id: str, room: RoomDep):
+    """Get all user bets for a specific bet, with nicknames"""
+    bet = await bet_service.get_bet(bet_id)
+    if not bet:
+        raise HTTPException(status_code=404, detail=f"Bet not found: {bet_id}")
+    if bet.room_code != code:
+        raise HTTPException(status_code=400, detail="Bet does not belong to this room")
+
+    user_bets = await bet_service.get_user_bets_for_bet(bet_id)
+    user_ids = [ub.user_id for ub in user_bets]
+    users = await user_service.get_users_by_ids(user_ids)
+
+    result = []
+    for ub in user_bets:
+        user = users.get(ub.user_id)
+        result.append({
+            **ub.to_dict(),
+            "nickname": user.nickname if user else "Unknown",
+        })
+
+    return {"userBets": result}
+
+
 # ============================================================================
 # Tournament Aggregation
 # ============================================================================
