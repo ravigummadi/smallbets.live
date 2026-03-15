@@ -93,20 +93,28 @@ describe('CreateRoomPage', () => {
       expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
     });
 
-    it('should not show custom event name input by default', () => {
+    it('should always show event name input', () => {
       render(<CreateRoomPage />);
 
-      expect(screen.queryByPlaceholderText(/enter your event name/i)).not.toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/enter your event name/i)).toBeInTheDocument();
     });
 
-    it('should show custom event name input when custom template is selected', async () => {
+    it('should pre-fill event name from selected template', () => {
+      render(<CreateRoomPage />);
+
+      const eventNameInput = screen.getByPlaceholderText(/enter your event name/i) as HTMLInputElement;
+      expect(eventNameInput.value).toBe('Grammy Awards 2026');
+    });
+
+    it('should clear event name when custom template is selected', async () => {
       const user = userEvent.setup();
       render(<CreateRoomPage />);
 
       const select = screen.getByRole('combobox');
       await user.selectOptions(select, 'custom');
 
-      expect(screen.getByPlaceholderText(/enter your event name/i)).toBeInTheDocument();
+      const eventNameInput = screen.getByPlaceholderText(/enter your event name/i) as HTMLInputElement;
+      expect(eventNameInput.value).toBe('');
     });
   });
 
@@ -197,12 +205,8 @@ describe('CreateRoomPage', () => {
       expect(nicknameInput.maxLength).toBe(20);
     });
 
-    it('should limit event name to 50 characters', async () => {
-      const user = userEvent.setup();
+    it('should limit event name to 50 characters', () => {
       render(<CreateRoomPage />);
-
-      const select = screen.getByRole('combobox');
-      await user.selectOptions(select, 'custom');
 
       const eventNameInput = screen.getByPlaceholderText(/enter your event name/i) as HTMLInputElement;
 
@@ -232,7 +236,7 @@ describe('CreateRoomPage', () => {
       await waitFor(() => {
         expect(roomApi.createRoom).toHaveBeenCalledWith({
           event_template: 'grammys-2026',
-          event_name: undefined,
+          event_name: 'Grammy Awards 2026',
           host_nickname: 'TestHost',
         });
       });
@@ -452,6 +456,7 @@ describe('CreateRoomPage', () => {
       await user.click(screen.getByRole('button', { name: /tournament/i }));
 
       const nameInput = screen.getByPlaceholderText(/e\.g\., IPL 2026 Friends League/i);
+      await user.clear(nameInput);
       await user.type(nameInput, 'My Tournament');
 
       const submitButton = screen.getByRole('button', { name: /create tournament/i });
@@ -604,16 +609,18 @@ describe('CreateRoomPage', () => {
       expect(screen.queryByRole('option', { name: /grammy/i })).not.toBeInTheDocument();
     });
 
-    it('should show tournament name field when Tournament is selected', async () => {
+    it('should show tournament name field with pre-filled value when Tournament is selected', async () => {
       const user = userEvent.setup();
       render(<CreateRoomPage />);
 
       await user.click(screen.getByRole('button', { name: /tournament/i }));
 
-      expect(screen.getByPlaceholderText(/e\.g\., IPL 2026 Friends League/i)).toBeInTheDocument();
+      const nameInput = screen.getByPlaceholderText(/e\.g\., IPL 2026 Friends League/i) as HTMLInputElement;
+      expect(nameInput).toBeInTheDocument();
+      expect(nameInput.value).toBe('IPL 2026');
     });
 
-    it('should require tournament name for submit', async () => {
+    it('should require tournament name for submit when cleared', async () => {
       const user = userEvent.setup();
       render(<CreateRoomPage />);
 
@@ -621,6 +628,10 @@ describe('CreateRoomPage', () => {
       await user.type(nicknameInput, 'TestHost');
 
       await user.click(screen.getByRole('button', { name: /tournament/i }));
+
+      // Clear the pre-filled name
+      const nameInput = screen.getByPlaceholderText(/e\.g\., IPL 2026 Friends League/i);
+      await user.clear(nameInput);
 
       const submitButton = screen.getByRole('button', { name: /create tournament/i });
       expect(submitButton).toBeDisabled();
@@ -644,6 +655,7 @@ describe('CreateRoomPage', () => {
       await user.click(screen.getByRole('button', { name: /tournament/i }));
 
       const nameInput = screen.getByPlaceholderText(/e\.g\., IPL 2026 Friends League/i);
+      await user.clear(nameInput);
       await user.type(nameInput, 'My Tournament');
 
       const submitButton = screen.getByRole('button', { name: /create tournament/i });
