@@ -41,6 +41,7 @@ export default function RoomPage() {
   const [placingBets, setPlacingBets] = useState<Set<string>>(new Set());
   const [betErrors, setBetErrors] = useState<Record<string, string>>({});
   const [matchRooms, setMatchRooms] = useState<Room[]>([]);
+  const [parentTournamentName, setParentTournamentName] = useState<string | null>(null);
 
   // Admin modal state (host only)
   const [showBetModal, setShowBetModal] = useState(false);
@@ -124,6 +125,14 @@ export default function RoomPage() {
         .catch(err => console.error('Failed to load match rooms:', err));
     }
   }, [localRoom?.roomType, localRoom?.code]);
+
+  // Load parent tournament name for match room breadcrumb
+  useEffect(() => {
+    if (localRoom?.roomType !== 'match' || !localRoom.parentRoomCode) return;
+    roomApi.getRoom(localRoom.parentRoomCode)
+      .then(parentRoom => setParentTournamentName(parentRoom.eventName || 'Tournament'))
+      .catch(() => setParentTournamentName('Tournament'));
+  }, [localRoom?.roomType, localRoom?.parentRoomCode]);
 
   // Load participant links for host/co-host
   useEffect(() => {
@@ -427,10 +436,11 @@ export default function RoomPage() {
       {isMatch && displayRoom.parentRoomCode && (
         <div className="mb-md" style={{ fontSize: '0.875rem' }}>
           <Link
-            to={`/room/${displayRoom.parentRoomCode}`}
+            to={`/join/${displayRoom.parentRoomCode}`}
+            state={{ nickname: user?.nickname }}
             style={{ color: 'var(--color-primary)', textDecoration: 'none' }}
           >
-            Tournament: {EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Tournament'}
+            Tournament: {parentTournamentName || 'Tournament'}
           </Link>
           <span className="text-muted"> &gt; </span>
           <span>Match: {eventName}</span>
