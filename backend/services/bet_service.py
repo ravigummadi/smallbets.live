@@ -269,11 +269,21 @@ async def place_user_bet(
         placed_at=datetime.utcnow(),
     )
 
+    user_bet_ref = db.collection("userBets").document(f"{bet_id}_{user_id}")
+
+    # Changing an existing bet — just update the selection, no point deduction
+    # Note: uses sync Firestore SDK (project-wide pattern with firebase-admin)
+    if existing_bet is not None:
+        user_bet_ref.update({
+            "selectedOption": selected_option,
+            "placedAt": user_bet.placed_at,
+        })
+        return user_bet
+
+    # New bet — deduct points
     updated_user = user.subtract_points(bet.points_value)
 
     batch = db.batch()
-
-    user_bet_ref = db.collection("userBets").document(f"{bet_id}_{user_id}")
     batch.set(user_bet_ref, user_bet.to_dict())
 
     user_ref = db.collection("users").document(user_id)

@@ -166,13 +166,13 @@ def validate_bet_eligibility(
     if not bet.can_accept_bets():
         return False, f"Bet is not open (status: {bet.status.value})"
 
-    # Rule 2: User must have enough points
+    # Rule 2: If user already has a bet on this, allow changing while open (no extra cost)
+    if existing_user_bet is not None:
+        return True, None
+
+    # Rule 3: User must have enough points (only for new bets)
     if not user.can_afford_bet(bet_cost):
         return False, f"Insufficient points (have: {user.points}, need: {bet_cost})"
-
-    # Rule 3: User cannot have already bet
-    if existing_user_bet is not None:
-        return False, "You have already placed a bet on this question"
 
     return True, None
 

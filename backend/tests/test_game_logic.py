@@ -232,8 +232,8 @@ def test_validate_bet_eligibility_insufficient_points():
 
 
 @pytest.mark.unit
-def test_validate_bet_eligibility_already_bet():
-    """Test user has already placed a bet"""
+def test_validate_bet_eligibility_change_bet_while_open():
+    """Test user can change bet while bet is still open"""
     user = User(user_id="u1", room_code="AAAA", nickname="U1", points=1000)
     bet = Bet(
         bet_id="b1",
@@ -247,8 +247,28 @@ def test_validate_bet_eligibility_already_bet():
 
     is_valid, error = validate_bet_eligibility(user, bet, existing_bet, 100)
 
+    assert is_valid is True
+    assert error is None
+
+
+@pytest.mark.unit
+def test_validate_bet_eligibility_cannot_change_locked_bet():
+    """Test user cannot change bet when bet is locked"""
+    user = User(user_id="u1", room_code="AAAA", nickname="U1", points=1000)
+    bet = Bet(
+        bet_id="b1",
+        room_code="AAAA",
+        question="Q?",
+        options=["A", "B"],
+        status=BetStatus.LOCKED,
+        points_value=100,
+    )
+    existing_bet = UserBet(user_id="u1", bet_id="b1", room_code="AAAA", selected_option="A")
+
+    is_valid, error = validate_bet_eligibility(user, bet, existing_bet, 100)
+
     assert is_valid is False
-    assert "already placed a bet" in error.lower()
+    assert "not open" in error.lower()
 
 
 @pytest.mark.unit
