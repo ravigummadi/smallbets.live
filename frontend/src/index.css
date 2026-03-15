@@ -1427,6 +1427,121 @@ select:focus {
   margin-bottom: var(--spacing-lg);
 }
 
+/* ===== Room Created Page ===== */
+.room-created-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-success), var(--color-primary));
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-md);
+  box-shadow: 0 0 24px rgba(74, 222, 128, 0.3);
+}
+
+.room-created-link-box {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  overflow-x: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.room-created-link-text {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.room-created-room-code {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--color-primary);
+  white-space: nowrap;
+  padding-right: 0.5rem;
+  border-right: 1px solid var(--color-border);
+}
+
+/* ===== My Rooms Section ===== */
+.my-rooms-section {
+  padding-top: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+}
+
+.my-rooms-list {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.my-room-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  transition: border-color 0.15s ease;
+}
+
+.my-room-card:hover {
+  border-color: var(--color-primary);
+}
+
+.my-room-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.my-room-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.my-room-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.my-room-badge--host {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent-warm));
+  color: #fff;
+}
+
+.my-room-code {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: 0.15rem;
+}
+
+.my-room-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   :root {
