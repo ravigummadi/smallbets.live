@@ -99,7 +99,7 @@ class RateLimiter:
 
 
 # Rate limiter for session restoration endpoint
-session_restore_limiter = RateLimiter(max_requests=10, window_seconds=60)
+session_restore_limiter = RateLimiter(max_requests=60, window_seconds=60)
 
 # Regex for validating userKey format
 USER_KEY_PATTERN = re.compile(r"^[23456789A-HJ-NP-Za-hj-np-z]{8}$")
