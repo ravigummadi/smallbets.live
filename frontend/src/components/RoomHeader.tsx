@@ -4,6 +4,7 @@
  */
 
 import type { Room, User } from '@/types';
+import ShareButton from '@/components/ShareButton';
 
 // Map template IDs to friendly names
 const EVENT_TEMPLATE_NAMES: Record<string, string> = {
@@ -20,8 +21,8 @@ interface RoomHeaderProps {
   isHost: boolean;
   isCoHost: boolean;
   isTournament: boolean;
-  copiedRoomLink: boolean;
-  onCopyRoomLink: () => void;
+  copiedRoomLink?: boolean;
+  onCopyRoomLink?: () => void;
   onFinishRoom: () => void;
 }
 
@@ -31,8 +32,6 @@ export default function RoomHeader({
   isHost,
   isCoHost,
   isTournament,
-  copiedRoomLink,
-  onCopyRoomLink,
   onFinishRoom,
 }: RoomHeaderProps) {
   const eventName = room.eventName || EVENT_TEMPLATE_NAMES[room.eventTemplate] || 'Event';
@@ -43,12 +42,6 @@ export default function RoomHeader({
         <div>
           <h3 className="room-header-title">
             <span>{isTournament && 'Tournament: '}{eventName} - Room {room.code}</span>
-            <button
-              className="btn btn-secondary btn-xs btn-share"
-              onClick={onCopyRoomLink}
-            >
-              {copiedRoomLink ? 'Copied!' : 'Share'}
-            </button>
           </h3>
           <div className="room-header-status">
             {room.status === 'waiting' && <span>Waiting to start</span>}
@@ -74,6 +67,14 @@ export default function RoomHeader({
           </span>
         </div>
       </div>
+
+      <ShareButton
+        roomCode={room.code}
+        eventName={eventName}
+        isTournament={isTournament}
+        compact={false}
+      />
+
       {isHost && room.status === 'active' && (
         <div className="room-header-finish">
           <button

@@ -33,9 +33,8 @@ const baseProps = {
   room: mockRoom,
   user: mockUser,
   isHost: false,
+  isCoHost: false,
   isTournament: false,
-  copiedRoomLink: false,
-  onCopyRoomLink: vi.fn(),
   onFinishRoom: vi.fn(),
 };
 
@@ -62,14 +61,15 @@ describe('RoomHeader', () => {
       expect(screen.getByText('Host')).toBeDefined();
     });
 
-    it('should show Share button', () => {
+    it('should render ShareButton with invite link', () => {
       render(<RoomHeader {...baseProps} />);
-      expect(screen.getByText('Share')).toBeDefined();
+      expect(screen.getByText('Share Invite Link')).toBeDefined();
     });
 
-    it('should show "Copied!" after sharing', () => {
-      render(<RoomHeader {...baseProps} copiedRoomLink={true} />);
-      expect(screen.getByText('Copied!')).toBeDefined();
+    it('should display room code in share section', () => {
+      render(<RoomHeader {...baseProps} />);
+      // Room code shown in title and in share section
+      expect(screen.getAllByText('ABC123').length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -127,15 +127,6 @@ describe('RoomHeader', () => {
 
       await user.click(screen.getByText('Finish Event'));
       expect(onFinish).toHaveBeenCalledOnce();
-    });
-
-    it('should call onCopyRoomLink when Share is clicked', async () => {
-      const user = userEvent.setup();
-      const onCopy = vi.fn();
-      render(<RoomHeader {...baseProps} onCopyRoomLink={onCopy} />);
-
-      await user.click(screen.getByText('Share'));
-      expect(onCopy).toHaveBeenCalledOnce();
     });
   });
 
