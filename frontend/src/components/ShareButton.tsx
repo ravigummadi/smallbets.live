@@ -55,21 +55,12 @@ export default function ShareButton({
   if (compact) {
     return (
       <button
-        className={`share-btn share-btn--compact ${copied ? 'share-btn--copied' : ''}`}
+        className={`share-btn share-btn--icon ${copied ? 'share-btn--copied' : ''}`}
         onClick={handleShare}
         aria-label="Share room link"
+        title="Share"
       >
-        {copied ? (
-          <>
-            <CheckIcon />
-            <span>Copied!</span>
-          </>
-        ) : (
-          <>
-            <ShareIcon />
-            <span>Share</span>
-          </>
-        )}
+        {copied ? <CheckIcon /> : <ShareIcon />}
       </button>
     );
   }

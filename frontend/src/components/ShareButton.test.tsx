@@ -69,10 +69,9 @@ describe('ShareButton', () => {
   });
 
   describe('Compact mode', () => {
-    it('should render compact share button', () => {
+    it('should render compact icon button', () => {
       render(<ShareButton {...baseProps} compact />);
-      expect(screen.getByText('Share')).toBeDefined();
-      expect(screen.getByRole('button')).toBeDefined();
+      expect(screen.getByLabelText('Share room link')).toBeDefined();
     });
 
     it('should have aria-label for accessibility', () => {
@@ -80,14 +79,14 @@ describe('ShareButton', () => {
       expect(screen.getByLabelText('Share room link')).toBeDefined();
     });
 
-    it('should show "Copied!" after clicking in compact mode', async () => {
+    it('should show copied state after clicking in compact mode', async () => {
       const user = userEvent.setup();
       render(<ShareButton {...baseProps} compact />);
 
-      await user.click(screen.getByText('Share'));
+      await user.click(screen.getByLabelText('Share room link'));
 
       await waitFor(() => {
-        expect(screen.getByText('Copied!')).toBeDefined();
+        expect(screen.getByLabelText('Share room link').classList.contains('share-btn--copied')).toBe(true);
       });
     });
   });
