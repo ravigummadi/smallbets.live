@@ -27,5 +27,5 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars FIREBASE_PROJECT_ID=smallbets-app \
-            --set-env-vars "^||^CORS_ORIGINS=https://smallbets-app.web.app,https://smallbets-app.firebaseapp.com" \
+            --set-env-vars "^||^CORS_ORIGINS=https://smallbets.live,https://smallbets-app.web.app,https://smallbets-app.firebaseapp.com" \
             --project smallbets-app
