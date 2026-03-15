@@ -9,6 +9,9 @@ from typing import Optional, Dict, Any
 import transcript_parser
 from services import bet_service, room_service
 
+# Minimum confidence for automated winner extraction from transcripts
+AUTOMATION_WINNER_CONFIDENCE_THRESHOLD = 0.7
+
 
 async def process_transcript_for_automation(
     room_code: str,
@@ -74,7 +77,7 @@ async def process_transcript_for_automation(
             transcript_text,
             bet.options,
             resolve_patterns,
-            threshold=0.85
+            threshold=AUTOMATION_WINNER_CONFIDENCE_THRESHOLD
         )
 
         if is_resolution and winner:
