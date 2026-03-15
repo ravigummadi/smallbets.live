@@ -109,7 +109,7 @@ export default function JoinRoomPage() {
   if (validating) {
     return (
       <div className="container" style={{ paddingTop: '2rem' }}>
-        <h2 className="mb-lg" style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>Join a Room</h2>
+        <h2 className="mb-lg" style={{ letterSpacing: '-0.01em' }}>Join a Room</h2>
         <div className="card mb-lg">
           <p className="text-muted">Checking room...</p>
         </div>
@@ -120,7 +120,7 @@ export default function JoinRoomPage() {
   if (roomNotFound) {
     return (
       <div className="container" style={{ paddingTop: '2rem' }}>
-        <h2 className="mb-lg" style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>Room Not Found</h2>
+        <h2 className="mb-lg" style={{ letterSpacing: '-0.01em' }}>Room Not Found</h2>
 
         <div className="card mb-lg" style={{ borderColor: 'var(--color-error)' }}>
           <p className="text-error" style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
@@ -166,7 +166,7 @@ export default function JoinRoomPage() {
 
   return (
     <div className="container" style={{ paddingTop: '2rem' }}>
-      <h2 className="mb-lg" style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>Join a Room</h2>
+      <h2 className="mb-lg" style={{ letterSpacing: '-0.01em' }}>Join a Room</h2>
 
       <form onSubmit={handleSubmit}>
         <div className="card mb-lg">

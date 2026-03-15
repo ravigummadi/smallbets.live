@@ -20,14 +20,14 @@ export default function HomePage() {
   return (
     <div className="container" style={{ paddingTop: '3rem' }}>
       <div className="text-center mb-xl">
-        <h1 style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>SmallBets.live</h1>
-        <p className="text-secondary" style={{ fontWeight: 500 }}>
-          Real-time betting with friends during live events
+        <h1>SmallBets<span style={{ color: 'var(--color-accent-pink)' }}>.live</span></h1>
+        <p className="text-secondary" style={{ fontWeight: 500, fontSize: '1.1rem' }}>
+          Bet on anything with friends. No money, just bragging rights.
         </p>
       </div>
 
       <div className="card mb-lg">
-        <h3 className="mb-md" style={{ fontSize: '1.125rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Join a Room</h3>
+        <h3 className="mb-md" style={{ fontSize: '1.125rem' }}>Join a Room</h3>
         <form onSubmit={handleJoinRoom}>
           <input
             type="text"

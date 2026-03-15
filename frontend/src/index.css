@@ -1,27 +1,35 @@
 /**
  * Global styles for SmallBets.live
- * UI Variation C: Bold Sports/Gaming Energy
- * Dark background with neon accents, bold typography, and visual energy
+ * "Neon Party" Theme — Fun, vibrant, game-show energy
+ * Dark navy base + electric purple/pink accents + Kahoot-style bet colors
  */
 
 :root {
-  /* Colors - Bold Sports/Gaming Energy */
-  --color-primary: #34d399;
-  --color-primary-hover: #10b981;
-  --color-accent-blue: #3b82f6;
-  --color-success: #34d399;
-  --color-error: #f43f5e;
-  --color-warning: #eab308;
+  /* Colors - Neon Party */
+  --color-primary: #8B5CF6;
+  --color-primary-hover: #7C3AED;
+  --color-primary-glow: rgba(139, 92, 246, 0.4);
+  --color-accent-blue: #3B82F6;
+  --color-accent-pink: #EC4899;
+  --color-success: #4ADE80;
+  --color-error: #F87171;
+  --color-warning: #FBBF24;
 
-  --color-bg: #0a0a0f;
-  --color-bg-secondary: #141420;
-  --color-bg-elevated: #1e1e2e;
+  /* Kahoot-style bet option colors */
+  --color-option-1: #8B5CF6; /* purple */
+  --color-option-2: #3B82F6; /* blue */
+  --color-option-3: #F59E0B; /* amber */
+  --color-option-4: #10B981; /* emerald */
 
-  --color-text: #ffffff;
-  --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
+  --color-bg: #0F172A;
+  --color-bg-secondary: #1E293B;
+  --color-bg-elevated: #334155;
 
-  --color-border: #27272a;
+  --color-text: #E2E8F0;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+
+  --color-border: #334155;
 
   /* Spacing */
   --spacing-xs: 0.5rem;
@@ -32,9 +40,8 @@
   --spacing-2xl: 3rem;
 
   /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  --font-display: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
@@ -45,16 +52,17 @@
   --font-size-3xl: 1.75rem;
   --font-size-4xl: 2.5rem;
 
-  /* Border Radius */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
+  /* Border Radius - more rounded for playful feel */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.2);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.2);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
 }
 
 * {
@@ -85,32 +93,32 @@ body {
   flex-direction: column;
 }
 
-/* Typography */
+/* Typography - Poppins for headings */
 h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
   line-height: 1.2;
   margin-bottom: var(--spacing-md);
 }
 
 h1 {
   font-size: var(--font-size-4xl);
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 h2 {
   font-size: var(--font-size-3xl);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 h3 {
   font-size: var(--font-size-2xl);
-  font-weight: 800;
+  font-weight: 700;
 }
 
-h4 { font-size: var(--font-size-xl); font-weight: 700; }
-h5 { font-size: var(--font-size-lg); font-weight: 700; }
-h6 { font-size: var(--font-size-base); font-weight: 700; }
+h4 { font-size: var(--font-size-xl); font-weight: 600; }
+h5 { font-size: var(--font-size-lg); font-weight: 600; }
+h6 { font-size: var(--font-size-base); font-weight: 600; }
 
 p {
   margin-bottom: var(--spacing-md);
@@ -131,58 +139,65 @@ button {
   align-items: center;
   justify-content: center;
   padding: var(--spacing-md) var(--spacing-lg);
+  font-family: var(--font-display);
   font-weight: 600;
-  border-radius: 8px;
-  transition: all 0.15s ease;
-  min-height: 44px; /* iOS touch target size */
-  min-width: 44px;
+  border-radius: var(--radius-lg);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-height: 48px;
+  min-width: 48px;
   text-decoration: none;
 }
 
 .btn-primary {
-  background-color: var(--color-primary);
-  color: #000;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent-pink) 100%);
+  color: #fff;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
+  border: none;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4), 0 2px 8px rgba(236, 72, 153, 0.3);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
 }
 
 .btn-secondary {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.06);
   color: var(--color-text);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.12);
   border-color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 .btn-danger {
-  background-color: rgba(244, 63, 94, 0.1);
+  background-color: rgba(248, 113, 113, 0.1);
   color: var(--color-error);
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  border: 1.5px solid rgba(248, 113, 113, 0.3);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: rgba(244, 63, 94, 0.2);
+  background-color: rgba(248, 113, 113, 0.2);
   border-color: var(--color-error);
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none !important;
 }
 
 .btn-lg {
   padding: var(--spacing-lg) var(--spacing-xl);
   font-size: var(--font-size-lg);
+  min-height: 56px;
 }
 
 .btn-full {
@@ -197,11 +212,12 @@ select {
   font-size: inherit;
   padding: var(--spacing-md);
   border: 1.5px solid var(--color-border);
-  border-radius: 8px;
-  background-color: #0a0a0f;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
   color: var(--color-text);
   width: 100%;
-  min-height: 44px; /* iOS touch target size */
+  min-height: 48px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 input:focus,
@@ -209,17 +225,17 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.15);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
 }
 
 /* Cards */
 .card {
   background-color: var(--color-bg-secondary);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   padding: var(--spacing-lg);
   border: 1px solid var(--color-border);
-  border-top: 2px solid var(--color-primary);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  border-top: 3px solid var(--color-primary);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
 }
 
 /* Containers */
@@ -261,7 +277,7 @@ select:focus {
   height: 40px;
   animation: spin 1s linear infinite;
   margin: var(--spacing-xl) auto;
-  box-shadow: 0 0 15px rgba(52, 211, 153, 0.2);
+  box-shadow: 0 0 15px var(--color-primary-glow);
 }
 
 @keyframes spin {
@@ -274,22 +290,23 @@ select:focus {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--color-error);
+  font-family: var(--font-display);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(248, 113, 113, 0.3);
 }
 
 .badge-live::before {
   content: '';
   width: 6px;
   height: 6px;
-  background: #ef4444;
+  background: var(--color-error);
   border-radius: 50%;
   animation: pulse-dot 1.5s ease-in-out infinite;
 }
@@ -301,10 +318,13 @@ select:focus {
 
 /* Points display */
 .points-display {
+  font-family: var(--font-display);
   font-size: 1.75rem;
-  font-weight: 900;
-  color: var(--color-primary);
-  text-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent-pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Rank badges */
@@ -312,17 +332,19 @@ select:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
+  font-family: var(--font-display);
   font-weight: 800;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   margin-right: 0.5rem;
 }
 
 .rank-1 {
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
   color: #000;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
 }
 
 .rank-2 {
@@ -342,7 +364,8 @@ select:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -353,7 +376,7 @@ select:focus {
 .modal-content {
   background-color: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   padding: var(--spacing-lg);
   width: 100%;
   max-width: 500px;
@@ -374,6 +397,7 @@ select:focus {
   border-top: 1px solid var(--color-border);
   z-index: 100;
   max-width: 100%;
+  backdrop-filter: blur(8px);
 }
 
 /* ===== Bet Timer ===== */
@@ -381,28 +405,32 @@ select:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.125rem 0.5rem;
+  padding: 0.25rem 0.625rem;
   border-radius: 999px;
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 0.75rem;
-  background: rgba(52, 211, 153, 0.15);
-  color: var(--color-primary);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  font-size: 0.8rem;
+  background: rgba(74, 222, 128, 0.15);
+  color: var(--color-success);
+  border: 1.5px solid rgba(74, 222, 128, 0.3);
   transition: all 0.3s ease;
 }
 
 .bet-timer--urgent {
-  background: rgba(244, 63, 94, 0.15);
-  color: var(--color-error);
-  border-color: rgba(244, 63, 94, 0.4);
+  background: rgba(249, 115, 22, 0.15);
+  color: #F97316;
+  border-color: rgba(249, 115, 22, 0.4);
   animation: timer-pulse 1s ease-in-out infinite;
 }
 
 .bet-timer--critical {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--color-error);
+  border-color: rgba(248, 113, 113, 0.5);
   font-size: 1rem;
-  padding: 0.25rem 0.75rem;
+  padding: 0.3rem 0.85rem;
   animation: timer-pulse-fast 0.5s ease-in-out infinite;
-  box-shadow: 0 0 12px rgba(244, 63, 94, 0.4);
+  box-shadow: 0 0 16px rgba(248, 113, 113, 0.4);
 }
 
 .bet-timer--expired {
@@ -421,8 +449,8 @@ select:focus {
 }
 
 @keyframes timer-flash {
-  0% { background: rgba(244, 63, 94, 0.5); transform: scale(1.2); }
-  100% { background: rgba(244, 63, 94, 0.15); transform: scale(1); }
+  0% { background: rgba(248, 113, 113, 0.5); transform: scale(1.2); }
+  100% { background: rgba(248, 113, 113, 0.15); transform: scale(1); }
 }
 
 /* ===== Bet Resolution Feedback ===== */
@@ -446,23 +474,23 @@ select:focus {
 }
 
 .resolution-overlay--won {
-  background: rgba(52, 211, 153, 0.12);
+  background: rgba(74, 222, 128, 0.15);
   animation: flash-green 0.4s ease-out;
 }
 
 .resolution-overlay--lost {
-  background: rgba(244, 63, 94, 0.12);
+  background: rgba(248, 113, 113, 0.12);
   animation: flash-red 0.4s ease-out;
 }
 
 @keyframes flash-green {
-  0% { background: rgba(52, 211, 153, 0.35); }
-  100% { background: rgba(52, 211, 153, 0.12); }
+  0% { background: rgba(74, 222, 128, 0.35); }
+  100% { background: rgba(74, 222, 128, 0.15); }
 }
 
 @keyframes flash-red {
-  0% { background: rgba(244, 63, 94, 0.35); }
-  100% { background: rgba(244, 63, 94, 0.12); }
+  0% { background: rgba(248, 113, 113, 0.35); }
+  100% { background: rgba(248, 113, 113, 0.12); }
 }
 
 .resolution-content {
@@ -479,8 +507,8 @@ select:focus {
   font-size: 3rem;
   font-weight: 900;
   margin-bottom: 0.5rem;
-  width: 72px;
-  height: 72px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -488,35 +516,37 @@ select:focus {
 }
 
 .resolution-icon--won {
-  background: rgba(52, 211, 153, 0.2);
+  background: rgba(74, 222, 128, 0.2);
   color: var(--color-success);
-  box-shadow: 0 0 30px rgba(52, 211, 153, 0.3);
+  box-shadow: 0 0 40px rgba(74, 222, 128, 0.4);
 }
 
 .resolution-icon--lost {
-  background: rgba(244, 63, 94, 0.2);
+  background: rgba(248, 113, 113, 0.2);
   color: var(--color-error);
-  box-shadow: 0 0 30px rgba(244, 63, 94, 0.3);
+  box-shadow: 0 0 30px rgba(248, 113, 113, 0.3);
 }
 
 .resolution-points {
-  font-size: 2rem;
-  font-weight: 900;
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 800;
   margin-bottom: 0.25rem;
 }
 
 .resolution-points--won {
   color: var(--color-success);
-  text-shadow: 0 0 20px rgba(52, 211, 153, 0.4);
+  text-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
 }
 
 .resolution-points--lost {
   color: var(--color-error);
-  text-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
+  text-shadow: 0 0 20px rgba(248, 113, 113, 0.4);
 }
 
 .resolution-label {
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
   font-weight: 600;
   color: var(--color-text-secondary);
 }
@@ -535,9 +565,9 @@ select:focus {
 .confetti-piece {
   position: absolute;
   top: -10px;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
   animation: confetti-fall 2.5s ease-out forwards;
 }
 
@@ -556,22 +586,23 @@ select:focus {
 .quick-resolve-btn {
   flex: 1;
   padding: 0.75rem 1rem;
+  font-family: var(--font-display);
   font-size: 0.875rem;
   font-weight: 700;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   border: 2px solid var(--color-primary);
-  background: rgba(52, 211, 153, 0.1);
+  background: rgba(139, 92, 246, 0.1);
   color: var(--color-primary);
   min-height: 48px;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
   text-align: center;
 }
 
 .quick-resolve-btn:hover:not(:disabled) {
-  background: rgba(52, 211, 153, 0.25);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.2);
+  background: rgba(139, 92, 246, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 .quick-resolve-btn:disabled {
@@ -625,7 +656,8 @@ select:focus {
 }
 
 .team-vs .team-name {
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-weight: 700;
   font-size: 1.1rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -661,6 +693,7 @@ select:focus {
 }
 
 .match-context-bar .stat-value {
+  font-family: var(--font-display);
   font-weight: 700;
   font-size: 1rem;
   color: var(--color-text);
@@ -676,13 +709,20 @@ select:focus {
 /* ===== BetCard Component ===== */
 .bet-card {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  background: var(--color-bg-secondary);
+  transition: box-shadow 0.2s ease;
 }
 
 .bet-card-header {
   padding: var(--spacing-md);
   cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.bet-card-header:hover {
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .bet-card-header--expanded {
@@ -698,6 +738,7 @@ select:focus {
 .bet-card-header-content { flex: 1; }
 
 .bet-card-question {
+  font-family: var(--font-display);
   font-weight: 600;
   margin-bottom: var(--spacing-xs);
 }
@@ -708,8 +749,8 @@ select:focus {
   margin-bottom: 0;
 }
 
-.bet-card-winner { margin-left: 0.5rem; color: var(--color-primary); font-weight: 600; }
-.bet-card-placed { margin-left: 0.5rem; color: var(--color-success); font-weight: 600; }
+.bet-card-winner { margin-left: 0.5rem; color: var(--color-success); font-weight: 600; }
+.bet-card-placed { margin-left: 0.5rem; color: var(--color-primary); font-weight: 600; }
 
 .bet-card-actions { display: flex; align-items: center; gap: 0.5rem; }
 .bet-card-expand-icon { font-size: 1.25rem; color: var(--color-text-secondary); }
@@ -738,7 +779,76 @@ select:focus {
 .bet-card-error-text { margin-bottom: 0; font-size: 0.875rem; }
 
 .bet-card-options { display: grid; gap: 0.75rem; }
-.bet-card-option { text-align: left; padding: 1rem; border-left: 3px solid var(--color-primary); }
+
+/* Kahoot-style colored bet options */
+.bet-card-option {
+  text-align: left;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: none;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  min-height: 56px;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.bet-card-option:nth-child(1) {
+  background: rgba(139, 92, 246, 0.15);
+  border-left: 4px solid var(--color-option-1);
+  color: var(--color-text);
+}
+.bet-card-option:nth-child(1):hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.28);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+.bet-card-option:nth-child(2) {
+  background: rgba(59, 130, 246, 0.15);
+  border-left: 4px solid var(--color-option-2);
+  color: var(--color-text);
+}
+.bet-card-option:nth-child(2):hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.28);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.bet-card-option:nth-child(3) {
+  background: rgba(245, 158, 11, 0.15);
+  border-left: 4px solid var(--color-option-3);
+  color: var(--color-text);
+}
+.bet-card-option:nth-child(3):hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.28);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.bet-card-option:nth-child(4) {
+  background: rgba(16, 185, 129, 0.15);
+  border-left: 4px solid var(--color-option-4);
+  color: var(--color-text);
+}
+.bet-card-option:nth-child(4):hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.28);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+/* Options beyond 4 cycle back */
+.bet-card-option:nth-child(n+5) {
+  background: rgba(236, 72, 153, 0.15);
+  border-left: 4px solid var(--color-accent-pink);
+  color: var(--color-text);
+}
+.bet-card-option:nth-child(n+5):hover:not(:disabled) {
+  background: rgba(236, 72, 153, 0.28);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2);
+}
+
 .bet-card-placing { font-size: 0.875rem; text-align: center; color: var(--color-text-secondary); margin-top: var(--spacing-md); }
 .bet-card-closed-text { font-size: 0.875rem; }
 
@@ -752,7 +862,7 @@ select:focus {
 .bet-card-admin-btn { flex: 1; font-size: 0.875rem; padding: 0.5rem 1rem; }
 .bet-card-close-btn { font-size: 0.875rem; padding: 0.5rem 1rem; }
 
-.bet-card-resolve-label { font-size: 0.875rem; font-weight: 600; margin-bottom: var(--spacing-xs); }
+.bet-card-resolve-label { font-family: var(--font-display); font-size: 0.875rem; font-weight: 600; margin-bottom: var(--spacing-xs); }
 .bet-card-resolve-options { display: flex; gap: var(--spacing-xs); flex-wrap: wrap; }
 .bet-card-resolving { font-size: 0.875rem; text-align: center; margin-bottom: 0; margin-top: var(--spacing-xs); color: var(--color-text-secondary); }
 
@@ -766,9 +876,10 @@ select:focus {
 .room-header-role-badge {
   display: inline-block;
   margin-top: 0.35rem;
+  font-family: var(--font-display);
   font-size: 0.7rem;
   font-weight: 600;
-  padding: 0.15rem 0.5rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
   background: var(--color-bg-elevated);
   color: var(--color-text-muted);
@@ -776,7 +887,11 @@ select:focus {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.room-header-role-badge--host { background: var(--color-primary); color: #fff; border: none; }
+.room-header-role-badge--host {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent-pink));
+  color: #fff;
+  border: none;
+}
 .room-header-finish { margin-top: var(--spacing-md); padding-top: 0.75rem; border-top: 1px solid var(--color-border); }
 .room-header-finish-btn { font-size: var(--font-size-sm); }
 
@@ -808,10 +923,11 @@ select:focus {
 .admin-error-text { margin-bottom: 0; font-size: 0.875rem; }
 
 .bet-count-badge {
-  background: var(--color-primary);
-  color: #000;
-  padding: 0.125rem 0.5rem;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent-pink));
+  color: #fff;
+  padding: 0.15rem 0.55rem;
   border-radius: 999px;
+  font-family: var(--font-display);
   font-size: 0.75rem;
   font-weight: 700;
   margin-left: 0.5rem;
