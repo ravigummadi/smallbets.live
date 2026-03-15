@@ -68,6 +68,13 @@ export default function RoomPage() {
   const prevBetsRef = useRef<Map<string, Bet>>(new Map());
   const autoLockingRef = useRef<Set<string>>(new Set());
 
+  // Compute effective host ID: primary host uses hostId, co-hosts use their userId
+  const getEffectiveHostId = () => {
+    if (session?.hostId) return session.hostId;
+    if (session?.userId && localRoom?.coHostIds?.includes(session.userId)) return session.userId;
+    return undefined;
+  };
+
   // Match room creation state
   const [showCreateMatch, setShowCreateMatch] = useState(false);
   const [matchTitle, setMatchTitle] = useState('');
@@ -119,13 +126,14 @@ export default function RoomPage() {
     }
   }, [localRoom?.roomType, localRoom?.code]);
 
-  // Load participant links for host
+  // Load participant links for host/co-host
   useEffect(() => {
-    if (!session?.hostId || !code) return;
-    roomApi.getParticipantsWithLinks(code, session.hostId)
+    const hostId = getEffectiveHostId();
+    if (!hostId || !code) return;
+    roomApi.getParticipantsWithLinks(code, hostId)
       .then((res) => setParticipantLinks(res.participants))
       .catch(err => console.error('Failed to load participant links:', err));
-  }, [session?.hostId, code, participants.length]);
+  }, [session?.hostId, session?.userId, localRoom?.coHostIds, code, participants.length]);
 
   const handleCopyRoomLink = async () => {
     if (!code) return;
@@ -162,9 +170,10 @@ export default function RoomPage() {
   };
 
   const handleStartRoom = async () => {
-    if (!code || !session?.hostId) return;
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId) return;
     try {
-      await roomApi.startRoom(code, session.hostId);
+      await roomApi.startRoom(code, hostId);
       setLocalRoom(prev => prev ? { ...prev, status: 'active' } : prev);
     } catch (err) {
       console.error('Failed to start room:', err);
@@ -172,9 +181,10 @@ export default function RoomPage() {
   };
 
   const handleFinishRoom = async () => {
-    if (!code || !session?.hostId) return;
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId) return;
     try {
-      await roomApi.finishRoom(code, session.hostId);
+      await roomApi.finishRoom(code, hostId);
       setLocalRoom(prev => prev ? { ...prev, status: 'finished' } : prev);
     } catch (err) {
       console.error('Failed to finish room:', err);
@@ -182,11 +192,12 @@ export default function RoomPage() {
   };
 
   const handleCloseBet = async (betId: string) => {
-    if (!code || !session?.hostId) return;
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId) return;
     setClosingBetId(betId);
     setAdminError(null);
     try {
-      await betApi.lockBet(code, session.hostId, betId);
+      await betApi.lockBet(code, hostId, betId);
     } catch (err: any) {
       setAdminError(err.detail || 'Failed to close bet');
     } finally {
@@ -195,11 +206,12 @@ export default function RoomPage() {
   };
 
   const handleResolveBet = async (betId: string, winningOption: string) => {
-    if (!code || !session?.hostId) return;
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId) return;
     setResolvingBetId(betId);
     setAdminError(null);
     try {
-      await betApi.resolveBet(code, session.hostId, betId, winningOption);
+      await betApi.resolveBet(code, hostId, betId, winningOption);
     } catch (err: any) {
       setAdminError(err.detail || 'Failed to resolve bet');
     } finally {
@@ -240,10 +252,11 @@ export default function RoomPage() {
   };
 
   const handleCreateMatchRoom = async () => {
-    if (!code || !session?.hostId || !matchTeam1.trim() || !matchTeam2.trim()) return;
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId || !matchTeam1.trim() || !matchTeam2.trim()) return;
     setCreatingMatch(true);
     try {
-      const response = await roomApi.createMatchRoom(code, session.hostId, {
+      const response = await roomApi.createMatchRoom(code, hostId, {
         team1: matchTeam1.trim(),
         team2: matchTeam2.trim(),
         match_date_time: matchDate ? new Date(matchDate).toISOString() : new Date().toISOString(),
@@ -264,26 +277,28 @@ export default function RoomPage() {
   };
 
   const handleUndoBet = useCallback(async (betId: string) => {
-    if (!code || !session?.hostId) return;
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId) return;
     try {
-      await betApi.undoResolveBet(code, session.hostId, betId);
+      await betApi.undoResolveBet(code, hostId, betId);
     } catch (err: any) {
       console.error('Failed to undo bet:', err);
     }
-  }, [code, session?.hostId]);
+  }, [code, session?.hostId, session?.userId, localRoom?.coHostIds]);
 
   const handleTimerExpired = useCallback(async (betId: string) => {
-    if (!code || !session?.hostId) return;
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId) return;
     if (autoLockingRef.current.has(betId)) return;
     autoLockingRef.current.add(betId);
     try {
-      await betApi.lockBet(code, session.hostId, betId);
+      await betApi.lockBet(code, hostId, betId);
     } catch {
       // Bet may already be locked
     } finally {
       autoLockingRef.current.delete(betId);
     }
-  }, [code, session?.hostId]);
+  }, [code, session?.hostId, session?.userId, localRoom?.coHostIds]);
 
   // Detect bet resolutions and trigger feedback
   useEffect(() => {
@@ -306,15 +321,36 @@ export default function RoomPage() {
   }, [bets, userBets]);
 
   const handleDeleteBet = async (betId: string) => {
-    if (!code || !session?.hostId) return;
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId) return;
     setDeletingBetId(betId);
     setAdminError(null);
     try {
-      await betApi.deleteBet(code, session.hostId, betId);
+      await betApi.deleteBet(code, hostId, betId);
     } catch (err: any) {
       setAdminError(err.detail || 'Failed to delete bet');
     } finally {
       setDeletingBetId(null);
+    }
+  };
+
+  const handlePromoteCoHost = async (userId: string) => {
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId) return;
+    try {
+      await roomApi.addCoHost(code, hostId, userId);
+    } catch (err: any) {
+      setAdminError(err.detail || 'Failed to promote co-host');
+    }
+  };
+
+  const handleDemoteCoHost = async (userId: string) => {
+    const hostId = getEffectiveHostId();
+    if (!code || !hostId) return;
+    try {
+      await roomApi.removeCoHost(code, hostId, userId);
+    } catch (err: any) {
+      setAdminError(err.detail || 'Failed to remove co-host');
     }
   };
 
@@ -345,8 +381,12 @@ export default function RoomPage() {
     );
   }
 
-  const isHost = user.isAdmin;
   const displayRoom = localRoom;
+  const isCoHost = !!(session?.userId && displayRoom?.coHostIds?.includes(session.userId));
+  const isHost = user.isAdmin || isCoHost;
+  const isPrimaryHost = user.isAdmin;
+  // Co-hosts use their own userId as the X-Host-Id header value
+  const effectiveHostId = session?.hostId || (isCoHost ? session?.userId : undefined);
   const isTournament = displayRoom.roomType === 'tournament';
   const isMatch = displayRoom.roomType === 'match';
   const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
@@ -404,6 +444,7 @@ export default function RoomPage() {
         room={displayRoom}
         user={user}
         isHost={isHost}
+        isCoHost={isCoHost}
         isTournament={isTournament}
         copiedRoomLink={copiedRoomLink}
         onCopyRoomLink={handleCopyRoomLink}
@@ -465,8 +506,8 @@ export default function RoomPage() {
 
       {displayRoom.status === 'active' && (
         <>
-          {isHost && pendingBets.length > 0 && session?.hostId && (
-            <BetQueue pendingBets={pendingBets} roomCode={code!} hostId={session.hostId} />
+          {isHost && pendingBets.length > 0 && effectiveHostId && (
+            <BetQueue pendingBets={pendingBets} roomCode={code!} hostId={effectiveHostId} />
           )}
 
           {isTournament && tournamentBets.length > 0 && (
@@ -520,9 +561,13 @@ export default function RoomPage() {
         participants={participants}
         currentUserId={session?.userId}
         isHost={isHost}
+        isPrimaryHost={isPrimaryHost}
+        coHostIds={displayRoom.coHostIds || []}
         participantLinks={participantLinks}
         copiedUserId={copiedUserId}
         onCopyLink={handleCopyParticipantLink}
+        onPromoteCoHost={handlePromoteCoHost}
+        onDemoteCoHost={handleDemoteCoHost}
       />
 
       {isHost && (
@@ -538,32 +583,32 @@ export default function RoomPage() {
         />
       )}
 
-      {showBetModal && session?.hostId && (
+      {showBetModal && effectiveHostId && (
         <div className="modal-overlay" onClick={() => setShowBetModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h4 className="modal-title">Create New Bet</h4>
               <button className="btn btn-secondary btn-modal-close" onClick={() => setShowBetModal(false)}>&#10005;</button>
             </div>
-            <BetCreationForm roomCode={code!} hostId={session.hostId} onSuccess={() => setShowBetModal(false)} />
+            <BetCreationForm roomCode={code!} hostId={effectiveHostId} onSuccess={() => setShowBetModal(false)} />
           </div>
         </div>
       )}
 
-      {showFeedModal && session?.hostId && (
+      {showFeedModal && effectiveHostId && (
         <div className="modal-overlay" onClick={() => setShowFeedModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h4 className="modal-title">Live Transcript Feed</h4>
               <button className="btn btn-secondary btn-modal-close" onClick={() => setShowFeedModal(false)}>&#10005;</button>
             </div>
-            <LiveFeedPanel roomCode={code!} hostId={session.hostId} automationEnabled={automationEnabled} onToggleAutomation={setAutomationEnabled} />
+            <LiveFeedPanel roomCode={code!} hostId={effectiveHostId} automationEnabled={automationEnabled} onToggleAutomation={setAutomationEnabled} />
           </div>
         </div>
       )}
 
-      {editingBet && session?.hostId && (
-        <EditBetModal bet={editingBet} roomCode={code!} hostId={session.hostId} onClose={() => setEditingBet(null)} />
+      {editingBet && effectiveHostId && (
+        <EditBetModal bet={editingBet} roomCode={code!} hostId={effectiveHostId} onClose={() => setEditingBet(null)} />
       )}
 
       {resolutionFeedback && (

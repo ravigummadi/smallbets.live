@@ -892,6 +892,11 @@ select:focus {
   color: #fff;
   border: none;
 }
+.room-header-role-badge--cohost {
+  background: linear-gradient(135deg, var(--color-accent-warm), #F59E0B);
+  color: #fff;
+  border: none;
+}
 .room-header-finish { margin-top: var(--spacing-md); padding-top: 0.75rem; border-top: 1px solid var(--color-border); }
 .room-header-finish-btn { font-size: var(--font-size-sm); }
 

@@ -145,6 +145,29 @@ export const roomApi = {
     });
   },
 
+  async addCoHost(
+    code: string,
+    hostId: string,
+    userId: string,
+  ): Promise<{ status: string; userId: string; coHostIds: string[] }> {
+    return fetchApi(`/api/rooms/${code}/co-host`, {
+      method: 'POST',
+      headers: { 'X-Host-Id': hostId },
+      body: JSON.stringify({ user_id: userId }),
+    });
+  },
+
+  async removeCoHost(
+    code: string,
+    hostId: string,
+    userId: string,
+  ): Promise<{ status: string; userId: string; coHostIds: string[] }> {
+    return fetchApi(`/api/rooms/${code}/co-host/${userId}`, {
+      method: 'DELETE',
+      headers: { 'X-Host-Id': hostId },
+    });
+  },
+
   async getParticipantsWithLinks(
     code: string,
     hostId: string,

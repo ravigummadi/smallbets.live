@@ -32,6 +32,7 @@ export interface Room {
   participants: string[];
   matchDetails: MatchDetails | null;
   currentBetId: string | null;
+  coHostIds: string[];
   version: number;
 }
 

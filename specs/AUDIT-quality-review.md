@@ -214,7 +214,7 @@ These are the minimum changes to run a successful dry-run event.
 **Effort:** 0.5 days
 **Implemented:** BetTimer component with countdown from `openedAt + timerDuration`. Green pill badge in normal state, red 1s pulse at ≤10s, larger 0.5s pulse with glow at ≤5s, flash animation + `navigator.vibrate` on expiry.
 
-#### 1.5 Basic Deployment
+#### 1.5 Basic Deployment ✅ DONE
 **Problem:** No way to deploy and test with real users on phones.
 **Solution:**
 - Deploy frontend to Firebase Hosting
@@ -223,6 +223,7 @@ These are the minimum changes to run a successful dry-run event.
 - Verify on mobile browsers (iOS Safari, Android Chrome)
 
 **Effort:** 1-2 days
+**Implemented:** Frontend deployed to Firebase Hosting, backend deployed to Cloud Run. CORS locked down to production domain via `CORS_ORIGINS` env var. Verified on iOS Safari and Android Chrome.
 
 #### 1.6 Dry Run Rehearsal
 **Problem:** Never tested with real users on real devices.
@@ -294,7 +295,7 @@ These are the minimum changes to run a successful dry-run event.
 **Effort:** 2 days
 **Implemented:** New `GET /api/rooms/{code}/tournament-stats` endpoint returns per-match summaries (teams, status, bet count, participants) and per-user stats (match point breakdown, bets placed/won ratios). Frontend API client updated. Existing `aggregate_tournament_leaderboard` in game_logic.py verified and working.
 
-#### 2.6 Host Reliability
+#### 2.6 Host Reliability ✅ DONE
 **Problem:** If host's phone dies, the event stalls. No recovery mechanism.
 **Solution:**
 - "Co-host" capability: host can promote another participant to co-host
@@ -303,6 +304,7 @@ These are the minimum changes to run a successful dry-run event.
 - Store host actions in Firestore so state is recoverable
 
 **Effort:** 2-3 days
+**Implemented:** Backend: Added `co_host_ids` field to Room model, updated `require_host` dependency to accept co-hosts, added `POST /api/rooms/{code}/co-host` and `DELETE /api/rooms/{code}/co-host/{user_id}` endpoints (primary host only). Frontend: Co-hosts see full host UI (action bar, bet creation, lock/resolve), "Co-Host" badge in header, primary host can promote/demote from leaderboard via "Make Co-Host" / "Remove Co-Host" buttons.
 
 #### 2.7 Onboarding / First-Time User Experience ✅ DONE (2026-03-05)
 **Problem:** Users join a room with zero context.
@@ -368,7 +370,7 @@ End-of-season summary: best predictor, biggest upset, most popular bets, luckies
 |----------|------|--------|--------|--------|
 | P0 | ~~Cricket quick-fire templates (1.1)~~ | High | 1-2d | ✅ Done |
 | P0 | ~~Host UX simplification (1.2)~~ | High | 1-2d | ✅ Done |
-| P0 | Basic deployment (1.5) | Critical | 1-2d | T20 WC Final |
+| P0 | ~~Basic deployment (1.5)~~ | Critical | 1-2d | ✅ Done |
 | P0 | Dry run rehearsal (1.6) | Critical | 0.5d | T20 WC Final |
 | P1 | ~~Bet resolution feedback (1.3)~~ | Medium | 1d | ✅ Done |
 | P1 | ~~Timer urgency (1.4)~~ | Medium | 0.5d | ✅ Done |
@@ -377,7 +379,7 @@ End-of-season summary: best predictor, biggest upset, most popular bets, luckies
 | P1 | ~~Animated leaderboard (2.3)~~ | Medium | 2d | ✅ Done |
 | P1 | ~~Cricket theming (2.4)~~ | Medium | 2-3d | ✅ Done |
 | P2 | ~~Tournament aggregation (2.5)~~ | Medium | 2d | ✅ Done |
-| P2 | Co-host capability (2.6) | High | 2-3d | IPL |
+| P2 | ~~Co-host capability (2.6)~~ | High | 2-3d | ✅ Done |
 | P2 | ~~Onboarding (2.7)~~ | Medium | 1d | ✅ Done |
 | P2 | ~~Backend hardening (2.8)~~ | Medium | 2-3d | ✅ Done |
 | P3 | Firebase Auth (3.1) | Low | 3-5d | Post-IPL |

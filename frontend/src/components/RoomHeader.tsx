@@ -18,6 +18,7 @@ interface RoomHeaderProps {
   room: Room;
   user: User;
   isHost: boolean;
+  isCoHost: boolean;
   isTournament: boolean;
   copiedRoomLink: boolean;
   onCopyRoomLink: () => void;
@@ -28,6 +29,7 @@ export default function RoomHeader({
   room,
   user,
   isHost,
+  isCoHost,
   isTournament,
   copiedRoomLink,
   onCopyRoomLink,
@@ -66,8 +68,8 @@ export default function RoomHeader({
           <p className="room-header-points-label">
             points
           </p>
-          <span className={`room-header-role-badge ${isHost ? 'room-header-role-badge--host' : ''}`}>
-            {isHost ? 'Host' : 'Guest'}
+          <span className={`room-header-role-badge ${isHost ? 'room-header-role-badge--host' : ''} ${isCoHost ? 'room-header-role-badge--cohost' : ''}`}>
+            {isCoHost ? 'Co-Host' : isHost ? 'Host' : 'Guest'}
           </span>
         </div>
       </div>

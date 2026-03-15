@@ -63,6 +63,7 @@ class Room(BaseModel):
     participants: List[str] = Field(default_factory=list, description="User IDs of participants")
     match_details: Optional[MatchDetails] = Field(default=None, description="Match details (match rooms only)")
     current_bet_id: Optional[str] = Field(default=None, description="Currently active bet ID")
+    co_host_ids: List[str] = Field(default_factory=list, description="User IDs of co-hosts who can manage bets")
     version: int = Field(default=1, description="Optimistic locking version")
 
     def to_dict(self) -> dict:
@@ -81,6 +82,7 @@ class Room(BaseModel):
             "participants": self.participants,
             "matchDetails": self.match_details.to_dict() if self.match_details else None,
             "currentBetId": self.current_bet_id,
+            "coHostIds": self.co_host_ids,
             "version": self.version,
         }
         return result
@@ -106,6 +108,7 @@ class Room(BaseModel):
             participants=data.get("participants", []),
             match_details=match_details,
             current_bet_id=data.get("currentBetId"),
+            co_host_ids=data.get("coHostIds", []),
             version=data.get("version", 1),
         )
 
