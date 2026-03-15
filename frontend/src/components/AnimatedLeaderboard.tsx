@@ -91,9 +91,9 @@ export default function AnimatedLeaderboard({
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '0.75rem',
-                backgroundColor: isCurrentUser ? 'rgba(139, 92, 246, 0.1)' : 'var(--color-bg-elevated)',
+                backgroundColor: isCurrentUser ? 'rgba(20, 184, 166, 0.1)' : 'var(--color-bg-elevated)',
                 borderRadius: 'var(--radius-md)',
-                border: isCurrentUser ? '1px solid rgba(139, 92, 246, 0.25)' : 'none',
+                border: isCurrentUser ? '1px solid rgba(20, 184, 166, 0.25)' : 'none',
                 transition: 'transform 0.5s ease, background-color 0.3s ease',
               }}
             >

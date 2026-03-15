@@ -20,7 +20,7 @@ export default function HomePage() {
   return (
     <div className="container" style={{ paddingTop: '3rem' }}>
       <div className="text-center mb-xl">
-        <h1>SmallBets<span style={{ color: 'var(--color-accent-pink)' }}>.live</span></h1>
+        <h1>SmallBets<span style={{ color: 'var(--color-accent-warm)' }}>.live</span></h1>
         <p className="text-secondary" style={{ fontWeight: 500, fontSize: '1.1rem' }}>
           Bet on anything with friends. No money, just bragging rights.
         </p>

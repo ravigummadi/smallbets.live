@@ -19,7 +19,7 @@ const CONFETTI_COLORS = [
   'var(--color-accent-blue)',
   'var(--color-warning)',
   'var(--color-error)',
-  '#a855f7',
+  'var(--color-accent-warm)',
 ];
 
 export default function BetResolutionFeedback({
