@@ -61,7 +61,6 @@ export default function RoomPage() {
   // Participant links state (host only)
   const [participantLinks, setParticipantLinks] = useState<ParticipantWithLink[]>([]);
   const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
-  const [copiedRoomLink, setCopiedRoomLink] = useState(false);
 
   // Resolution feedback state
   const [resolutionFeedback, setResolutionFeedback] = useState<{
@@ -141,23 +140,6 @@ export default function RoomPage() {
       .then((res) => setParticipantLinks(res.participants))
       .catch(err => console.error('Failed to load participant links:', err));
   }, [session?.hostId, session?.userId, localRoom?.coHostIds, code, participants.length]);
-
-  const handleCopyRoomLink = async () => {
-    if (!code) return;
-    const link = `${window.location.origin}/join/${code}`;
-    try {
-      await navigator.clipboard.writeText(link);
-    } catch {
-      const textArea = document.createElement('textarea');
-      textArea.value = link;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-    }
-    setCopiedRoomLink(true);
-    setTimeout(() => setCopiedRoomLink(false), 2000);
-  };
 
   const handleCopyParticipantLink = async (participant: ParticipantWithLink) => {
     if (!code) return;
@@ -487,8 +469,6 @@ export default function RoomPage() {
         isHost={isHost}
         isCoHost={isCoHost}
         isTournament={isTournament}
-        copiedRoomLink={copiedRoomLink}
-        onCopyRoomLink={handleCopyRoomLink}
         onFinishRoom={handleFinishRoom}
       />
 
