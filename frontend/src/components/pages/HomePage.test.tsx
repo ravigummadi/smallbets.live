@@ -33,14 +33,14 @@ describe('HomePage', () => {
     it('should render the page title', () => {
       render(<HomePage />);
 
-      expect(screen.getByText('SmallBets.live')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('SmallBets.live');
     });
 
     it('should render the tagline', () => {
       render(<HomePage />);
 
       expect(
-        screen.getByText('Real-time betting with friends during live events')
+        screen.getByText(/bet on anything with friends/i)
       ).toBeInTheDocument();
     });
 

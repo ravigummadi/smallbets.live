@@ -92,7 +92,7 @@ export default function CreateRoomPage() {
 
   return (
     <div className="container" style={{ paddingTop: '2rem' }}>
-      <h2 className="mb-lg" style={{ textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+      <h2 className="mb-lg" style={{ letterSpacing: '-0.01em' }}>
         {isTournament ? 'Create Tournament' : 'Create a Room'}
       </h2>
 
