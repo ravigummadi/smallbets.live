@@ -44,6 +44,7 @@ class Bet(BaseModel):
     timer_duration: int = Field(default=0, description="Timer duration in seconds (0 = no auto-lock)")
     can_undo_until: Optional[datetime] = Field(default=None, description="Undo window expiry (10s after resolution)")
     version: int = Field(default=1, description="Optimistic locking version")
+    betting_locked: bool = Field(default=False, description="Host can lock betting without closing the bet")
 
     def to_dict(self) -> dict:
         """Serialize for Firestore storage"""
@@ -65,6 +66,7 @@ class Bet(BaseModel):
             "timerDuration": self.timer_duration,
             "canUndoUntil": self.can_undo_until,
             "version": self.version,
+            "bettingLocked": self.betting_locked,
         }
 
     @classmethod
@@ -88,11 +90,12 @@ class Bet(BaseModel):
             timer_duration=data.get("timerDuration", 0),
             can_undo_until=data.get("canUndoUntil"),
             version=data.get("version", 1),
+            betting_locked=data.get("bettingLocked", False),
         )
 
     def can_accept_bets(self) -> bool:
         """Check if bet is accepting user bets"""
-        return self.status == BetStatus.OPEN
+        return self.status == BetStatus.OPEN and not self.betting_locked
 
     def is_resolved(self) -> bool:
         """Check if bet has been resolved"""
@@ -136,11 +139,10 @@ class Bet(BaseModel):
             "can_undo_until": now + timedelta(seconds=10),
         })
 
-    def unlock_bet(self) -> "Bet":
-        """Return new Bet instance with reopened status (locked -> open)"""
+    def set_betting_locked(self, locked: bool) -> "Bet":
+        """Return new Bet instance with betting_locked toggled"""
         return self.model_copy(update={
-            "status": BetStatus.OPEN,
-            "locked_at": None,
+            "betting_locked": locked,
         })
 
     def undo_resolve(self) -> "Bet":

@@ -171,6 +171,10 @@ class LockBetRequest(BaseModel):
     bet_id: str
 
 
+class ToggleBettingLockRequest(BaseModel):
+    locked: bool
+
+
 class ResolveBetRequest(BaseModel):
     winning_option: str
 
@@ -788,17 +792,25 @@ async def lock_bet(code: str, room: HostRoomDep, request: LockBetRequest):
         raise HTTPException(status_code=500, detail=f"Failed to lock bet: {str(e)}")
 
 
-@app.post("/api/rooms/{code}/bets/{bet_id}/unlock")
-async def unlock_bet(code: str, bet_id: str, room: HostRoomDep):
-    """Unlock a bet (reopen betting) (admin only)"""
+@app.post("/api/rooms/{code}/bets/{bet_id}/toggle-lock")
+async def toggle_betting_lock(
+    code: str,
+    bet_id: str,
+    room: HostRoomDep,
+    request: ToggleBettingLockRequest,
+):
+    """Lock or unlock betting on an open bet (admin only)
+
+    This freezes/unfreezes user bets without closing the bet for resolution.
+    """
     try:
-        bet = await bet_service.unlock_bet(bet_id)
+        bet = await bet_service.toggle_betting_locked(bet_id, request.locked)
         return bet.to_dict()
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to unlock bet: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to toggle betting lock: {str(e)}")
 
 
 @app.post("/api/rooms/{code}/bets/{bet_id}/resolve")

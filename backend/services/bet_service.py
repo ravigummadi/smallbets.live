@@ -114,18 +114,18 @@ async def lock_bet(bet_id: str) -> Bet:
     return locked_bet
 
 
-async def unlock_bet(bet_id: str) -> Bet:
-    """Unlock a bet (reopen betting)"""
+async def toggle_betting_locked(bet_id: str, locked: bool) -> Bet:
+    """Toggle betting lock on an open bet"""
     bet = await get_bet(bet_id)
     if not bet:
         raise ValueError(f"Bet not found: {bet_id}")
 
-    if bet.status != BetStatus.LOCKED:
-        raise ValueError(f"Only locked bets can be unlocked (current: {bet.status.value})")
+    if bet.status != BetStatus.OPEN:
+        raise ValueError(f"Can only lock/unlock betting on open bets (current: {bet.status.value})")
 
-    unlocked_bet = bet.unlock_bet()
-    await update_bet(unlocked_bet)
-    return unlocked_bet
+    updated_bet = bet.set_betting_locked(locked)
+    await update_bet(updated_bet)
+    return updated_bet
 
 
 async def resolve_bet(bet_id: str, winning_option: str) -> None:

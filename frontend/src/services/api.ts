@@ -218,10 +218,11 @@ export const betApi = {
     });
   },
 
-  async unlockBet(roomCode: string, hostId: string, betId: string): Promise<Bet> {
-    return fetchApi(`/api/rooms/${roomCode}/bets/${betId}/unlock`, {
+  async toggleBettingLock(roomCode: string, hostId: string, betId: string, locked: boolean): Promise<Bet> {
+    return fetchApi(`/api/rooms/${roomCode}/bets/${betId}/toggle-lock`, {
       method: 'POST',
       headers: { 'X-Host-Id': hostId },
+      body: JSON.stringify({ locked }),
     });
   },
 
