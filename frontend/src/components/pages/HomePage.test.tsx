@@ -60,7 +60,7 @@ describe('HomePage', () => {
     it('should render how-it-works section', () => {
       render(<HomePage />);
 
-      expect(screen.getByText(/how it works/i)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /how it works/i })).toBeInTheDocument();
       expect(screen.getByText(/create or join/i)).toBeInTheDocument();
       expect(screen.getByText(/place your bets/i)).toBeInTheDocument();
       expect(screen.getByText(/win bragging rights/i)).toBeInTheDocument();
