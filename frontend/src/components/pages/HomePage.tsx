@@ -55,11 +55,19 @@ export default function HomePage() {
               Create New Room &rsaquo;
             </Link>
           </div>
+
+          <div
+            className="scroll-hint"
+            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+          >
+            <span>How It Works</span>
+            <span className="scroll-hint-chevron">&#8964;</span>
+          </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section className="container how-it-works">
+      <section id="how-it-works" className="container how-it-works">
         <h2 className="section-title">How It Works</h2>
         <div className="steps-grid">
           <div className="step-card">
