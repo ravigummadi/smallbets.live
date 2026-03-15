@@ -27,7 +27,7 @@ async def create_bet(
     bet_type: str = "in-game",
     created_from: str = "custom",
     template_id: Optional[str] = None,
-    timer_duration: int = 60,
+    timer_duration: int = 0,
     initial_status: str = "open",
 ) -> Bet:
     """Create a new bet

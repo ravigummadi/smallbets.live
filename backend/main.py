@@ -191,7 +191,7 @@ class CreateBetRequest(BaseModel):
     betType: str = "in-game"
     createdFrom: str = "custom"
     templateId: Optional[str] = None
-    timerDuration: int = 60
+    timerDuration: int = 0
     status: str = "open"  # "open" (default) or "pending" for bet queue
 
 
@@ -343,7 +343,7 @@ async def create_tournament(request: CreateTournamentRequest):
                     room_code=room.code,
                     template_id=request.event_template,
                     bet_type="tournament",
-                    timer_duration=120,
+                    timer_duration=0,
                 )
             except ValueError as e:
                 print(f"Warning: Could not load template {request.event_template}: {e}")

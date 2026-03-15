@@ -41,7 +41,7 @@ class Bet(BaseModel):
     bet_type: str = Field(default="in-game", description="Bet type: pre-match|in-game|tournament")
     created_from: str = Field(default="custom", description="Source: template|custom")
     template_id: Optional[str] = Field(default=None, description="Source template ID if created from template")
-    timer_duration: int = Field(default=60, description="Timer duration in seconds")
+    timer_duration: int = Field(default=0, description="Timer duration in seconds (0 = no auto-lock)")
     can_undo_until: Optional[datetime] = Field(default=None, description="Undo window expiry (10s after resolution)")
     version: int = Field(default=1, description="Optimistic locking version")
 
@@ -85,7 +85,7 @@ class Bet(BaseModel):
             bet_type=data.get("betType", "in-game"),
             created_from=data.get("createdFrom", "custom"),
             template_id=data.get("templateId"),
-            timer_duration=data.get("timerDuration", 60),
+            timer_duration=data.get("timerDuration", 0),
             can_undo_until=data.get("canUndoUntil"),
             version=data.get("version", 1),
         )
