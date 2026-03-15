@@ -74,7 +74,7 @@ async def process_transcript_for_automation(
             transcript_text,
             bet.options,
             resolve_patterns,
-            threshold=0.85
+            threshold=0.7
         )
 
         if is_resolution and winner:

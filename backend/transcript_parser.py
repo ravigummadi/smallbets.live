@@ -214,7 +214,7 @@ def generate_resolve_patterns_from_question(question: str) -> List[str]:
         "do", "can", "be", "this", "that", "it", "and", "or", "but",
         "score", "scores", "scored", "win", "wins", "get", "gets",
         "make", "makes", "total", "first", "last", "next", "today",
-        "tonight", "match", "game",
+        "tonight", "game",
     }
 
     text = normalize_text(question)
@@ -332,6 +332,22 @@ def extract_winner_from_text(
     """
     if not options:
         return None, 0.0
+
+    # Strategy 0: Yes/No bet detection
+    # If options are Yes/No variants and the text matches the bet's topic,
+    # infer the answer based on whether the text affirms or negates.
+    normalized_options = [o.strip().lower() for o in options]
+    yes_no_options = {"yes", "no"}
+    if set(normalized_options) == yes_no_options or set(normalized_options) <= {"yes", "no", "true", "false"}:
+        negation_words = {"not", "didn't", "didnt", "doesn't", "doesnt", "won't", "wont", "never", "no", "failed"}
+        text_words = set(normalize_text(text).split())
+        has_negation = bool(text_words & negation_words)
+        # Find which option maps to Yes/No
+        yes_option = next((o for o in options if o.strip().lower() in ("yes", "true")), None)
+        no_option = next((o for o in options if o.strip().lower() in ("no", "false")), None)
+        if yes_option and no_option:
+            winner = no_option if has_negation else yes_option
+            return winner, 0.9
 
     # Strategy 1: Numeric range matching
     if is_numeric_range_options(options):
