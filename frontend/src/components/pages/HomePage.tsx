@@ -1,5 +1,6 @@
 /**
  * Home page - Entry point for users
+ * Redesigned with hero section, feature cards, and how-it-works
  */
 
 import { Link } from 'react-router-dom';
@@ -18,47 +19,110 @@ export default function HomePage() {
   };
 
   return (
-    <div className="container" style={{ paddingTop: '3rem' }}>
-      <div className="text-center mb-xl">
-        <h1>SmallBets<span style={{ color: 'var(--color-accent-warm)' }}>.live</span></h1>
-        <p className="text-secondary" style={{ fontWeight: 500, fontSize: '1.1rem' }}>
-          Bet on anything with friends. No money, just bragging rights.
-        </p>
-      </div>
+    <div>
+      {/* Hero Section */}
+      <section className="hero-section">
+        <div className="hero-bg" />
+        <div className="container hero-content">
+          <div className="hero-icon">🎲</div>
+          <h1 className="hero-title">
+            SmallBets<span className="hero-title-accent">.live</span>
+          </h1>
+          <p className="hero-subtitle">
+            Bet on anything with friends while watching live events.
+            No money, no accounts &mdash; just bragging rights.
+          </p>
 
-      <div className="card mb-lg">
-        <h3 className="mb-md" style={{ fontSize: '1.125rem' }}>Join a Room</h3>
-        <form onSubmit={handleJoinRoom}>
-          <input
-            type="text"
-            placeholder="Enter room code (e.g. BLUE42)"
-            value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-            maxLength={6}
-            className="mb-md"
-            autoFocus
-          />
-          <button
-            type="submit"
-            className="btn btn-primary btn-full"
-            disabled={roomCode.length < 4}
-          >
-            Join Room
-          </button>
-        </form>
-      </div>
+          <div className="hero-actions">
+            <form onSubmit={handleJoinRoom} className="hero-join-form">
+              <input
+                type="text"
+                placeholder="Enter room code"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                maxLength={6}
+                className="hero-input"
+              />
+              <button
+                type="submit"
+                className="btn btn-outline-light"
+                disabled={roomCode.length < 4}
+              >
+                Join &rsaquo;
+              </button>
+            </form>
+            <Link to="/create" className="btn btn-outline-light btn-lg hero-create-btn">
+              Create New Room &rsaquo;
+            </Link>
+          </div>
+        </div>
+      </section>
 
-      <div className="text-center">
-        <p className="text-muted mb-md">or</p>
-        <Link to="/create" className="btn btn-secondary btn-full">
-          Create New Room
-        </Link>
-      </div>
+      {/* How It Works */}
+      <section className="container how-it-works">
+        <h2 className="section-title">How It Works</h2>
+        <div className="steps-grid">
+          <div className="step-card">
+            <div className="step-number">1</div>
+            <h4 className="step-title">Create or Join</h4>
+            <p className="step-desc">
+              Create a room for any live event, or join a friend's room with a short code.
+            </p>
+          </div>
+          <div className="step-card">
+            <div className="step-number">2</div>
+            <h4 className="step-title">Place Your Bets</h4>
+            <p className="step-desc">
+              Predict outcomes in real-time &mdash; who wins Best Picture, the next touchdown, or the Gatorade color.
+            </p>
+          </div>
+          <div className="step-card">
+            <div className="step-number">3</div>
+            <h4 className="step-title">Win Bragging Rights</h4>
+            <p className="step-desc">
+              See live leaderboards update instantly. No money involved &mdash; just virtual points and glory.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      <div className="mt-xl text-center text-muted" style={{ fontSize: '0.875rem' }}>
-        <p>No accounts needed. Virtual points only.</p>
-        <p className="mt-sm">Perfect for watching awards shows, sports, and live events with friends.</p>
-      </div>
+      {/* Event Templates */}
+      <section className="container events-section">
+        <h2 className="section-title">Built For Any Event</h2>
+        <div className="events-grid">
+          <div className="event-card">
+            <span className="event-icon">🏆</span>
+            <span className="event-name">Award Shows</span>
+            <span className="event-detail">Oscars, Grammys, Emmys</span>
+          </div>
+          <div className="event-card">
+            <span className="event-icon">🏈</span>
+            <span className="event-name">Sports</span>
+            <span className="event-detail">Super Bowl, World Cup, IPL</span>
+          </div>
+          <div className="event-card">
+            <span className="event-icon">🎤</span>
+            <span className="event-name">Live Shows</span>
+            <span className="event-detail">Reality TV, Debates, Concerts</span>
+          </div>
+          <div className="event-card">
+            <span className="event-icon">🎯</span>
+            <span className="event-name">Anything</span>
+            <span className="event-detail">Custom events, game nights</span>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="container cta-section">
+        <div className="cta-card">
+          <h3>Ready to play?</h3>
+          <p className="text-secondary">No signup required. Just create a room and share the code.</p>
+          <Link to="/create" className="btn btn-primary btn-lg">
+            Get Started &rsaquo;
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

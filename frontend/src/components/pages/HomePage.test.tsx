@@ -48,7 +48,7 @@ describe('HomePage', () => {
       render(<HomePage />);
 
       expect(screen.getByPlaceholderText(/enter room code/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /join room/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /join/i })).toBeInTheDocument();
     });
 
     it('should render create room link', () => {
@@ -57,11 +57,28 @@ describe('HomePage', () => {
       expect(screen.getByRole('link', { name: /create new room/i })).toBeInTheDocument();
     });
 
-    it('should render informational text', () => {
+    it('should render how-it-works section', () => {
       render(<HomePage />);
 
-      expect(screen.getByText(/no accounts needed/i)).toBeInTheDocument();
-      expect(screen.getByText(/virtual points only/i)).toBeInTheDocument();
+      expect(screen.getByText(/how it works/i)).toBeInTheDocument();
+      expect(screen.getByText(/create or join/i)).toBeInTheDocument();
+      expect(screen.getByText(/place your bets/i)).toBeInTheDocument();
+      expect(screen.getByText(/win bragging rights/i)).toBeInTheDocument();
+    });
+
+    it('should render event types section', () => {
+      render(<HomePage />);
+
+      expect(screen.getByText(/built for any event/i)).toBeInTheDocument();
+      expect(screen.getByText(/award shows/i)).toBeInTheDocument();
+      expect(screen.getByText(/sports/i)).toBeInTheDocument();
+    });
+
+    it('should render CTA section', () => {
+      render(<HomePage />);
+
+      expect(screen.getByText(/ready to play/i)).toBeInTheDocument();
+      expect(screen.getByText(/no signup required/i)).toBeInTheDocument();
     });
   });
 
@@ -103,7 +120,7 @@ describe('HomePage', () => {
     it('should disable submit button when room code is empty', () => {
       render(<HomePage />);
 
-      const button = screen.getByRole('button', { name: /join room/i });
+      const button = screen.getByRole('button', { name: /join/i });
 
       expect(button).toBeDisabled();
     });
@@ -113,7 +130,7 @@ describe('HomePage', () => {
       render(<HomePage />);
 
       const input = screen.getByPlaceholderText(/enter room code/i);
-      const button = screen.getByRole('button', { name: /join room/i });
+      const button = screen.getByRole('button', { name: /join/i });
 
       await user.type(input, 'BLU');
 
@@ -125,7 +142,7 @@ describe('HomePage', () => {
       render(<HomePage />);
 
       const input = screen.getByPlaceholderText(/enter room code/i);
-      const button = screen.getByRole('button', { name: /join room/i });
+      const button = screen.getByRole('button', { name: /join/i });
 
       await user.type(input, 'BLUE');
 
@@ -137,7 +154,7 @@ describe('HomePage', () => {
       render(<HomePage />);
 
       const input = screen.getByPlaceholderText(/enter room code/i);
-      const button = screen.getByRole('button', { name: /join room/i });
+      const button = screen.getByRole('button', { name: /join/i });
 
       await user.type(input, 'BLUE');
       await user.click(button);
@@ -166,7 +183,7 @@ describe('HomePage', () => {
       // Type a valid room code
       await user.type(input, 'BLUE');
 
-      const button = screen.getByRole('button', { name: /join room/i });
+      const button = screen.getByRole('button', { name: /join/i });
       await user.click(button);
 
       // Should navigate with the code
@@ -178,7 +195,7 @@ describe('HomePage', () => {
       render(<HomePage />);
 
       const input = screen.getByPlaceholderText(/enter room code/i);
-      const button = screen.getByRole('button', { name: /join room/i });
+      const button = screen.getByRole('button', { name: /join/i });
 
       // Type fewer than 4 characters
       await user.type(input, 'BL');
@@ -198,13 +215,10 @@ describe('HomePage', () => {
     });
 
     it('should navigate to create room when link is clicked', async () => {
-      const user = userEvent.setup();
       render(<HomePage />);
 
       const link = screen.getByRole('link', { name: /create new room/i });
 
-      // Note: In testing environment with BrowserRouter, clicking link doesn't
-      // actually navigate, but we verify the href is correct
       expect(link).toHaveAttribute('href', '/create');
     });
   });
@@ -220,19 +234,10 @@ describe('HomePage', () => {
       expect(results).toHaveNoViolations();
     });
 
-    it('should have room code input focused by default', () => {
-      render(<HomePage />);
-
-      const input = screen.getByPlaceholderText(/enter room code/i);
-
-      // React's autoFocus prop triggers focus via JS, not an HTML attribute
-      expect(input).toBeDefined();
-    });
-
     it('should have proper button semantics', () => {
       render(<HomePage />);
 
-      const joinButton = screen.getByRole('button', { name: /join room/i });
+      const joinButton = screen.getByRole('button', { name: /join/i });
 
       expect(joinButton).toHaveAttribute('type', 'submit');
     });
@@ -250,21 +255,8 @@ describe('HomePage', () => {
       render(<HomePage />);
 
       const h1 = screen.getByRole('heading', { level: 1 });
-      const h3 = screen.getByRole('heading', { level: 3 });
 
       expect(h1).toHaveTextContent('SmallBets.live');
-      expect(h3).toHaveTextContent('Join a Room');
-    });
-
-    it('should have descriptive placeholder text for input', () => {
-      render(<HomePage />);
-
-      const input = screen.getByPlaceholderText(/enter room code/i);
-
-      expect(input).toHaveAttribute(
-        'placeholder',
-        expect.stringContaining('e.g.')
-      );
     });
   });
 
@@ -274,7 +266,7 @@ describe('HomePage', () => {
       render(<HomePage />);
 
       const input = screen.getByPlaceholderText(/enter room code/i);
-      const button = screen.getByRole('button', { name: /join room/i });
+      const button = screen.getByRole('button', { name: /join/i });
 
       await user.type(input, 'BLUE');
 
