@@ -12,6 +12,12 @@ from typing import Optional, List, Tuple
 from difflib import SequenceMatcher
 import math
 
+# Confidence score for Yes/No bet inference (high but below 1.0 since it's heuristic)
+YES_NO_INFERENCE_CONFIDENCE = 0.9
+
+# Valid binary option pairs for Yes/No detection
+_BINARY_OPTION_PAIRS = {frozenset({"yes", "no"}), frozenset({"true", "false"})}
+
 # Pre-compiled regex for numeric range detection (used in hot path)
 _NUMERIC_RANGE_RE = re.compile(
     r'^\s*\d+\s*[-–]\s*\d+\s*(?:runs?|pts|points|goals?|wickets?)?\s*$'
@@ -334,20 +340,18 @@ def extract_winner_from_text(
         return None, 0.0
 
     # Strategy 0: Yes/No bet detection
-    # If options are Yes/No variants and the text matches the bet's topic,
-    # infer the answer based on whether the text affirms or negates.
-    normalized_options = [o.strip().lower() for o in options]
-    yes_no_options = {"yes", "no"}
-    if set(normalized_options) == yes_no_options or set(normalized_options) <= {"yes", "no", "true", "false"}:
-        negation_words = {"not", "didn't", "didnt", "doesn't", "doesnt", "won't", "wont", "never", "no", "failed"}
-        text_words = set(normalize_text(text).split())
-        has_negation = bool(text_words & negation_words)
-        # Find which option maps to Yes/No
-        yes_option = next((o for o in options if o.strip().lower() in ("yes", "true")), None)
-        no_option = next((o for o in options if o.strip().lower() in ("no", "false")), None)
-        if yes_option and no_option:
+    # Only for exactly 2 options that form a known binary pair (yes/no or true/false).
+    # Infer the answer based on whether the text affirms or negates.
+    if len(options) == 2:
+        normalized_pair = frozenset(o.strip().lower() for o in options)
+        if normalized_pair in _BINARY_OPTION_PAIRS:
+            negation_words = {"not", "didn't", "didnt", "doesn't", "doesnt", "won't", "wont", "never", "no", "failed"}
+            text_words = set(normalize_text(text).split())
+            has_negation = bool(text_words & negation_words)
+            yes_option = next(o for o in options if o.strip().lower() in ("yes", "true"))
+            no_option = next(o for o in options if o.strip().lower() in ("no", "false"))
             winner = no_option if has_negation else yes_option
-            return winner, 0.9
+            return winner, YES_NO_INFERENCE_CONFIDENCE
 
     # Strategy 1: Numeric range matching
     if is_numeric_range_options(options):
