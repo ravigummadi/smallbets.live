@@ -63,7 +63,7 @@ describe('RoomHeader', () => {
 
     it('should render compact ShareButton in header', () => {
       render(<RoomHeader {...baseProps} />);
-      expect(screen.getByLabelText('Copy room link')).toBeDefined();
+      expect(screen.getByLabelText('Share room link')).toBeDefined();
     });
 
     it('should display room code in title', () => {

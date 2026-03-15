@@ -1021,11 +1021,6 @@ select:focus {
   font-family: var(--font-body);
 }
 .share-btn-icon { flex-shrink: 0; }
-.share-btn--icon-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
 .share-btn--icon {
   padding: 0.25rem;
   background: transparent;
@@ -1061,12 +1056,6 @@ select:focus {
 .share-btn--full.share-btn--copied {
   background: linear-gradient(135deg, var(--color-success), #10B981);
 }
-.share-btn--row {
-  display: flex;
-  gap: 0.5rem;
-}
-.share-btn--row .share-btn--full { flex: 1; }
-.share-btn--native { flex: 0 0 auto !important; width: auto !important; }
 .share-btn-group {
   margin-top: 0.75rem;
   padding-top: 0.75rem;

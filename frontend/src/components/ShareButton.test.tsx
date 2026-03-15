@@ -34,9 +34,9 @@ describe('ShareButton', () => {
   });
 
   describe('Full mode (default)', () => {
-    it('should render copy button with invite text', () => {
+    it('should render share button with invite text', () => {
       render(<ShareButton {...baseProps} />);
-      expect(screen.getByText('Copy Invite Link')).toBeDefined();
+      expect(screen.getByText('Share Invite Link')).toBeDefined();
     });
 
     it('should display room code', () => {
@@ -44,12 +44,13 @@ describe('ShareButton', () => {
       expect(screen.getByText('ABC123')).toBeDefined();
     });
 
-    it('should copy join link to clipboard when clicked', async () => {
+    it('should copy join link to clipboard when clicked (no native share)', async () => {
       const user = userEvent.setup();
       render(<ShareButton {...baseProps} />);
 
-      await user.click(screen.getByText('Copy Invite Link'));
+      await user.click(screen.getByText('Share Invite Link'));
 
+      // Verify the copy succeeded by checking the UI feedback
       await waitFor(() => {
         expect(screen.getByText('Link Copied!')).toBeDefined();
       });
@@ -59,7 +60,7 @@ describe('ShareButton', () => {
       const user = userEvent.setup();
       render(<ShareButton {...baseProps} />);
 
-      await user.click(screen.getByText('Copy Invite Link'));
+      await user.click(screen.getByText('Share Invite Link'));
 
       await waitFor(() => {
         expect(screen.getByText('Link Copied!')).toBeDefined();
@@ -68,61 +69,37 @@ describe('ShareButton', () => {
   });
 
   describe('Compact mode', () => {
-    it('should render compact copy link button', () => {
+    it('should render compact icon button', () => {
       render(<ShareButton {...baseProps} compact />);
-      expect(screen.getByLabelText('Copy room link')).toBeDefined();
+      expect(screen.getByLabelText('Share room link')).toBeDefined();
     });
 
     it('should have aria-label for accessibility', () => {
       render(<ShareButton {...baseProps} compact />);
-      expect(screen.getByLabelText('Copy room link')).toBeDefined();
+      expect(screen.getByLabelText('Share room link')).toBeDefined();
     });
 
-    it('should copy to clipboard when icon is clicked', async () => {
+    it('should show copied state after clicking in compact mode', async () => {
       const user = userEvent.setup();
       render(<ShareButton {...baseProps} compact />);
 
-      await user.click(screen.getByLabelText('Copy room link'));
+      await user.click(screen.getByLabelText('Share room link'));
 
-      // Verify copy happened by checking the icon changes to checkmark (copied state)
       await waitFor(() => {
-        expect(screen.getByLabelText('Copy room link').classList.contains('share-btn--copied')).toBe(true);
+        expect(screen.getByLabelText('Share room link').classList.contains('share-btn--copied')).toBe(true);
       });
     });
   });
 
   describe('Native share', () => {
-    it('should show separate Share button when navigator.share is available', () => {
-      const mockShare = vi.fn().mockResolvedValue(undefined);
-      Object.defineProperty(navigator, 'share', { value: mockShare, writable: true, configurable: true });
-
-      render(<ShareButton {...baseProps} />);
-      expect(screen.getByText('Share')).toBeDefined();
-    });
-
-    it('should copy to clipboard on Copy button click (not native share)', async () => {
+    it('should use navigator.share when available', async () => {
       const mockShare = vi.fn().mockResolvedValue(undefined);
       Object.defineProperty(navigator, 'share', { value: mockShare, writable: true, configurable: true });
 
       const user = userEvent.setup();
       render(<ShareButton {...baseProps} />);
 
-      await user.click(screen.getByText('Copy Invite Link'));
-
-      await waitFor(() => {
-        expect(screen.getByText('Link Copied!')).toBeDefined();
-      });
-      expect(mockShare).not.toHaveBeenCalled();
-    });
-
-    it('should call navigator.share when Share button is clicked', async () => {
-      const mockShare = vi.fn().mockResolvedValue(undefined);
-      Object.defineProperty(navigator, 'share', { value: mockShare, writable: true, configurable: true });
-
-      const user = userEvent.setup();
-      render(<ShareButton {...baseProps} />);
-
-      await user.click(screen.getByText('Share'));
+      await user.click(screen.getByText('Share Invite Link'));
 
       expect(mockShare).toHaveBeenCalledWith({
         title: 'Join Test Event on SmallBets.live',
@@ -138,13 +115,28 @@ describe('ShareButton', () => {
       const user = userEvent.setup();
       render(<ShareButton {...baseProps} isTournament />);
 
-      await user.click(screen.getByText('Share'));
+      await user.click(screen.getByText('Share Invite Link'));
 
       expect(mockShare).toHaveBeenCalledWith(
         expect.objectContaining({
           text: expect.stringContaining('tournament'),
         })
       );
+    });
+
+    it('should fall back to clipboard if native share is cancelled', async () => {
+      const mockShare = vi.fn().mockRejectedValue(new Error('cancelled'));
+      Object.defineProperty(navigator, 'share', { value: mockShare, writable: true, configurable: true });
+
+      const user = userEvent.setup();
+      render(<ShareButton {...baseProps} />);
+
+      await user.click(screen.getByText('Share Invite Link'));
+
+      // Falls back to copy, which shows "Link Copied!" feedback
+      await waitFor(() => {
+        expect(screen.getByText('Link Copied!')).toBeDefined();
+      });
     });
   });
 
