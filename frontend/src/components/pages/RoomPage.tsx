@@ -4,7 +4,7 @@
  */
 
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSession } from '@/hooks/useSession';
 import { useRoom } from '@/hooks/useRoom';
 import { useUser } from '@/hooks/useUser';
@@ -24,6 +24,7 @@ import BetCard from '@/components/BetCard';
 import BetUsersModal from '@/components/BetUsersModal';
 import RoomHeader, { EVENT_TEMPLATE_NAMES } from '@/components/RoomHeader';
 import HostActionBar from '@/components/HostActionBar';
+import CollapsibleSection from '@/components/CollapsibleSection';
 import SessionRestoreFlow from '@/components/SessionRestoreFlow';
 import { betApi, roomApi } from '@/services/api';
 import type { Room, Bet, ParticipantWithLink } from '@/types';
@@ -409,14 +410,23 @@ export default function RoomPage() {
   const isMatch = displayRoom.roomType === 'match';
   const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
 
-  const openBets = bets.filter(bet => bet.status === 'open');
-  const lockedBets = bets.filter(bet => bet.status === 'locked');
-  const pendingBets = bets.filter(bet => bet.status === 'pending');
-  const resolvedBets = bets.filter(bet => bet.status === 'resolved');
-  const tournamentBets = bets.filter(bet => bet.betType === 'tournament');
-  const matchBets = bets.filter(bet => bet.betType !== 'tournament');
+  const openBets = useMemo(() => bets.filter(bet => bet.status === 'open'), [bets]);
+  const lockedBets = useMemo(() => bets.filter(bet => bet.status === 'locked'), [bets]);
+  const pendingBets = useMemo(() => bets.filter(bet => bet.status === 'pending'), [bets]);
+  const resolvedBets = useMemo(() => bets.filter(bet => bet.status === 'resolved'), [bets]);
+  const tournamentBets = useMemo(() => bets.filter(bet => bet.betType === 'tournament'), [bets]);
+  const matchBets = useMemo(() => bets.filter(bet => bet.betType !== 'tournament'), [bets]);
 
-  const userBetMap = new Map(userBets.map(ub => [ub.betId, ub]));
+  const openTournamentBetsCount = useMemo(
+    () => tournamentBets.filter(b => b.status === 'open').length,
+    [tournamentBets]
+  );
+  const openMatchBetsCount = useMemo(
+    () => matchBets.filter(b => b.status === 'open').length,
+    [matchBets]
+  );
+
+  const userBetMap = useMemo(() => new Map(userBets.map(ub => [ub.betId, ub])), [userBets]);
 
   const renderBetCard = (bet: Bet) => (
     <BetCard
@@ -532,10 +542,9 @@ export default function RoomPage() {
           )}
 
           {isTournament && tournamentBets.length > 0 && (
-            <div className="card mb-md">
-              <h4 className="mb-md">Season Bets <span className="bet-count-badge">{tournamentBets.filter(b => b.status === 'open').length}</span></h4>
+            <CollapsibleSection title="Season Bets" badge={openTournamentBetsCount}>
               <div className="bet-list">{tournamentBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           )}
 
           {betsLoading ? (
@@ -543,39 +552,37 @@ export default function RoomPage() {
           ) : openBets.length === 0 && lockedBets.length === 0 && (!isTournament || matchBets.length === 0) ? (
             <div className="card mb-md text-center"><p className="text-secondary">No open bets. Waiting for next bet...</p></div>
           ) : !isTournament && openBets.length > 0 ? (
-            <div className="card mb-md">
-              <h4 className="mb-md">Open Bets <span className="bet-count-badge">{openBets.length}</span></h4>
+            <CollapsibleSection title="Open Bets" badge={openBets.length}>
               <div className="bet-list">{openBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           ) : null}
 
           {lockedBets.length > 0 && (
-            <div className="card mb-md">
-              <h4 className="mb-md">{isHost ? 'Resolve Bets' : 'Locked Bets'} <span className="bet-count-badge">{lockedBets.length}</span></h4>
+            <CollapsibleSection title={isHost ? 'Resolve Bets' : 'Locked Bets'} badge={lockedBets.length}>
               <div className="bet-list">{lockedBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           )}
 
           {isMatch && matchBets.length > 0 && (
-            <div className="card mb-md">
-              <h4 className="mb-md">Match Bets <span className="bet-count-badge">{matchBets.filter(b => b.status === 'open').length} open</span></h4>
+            <CollapsibleSection title="Match Bets" badge={`${openMatchBetsCount} open`}>
               <div className="bet-list">{matchBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           )}
         </>
       )}
 
       {displayRoom.status === 'finished' && (
-        <div className="card mb-md text-center">
-          <h4 className="mb-md">{isTournament ? 'Tournament Finished' : 'Event Finished'}</h4>
-          <p className="text-secondary">Check the leaderboard below to see final standings</p>
+        <>
+          <div className="card mb-md text-center">
+            <h4 className="mb-md">{isTournament ? 'Tournament Finished' : 'Event Finished'}</h4>
+            <p className="text-secondary">Check the leaderboard below to see final standings</p>
+          </div>
           {resolvedBets.length > 0 && (
-            <div className="mt-md" style={{ textAlign: 'left' }}>
-              <h4 className="mb-md">Results</h4>
+            <CollapsibleSection title="Results" badge={resolvedBets.length} defaultExpanded={false}>
               <div className="bet-list">{resolvedBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           )}
-        </div>
+        </>
       )}
 
       <AnimatedLeaderboard

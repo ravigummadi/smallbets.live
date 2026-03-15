@@ -723,6 +723,55 @@ select:focus {
   color: var(--color-text-muted);
 }
 
+/* ===== CollapsibleSection Component ===== */
+.collapsible-section {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-md);
+  overflow: hidden;
+}
+
+.collapsible-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: var(--spacing-md);
+  background: none;
+  border: none;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  transition: background-color 0.15s ease;
+}
+
+.collapsible-section-header:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.collapsible-section-header--expanded {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.collapsible-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.collapsible-section-icon {
+  font-size: 1.25rem;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.collapsible-section-body {
+  padding: var(--spacing-md);
+}
+
 /* ===== BetCard Component ===== */
 .bet-card {
   border: 1px solid var(--color-border);

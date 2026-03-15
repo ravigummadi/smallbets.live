@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { roomApi } from '@/services/api';
+import CollapsibleSection from '@/components/CollapsibleSection';
 import type { Room } from '@/types';
 
 interface MatchRoomDiscoveryProps {
@@ -100,21 +101,7 @@ export default function MatchRoomDiscovery({
   });
 
   return (
-    <div className="card mb-md">
-      <h4 className="mb-md" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        Matches
-        <span style={{
-          background: 'var(--color-primary)',
-          color: '#000',
-          padding: '0.125rem 0.5rem',
-          borderRadius: '999px',
-          fontSize: '0.75rem',
-          fontWeight: 700,
-        }}>
-          {matchRooms.length}
-        </span>
-      </h4>
-
+    <CollapsibleSection title="Matches" badge={matchRooms.length}>
       {sortedRooms.length > 0 ? (
         <div style={{ display: 'grid', gap: '0.75rem' }}>
           {sortedRooms.map(matchRoom => {
@@ -185,6 +172,6 @@ export default function MatchRoomDiscovery({
           </button>
         </div>
       )}
-    </div>
+    </CollapsibleSection>
   );
 }
