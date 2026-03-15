@@ -1021,6 +1021,20 @@ select:focus {
   font-family: var(--font-body);
 }
 .share-btn-icon { flex-shrink: 0; }
+.share-btn--icon-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.share-btn--icon {
+  padding: 0.25rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  min-height: auto;
+  border-radius: var(--radius-sm);
+}
+.share-btn--icon:hover { color: var(--color-primary); background: var(--color-bg-elevated); }
+.share-btn--icon.share-btn--copied { color: var(--color-success); }
 .share-btn--compact {
   font-size: 0.8rem;
   padding: 0.35rem 0.75rem;
@@ -1047,6 +1061,12 @@ select:focus {
 .share-btn--full.share-btn--copied {
   background: linear-gradient(135deg, var(--color-success), #10B981);
 }
+.share-btn--row {
+  display: flex;
+  gap: 0.5rem;
+}
+.share-btn--row .share-btn--full { flex: 1; }
+.share-btn--native { flex: 0 0 auto !important; width: auto !important; }
 .share-btn-group {
   margin-top: 0.75rem;
   padding-top: 0.75rem;

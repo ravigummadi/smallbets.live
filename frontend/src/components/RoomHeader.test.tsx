@@ -61,15 +61,14 @@ describe('RoomHeader', () => {
       expect(screen.getByText('Host')).toBeDefined();
     });
 
-    it('should render ShareButton with invite link', () => {
+    it('should render compact ShareButton in header', () => {
       render(<RoomHeader {...baseProps} />);
-      expect(screen.getByText('Share Invite Link')).toBeDefined();
+      expect(screen.getByLabelText('Copy room link')).toBeDefined();
     });
 
-    it('should display room code in share section', () => {
+    it('should display room code in title', () => {
       render(<RoomHeader {...baseProps} />);
-      // Room code shown in title and in share section
-      expect(screen.getAllByText('ABC123').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText(/ABC123/)).toBeDefined();
     });
   });
 

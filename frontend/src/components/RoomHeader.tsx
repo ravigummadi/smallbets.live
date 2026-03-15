@@ -42,6 +42,12 @@ export default function RoomHeader({
         <div>
           <h3 className="room-header-title">
             <span>{isTournament && 'Tournament: '}{eventName} - Room {room.code}</span>
+            <ShareButton
+              roomCode={room.code}
+              eventName={eventName}
+              isTournament={isTournament}
+              compact
+            />
           </h3>
           <div className="room-header-status">
             {room.status === 'waiting' && <span>Waiting to start</span>}
@@ -67,13 +73,6 @@ export default function RoomHeader({
           </span>
         </div>
       </div>
-
-      <ShareButton
-        roomCode={room.code}
-        eventName={eventName}
-        isTournament={isTournament}
-        compact={false}
-      />
 
       {isHost && room.status === 'active' && (
         <div className="room-header-finish">
