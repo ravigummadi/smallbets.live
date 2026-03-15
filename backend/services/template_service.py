@@ -44,7 +44,7 @@ async def create_bets_from_template(
     room_code: str,
     template_id: str,
     bet_type: str = "in-game",
-    timer_duration: int = 60,
+    timer_duration: int = 0,
 ) -> List[Bet]:
     """Load template and create all bets for a room
 

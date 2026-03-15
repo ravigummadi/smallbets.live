@@ -99,7 +99,7 @@ class RateLimiter:
 
 
 # Rate limiter for session restoration endpoint
-session_restore_limiter = RateLimiter(max_requests=10, window_seconds=60)
+session_restore_limiter = RateLimiter(max_requests=60, window_seconds=60)
 
 # Regex for validating userKey format
 USER_KEY_PATTERN = re.compile(r"^[23456789A-HJ-NP-Za-hj-np-z]{8}$")
@@ -191,7 +191,7 @@ class CreateBetRequest(BaseModel):
     betType: str = "in-game"
     createdFrom: str = "custom"
     templateId: Optional[str] = None
-    timerDuration: int = 60
+    timerDuration: int = 0
     status: str = "open"  # "open" (default) or "pending" for bet queue
 
 
@@ -343,7 +343,7 @@ async def create_tournament(request: CreateTournamentRequest):
                     room_code=room.code,
                     template_id=request.event_template,
                     bet_type="tournament",
-                    timer_duration=120,
+                    timer_duration=0,
                 )
             except ValueError as e:
                 print(f"Warning: Could not load template {request.event_template}: {e}")
@@ -597,6 +597,23 @@ async def get_user_by_key(
         "isAdmin": user.is_admin,
         "roomCode": user.room_code,
     }
+
+
+@app.get("/api/rooms/{code}/user-key")
+async def get_user_key(code: str, room: RoomDep, nickname: str = None, user_id: str = None):
+    """Get a user's key by nickname or userId (for building direct room links)"""
+    if not nickname and not user_id:
+        raise HTTPException(status_code=400, detail="Provide nickname or user_id query parameter")
+    if nickname:
+        user = await user_service.find_user_by_nickname(code, nickname)
+    else:
+        user = await user_service.get_user(user_id)
+        if user and user.room_code != code:
+            user = None
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found in this room")
+    user = await user_service.ensure_user_has_key(user)
+    return {"userKey": user.user_key, "userId": user.user_id}
 
 
 @app.get("/api/rooms/{code}/leaderboard")

@@ -240,11 +240,11 @@ def test_get_user_by_key_rate_limited(client, mock_room):
     with patch("services.room_service.get_room", new_callable=AsyncMock, return_value=mock_room), \
          patch("services.user_service.get_user_by_key", new_callable=AsyncMock, return_value=None):
 
-        # Make 10 requests (all should pass, last ones may be 404)
-        for i in range(10):
+        # Make 60 requests (all should pass, last ones may be 404)
+        for i in range(60):
             client.get("/api/rooms/AAAA/users/xY7kM9zQ")
 
-        # 11th request should be rate limited
+        # 61st request should be rate limited
         response = client.get("/api/rooms/AAAA/users/xY7kM9zQ")
         assert response.status_code == 429
 

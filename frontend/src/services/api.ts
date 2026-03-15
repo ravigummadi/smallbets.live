@@ -93,6 +93,10 @@ export const roomApi = {
     return fetchApi(`/api/rooms/${code}`);
   },
 
+  async getUserKeyByNickname(code: string, nickname: string): Promise<{ userKey: string; userId: string }> {
+    return fetchApi(`/api/rooms/${code}/user-key?nickname=${encodeURIComponent(nickname)}`);
+  },
+
   async joinRoom(code: string, request: JoinRoomRequest): Promise<JoinRoomResponse> {
     return fetchApi(`/api/rooms/${code}/join`, {
       method: 'POST',

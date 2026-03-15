@@ -41,6 +41,8 @@ export default function RoomPage() {
   const [placingBets, setPlacingBets] = useState<Set<string>>(new Set());
   const [betErrors, setBetErrors] = useState<Record<string, string>>({});
   const [matchRooms, setMatchRooms] = useState<Room[]>([]);
+  const [parentTournamentName, setParentTournamentName] = useState<string | null>(null);
+  const [parentUserKey, setParentUserKey] = useState<string | null>(null);
 
   // Admin modal state (host only)
   const [showBetModal, setShowBetModal] = useState(false);
@@ -68,6 +70,12 @@ export default function RoomPage() {
   const prevBetsRef = useRef<Map<string, Bet>>(new Map());
   const autoLockingRef = useRef<Set<string>>(new Set());
 
+  // Compute effective host ID early so event handlers and effects can use it
+  // Primary host uses hostId, co-hosts use their userId
+  const effectiveHostId = session?.hostId || (
+    session?.userId && localRoom?.coHostIds?.includes(session.userId) ? session.userId : undefined
+  );
+
   // Match room creation state
   const [showCreateMatch, setShowCreateMatch] = useState(false);
   const [matchTitle, setMatchTitle] = useState('');
@@ -79,19 +87,9 @@ export default function RoomPage() {
   // Session restoration via userKey link
   const needsRestore = userKey && code && (!session || session.roomCode !== code);
 
-  if (needsRestore) {
-    return (
-      <SessionRestoreFlow
-        code={code!}
-        userKey={userKey!}
-        existingSession={session}
-        onSessionRestored={saveSession}
-      />
-    );
-  }
-
   // Redirect if no session for this room (and not on a userKey URL)
   useEffect(() => {
+    if (needsRestore) return;
     if (userKey) return;
     if (!session || session.roomCode !== code) {
       navigate(`/join/${code}`, {
@@ -118,6 +116,20 @@ export default function RoomPage() {
         .catch(err => console.error('Failed to load match rooms:', err));
     }
   }, [localRoom?.roomType, localRoom?.code]);
+
+  // Load parent tournament name and user key for match room breadcrumb
+  useEffect(() => {
+    if (localRoom?.roomType !== 'match' || !localRoom.parentRoomCode) return;
+    const parentCode = localRoom.parentRoomCode;
+    roomApi.getRoom(parentCode)
+      .then(parentRoom => setParentTournamentName(parentRoom.eventName || 'Tournament'))
+      .catch(() => setParentTournamentName('Tournament'));
+    if (user?.nickname) {
+      roomApi.getUserKeyByNickname(parentCode, user.nickname)
+        .then(res => setParentUserKey(res.userKey))
+        .catch(() => {});
+    }
+  }, [localRoom?.roomType, localRoom?.parentRoomCode, user?.nickname]);
 
   // Load participant links for host/co-host
   useEffect(() => {
@@ -352,7 +364,27 @@ export default function RoomPage() {
     return new Date() < new Date(bet.canUndoUntil);
   };
 
-  if (roomLoading || userLoading) {
+  // Treat as loading if we have a valid session for this room but user data hasn't
+  // arrived yet. This prevents a flash of "Room not found" after session restore,
+  // when useEffect for Firestore subscriptions hasn't fired yet.
+  // Don't wait if room loading finished and room is null (room genuinely doesn't exist).
+  const awaitingUserData = !roomLoading && localRoom && !user
+    && session && session.roomCode === code;
+  const stillLoading = roomLoading || userLoading || awaitingUserData;
+
+  // Session restore must be rendered AFTER all hooks to avoid "rendered more hooks" error
+  if (needsRestore) {
+    return (
+      <SessionRestoreFlow
+        code={code!}
+        userKey={userKey!}
+        existingSession={session}
+        onSessionRestored={saveSession}
+      />
+    );
+  }
+
+  if (stillLoading) {
     return (
       <div className="container container-padded-top">
         <div className="spinner" />
@@ -378,8 +410,6 @@ export default function RoomPage() {
   const isCoHost = !!(session?.userId && displayRoom?.coHostIds?.includes(session.userId));
   const isHost = user.isAdmin || isCoHost;
   const isPrimaryHost = user.isAdmin;
-  // Co-hosts use their own userId as the X-Host-Id header value
-  const effectiveHostId = session?.hostId || (isCoHost ? session?.userId : undefined);
   const isTournament = displayRoom.roomType === 'tournament';
   const isMatch = displayRoom.roomType === 'match';
   const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
@@ -423,10 +453,13 @@ export default function RoomPage() {
       {isMatch && displayRoom.parentRoomCode && (
         <div className="mb-md" style={{ fontSize: '0.875rem' }}>
           <Link
-            to={`/room/${displayRoom.parentRoomCode}`}
+            to={parentUserKey
+              ? `/room/${displayRoom.parentRoomCode}/u/${parentUserKey}`
+              : `/join/${displayRoom.parentRoomCode}`}
+            state={parentUserKey ? undefined : { nickname: user?.nickname }}
             style={{ color: 'var(--color-primary)', textDecoration: 'none' }}
           >
-            Tournament: {EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Tournament'}
+            Tournament: {parentTournamentName || 'Tournament'}
           </Link>
           <span className="text-muted"> &gt; </span>
           <span>Match: {eventName}</span>

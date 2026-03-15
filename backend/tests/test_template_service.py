@@ -245,7 +245,7 @@ async def test_template_service_uses_points_value_not_timer_duration():
         assert call_kwargs["question"] == "Test Question?"
         assert call_kwargs["options"] == ["A", "B"]
         assert call_kwargs["points_value"] == 200  # Should use pointsValue!
-        assert call_kwargs["timer_duration"] == 60  # Timer duration is now passed through
+        assert call_kwargs["timer_duration"] == 0  # No auto-lock by default
         assert call_kwargs["created_from"] == "template"
 
 

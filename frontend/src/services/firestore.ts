@@ -59,6 +59,7 @@ export function subscribeToRoom(
       participants: data.participants ?? [],
       matchDetails: data.matchDetails ?? null,
       currentBetId: data.currentBetId ?? null,
+      coHostIds: data.coHostIds ?? [],
       version: data.version ?? 1,
     };
 
