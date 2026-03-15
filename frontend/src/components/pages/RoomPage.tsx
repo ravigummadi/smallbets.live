@@ -42,6 +42,7 @@ export default function RoomPage() {
   const [betErrors, setBetErrors] = useState<Record<string, string>>({});
   const [matchRooms, setMatchRooms] = useState<Room[]>([]);
   const [parentTournamentName, setParentTournamentName] = useState<string | null>(null);
+  const [parentUserKey, setParentUserKey] = useState<string | null>(null);
 
   // Admin modal state (host only)
   const [showBetModal, setShowBetModal] = useState(false);
@@ -126,13 +127,19 @@ export default function RoomPage() {
     }
   }, [localRoom?.roomType, localRoom?.code]);
 
-  // Load parent tournament name for match room breadcrumb
+  // Load parent tournament name and user key for match room breadcrumb
   useEffect(() => {
     if (localRoom?.roomType !== 'match' || !localRoom.parentRoomCode) return;
-    roomApi.getRoom(localRoom.parentRoomCode)
+    const parentCode = localRoom.parentRoomCode;
+    roomApi.getRoom(parentCode)
       .then(parentRoom => setParentTournamentName(parentRoom.eventName || 'Tournament'))
       .catch(() => setParentTournamentName('Tournament'));
-  }, [localRoom?.roomType, localRoom?.parentRoomCode]);
+    if (user?.nickname) {
+      roomApi.getUserKeyByNickname(parentCode, user.nickname)
+        .then(res => setParentUserKey(res.userKey))
+        .catch(() => {});
+    }
+  }, [localRoom?.roomType, localRoom?.parentRoomCode, user?.nickname]);
 
   // Load participant links for host/co-host
   useEffect(() => {
@@ -436,8 +443,10 @@ export default function RoomPage() {
       {isMatch && displayRoom.parentRoomCode && (
         <div className="mb-md" style={{ fontSize: '0.875rem' }}>
           <Link
-            to={`/join/${displayRoom.parentRoomCode}`}
-            state={{ nickname: user?.nickname }}
+            to={parentUserKey
+              ? `/room/${displayRoom.parentRoomCode}/u/${parentUserKey}`
+              : `/join/${displayRoom.parentRoomCode}`}
+            state={parentUserKey ? undefined : { nickname: user?.nickname }}
             style={{ color: 'var(--color-primary)', textDecoration: 'none' }}
           >
             Tournament: {parentTournamentName || 'Tournament'}

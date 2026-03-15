@@ -599,6 +599,23 @@ async def get_user_by_key(
     }
 
 
+@app.get("/api/rooms/{code}/user-key")
+async def get_user_key(code: str, room: RoomDep, nickname: str = None, user_id: str = None):
+    """Get a user's key by nickname or userId (for building direct room links)"""
+    if not nickname and not user_id:
+        raise HTTPException(status_code=400, detail="Provide nickname or user_id query parameter")
+    if nickname:
+        user = await user_service.find_user_by_nickname(code, nickname)
+    else:
+        user = await user_service.get_user(user_id)
+        if user and user.room_code != code:
+            user = None
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found in this room")
+    user = await user_service.ensure_user_has_key(user)
+    return {"userKey": user.user_key, "userId": user.user_id}
+
+
 @app.get("/api/rooms/{code}/leaderboard")
 async def get_leaderboard(code: str, room: RoomDep):
     """Get room leaderboard"""
