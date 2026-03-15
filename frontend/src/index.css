@@ -177,6 +177,23 @@ button {
   transform: translateY(-1px);
 }
 
+.btn-cohost-action {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.35rem;
+  min-height: auto;
+  line-height: 1.2;
+}
+
+.btn-promote-cohost {
+  color: var(--color-accent-warm);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.btn-demote-cohost {
+  color: var(--color-error);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
 .btn-danger {
   background-color: rgba(248, 113, 113, 0.1);
   color: var(--color-error);

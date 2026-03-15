@@ -185,15 +185,7 @@ export default function AnimatedLeaderboard({
                   coHostIds.includes(participant.userId) ? (
                     onDemoteCoHost && (
                       <button
-                        className="btn btn-secondary"
-                        style={{
-                          fontSize: '0.65rem',
-                          padding: '0.15rem 0.35rem',
-                          minHeight: 'auto',
-                          lineHeight: '1.2',
-                          color: 'var(--color-error)',
-                          borderColor: 'rgba(248, 113, 113, 0.3)',
-                        }}
+                        className="btn btn-secondary btn-cohost-action btn-demote-cohost"
                         onClick={() => onDemoteCoHost(participant.userId)}
                       >
                         Remove Co-Host
@@ -202,15 +194,7 @@ export default function AnimatedLeaderboard({
                   ) : (
                     onPromoteCoHost && (
                       <button
-                        className="btn btn-secondary"
-                        style={{
-                          fontSize: '0.65rem',
-                          padding: '0.15rem 0.35rem',
-                          minHeight: 'auto',
-                          lineHeight: '1.2',
-                          color: 'var(--color-accent-warm)',
-                          borderColor: 'rgba(245, 158, 11, 0.3)',
-                        }}
+                        className="btn btn-secondary btn-cohost-action btn-promote-cohost"
                         onClick={() => onPromoteCoHost(participant.userId)}
                       >
                         Make Co-Host

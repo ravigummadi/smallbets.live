@@ -667,6 +667,9 @@ async def add_co_host(code: str, room: PrimaryHostRoomDep, request: CoHostReques
     if not user or user.room_code != code:
         raise HTTPException(status_code=404, detail="User not found in this room")
 
+    if room.room_type in ("tournament", "match") and user_id not in room.participants:
+        raise HTTPException(status_code=400, detail="User is not a participant in this room")
+
     updated_co_hosts = room.co_host_ids + [user_id]
     updated_room = room.model_copy(update={"co_host_ids": updated_co_hosts})
     await room_service.update_room(updated_room)

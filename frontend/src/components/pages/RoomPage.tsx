@@ -68,13 +68,6 @@ export default function RoomPage() {
   const prevBetsRef = useRef<Map<string, Bet>>(new Map());
   const autoLockingRef = useRef<Set<string>>(new Set());
 
-  // Compute effective host ID: primary host uses hostId, co-hosts use their userId
-  const getEffectiveHostId = () => {
-    if (session?.hostId) return session.hostId;
-    if (session?.userId && localRoom?.coHostIds?.includes(session.userId)) return session.userId;
-    return undefined;
-  };
-
   // Match room creation state
   const [showCreateMatch, setShowCreateMatch] = useState(false);
   const [matchTitle, setMatchTitle] = useState('');
@@ -128,7 +121,7 @@ export default function RoomPage() {
 
   // Load participant links for host/co-host
   useEffect(() => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!hostId || !code) return;
     roomApi.getParticipantsWithLinks(code, hostId)
       .then((res) => setParticipantLinks(res.participants))
@@ -170,7 +163,7 @@ export default function RoomPage() {
   };
 
   const handleStartRoom = async () => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId) return;
     try {
       await roomApi.startRoom(code, hostId);
@@ -181,7 +174,7 @@ export default function RoomPage() {
   };
 
   const handleFinishRoom = async () => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId) return;
     try {
       await roomApi.finishRoom(code, hostId);
@@ -192,7 +185,7 @@ export default function RoomPage() {
   };
 
   const handleCloseBet = async (betId: string) => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId) return;
     setClosingBetId(betId);
     setAdminError(null);
@@ -206,7 +199,7 @@ export default function RoomPage() {
   };
 
   const handleResolveBet = async (betId: string, winningOption: string) => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId) return;
     setResolvingBetId(betId);
     setAdminError(null);
@@ -252,7 +245,7 @@ export default function RoomPage() {
   };
 
   const handleCreateMatchRoom = async () => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId || !matchTeam1.trim() || !matchTeam2.trim()) return;
     setCreatingMatch(true);
     try {
@@ -277,7 +270,7 @@ export default function RoomPage() {
   };
 
   const handleUndoBet = useCallback(async (betId: string) => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId) return;
     try {
       await betApi.undoResolveBet(code, hostId, betId);
@@ -287,7 +280,7 @@ export default function RoomPage() {
   }, [code, session?.hostId, session?.userId, localRoom?.coHostIds]);
 
   const handleTimerExpired = useCallback(async (betId: string) => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId) return;
     if (autoLockingRef.current.has(betId)) return;
     autoLockingRef.current.add(betId);
@@ -321,7 +314,7 @@ export default function RoomPage() {
   }, [bets, userBets]);
 
   const handleDeleteBet = async (betId: string) => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId) return;
     setDeletingBetId(betId);
     setAdminError(null);
@@ -335,7 +328,7 @@ export default function RoomPage() {
   };
 
   const handlePromoteCoHost = async (userId: string) => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId) return;
     try {
       await roomApi.addCoHost(code, hostId, userId);
@@ -345,7 +338,7 @@ export default function RoomPage() {
   };
 
   const handleDemoteCoHost = async (userId: string) => {
-    const hostId = getEffectiveHostId();
+    const hostId = effectiveHostId;
     if (!code || !hostId) return;
     try {
       await roomApi.removeCoHost(code, hostId, userId);
