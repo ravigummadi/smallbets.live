@@ -101,13 +101,13 @@ async def test_place_user_bet_insufficient_points():
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_place_user_bet_already_bet():
-    """Test placing bet when already placed"""
+async def test_place_user_bet_change_existing():
+    """Test changing an existing bet while still open (no extra point deduction)"""
     user = User(
         user_id="user1",
         room_code="AAAA",
         nickname="User1",
-        points=1000,
+        points=900,  # already deducted 100 for original bet
     )
 
     bet = Bet(
@@ -126,16 +126,24 @@ async def test_place_user_bet_already_bet():
         selected_option="A",
     )
 
+    mock_db = MagicMock()
+    mock_doc_ref = MagicMock()
+    mock_db.collection.return_value.document.return_value = mock_doc_ref
+
     with patch("services.user_service.get_user", return_value=user), \
          patch("services.bet_service.get_bet", return_value=bet), \
-         patch("services.bet_service.get_user_bet", return_value=existing_bet):
+         patch("services.bet_service.get_user_bet", return_value=existing_bet), \
+         patch("services.bet_service.get_db", return_value=mock_db):
 
-        with pytest.raises(ValueError, match="already placed a bet"):
-            await bet_service.place_user_bet(
-                user_id="user1",
-                bet_id="bet1",
-                selected_option="B",
-            )
+        result = await bet_service.place_user_bet(
+            user_id="user1",
+            bet_id="bet1",
+            selected_option="B",
+        )
+
+        assert result.selected_option == "B"
+        # Should NOT create a batch (no point deduction)
+        mock_db.batch.assert_not_called()
 
 
 @pytest.mark.unit

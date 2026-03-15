@@ -3,6 +3,7 @@
  * Extracted from RoomPage to reduce component size
  */
 
+import { useState } from 'react';
 import BetTimer from '@/components/BetTimer';
 import type { Bet, UserBet } from '@/types';
 
@@ -48,6 +49,7 @@ export default function BetCard({
   canUndo,
 }: BetCardProps) {
   const hasPlacedBet = !!userBet;
+  const [isChanging, setIsChanging] = useState(false);
 
   return (
     <div className="bet-card">
@@ -117,7 +119,42 @@ export default function BetCard({
                       : <span className="text-error">Lost</span>}
                   </span>
                 )}
+                {bet.status === 'open' && !isChanging && (
+                  <button
+                    className="btn-link bet-card-change-btn"
+                    onClick={() => setIsChanging(true)}
+                  >
+                    Change
+                  </button>
+                )}
               </p>
+              {isChanging && bet.status === 'open' && (
+                <>
+                  {error && (
+                    <div className="bet-card-error">
+                      <p className="text-error bet-card-error-text">{error}</p>
+                    </div>
+                  )}
+                  <div className="bet-card-options">
+                    {bet.options.map((option) => (
+                      <button
+                        key={option}
+                        className={`btn btn-secondary bet-card-option ${option === userBet.selectedOption ? 'bet-card-option--selected' : ''}`}
+                        disabled={isPlacing || option === userBet.selectedOption}
+                        onClick={() => { onPlaceBet(bet.betId, option); setIsChanging(false); }}
+                      >
+                        {option}{option === userBet.selectedOption ? ' (current)' : ''}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    className="btn-link bet-card-change-btn"
+                    onClick={() => setIsChanging(false)}
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
             </div>
           ) : bet.status === 'open' ? (
             <>

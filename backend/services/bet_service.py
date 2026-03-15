@@ -269,11 +269,17 @@ async def place_user_bet(
         placed_at=datetime.utcnow(),
     )
 
+    user_bet_ref = db.collection("userBets").document(f"{bet_id}_{user_id}")
+
+    # Changing an existing bet — just update the selection, no point deduction
+    if existing_bet is not None:
+        user_bet_ref.set(user_bet.to_dict())
+        return user_bet
+
+    # New bet — deduct points
     updated_user = user.subtract_points(bet.points_value)
 
     batch = db.batch()
-
-    user_bet_ref = db.collection("userBets").document(f"{bet_id}_{user_id}")
     batch.set(user_bet_ref, user_bet.to_dict())
 
     user_ref = db.collection("users").document(user_id)
