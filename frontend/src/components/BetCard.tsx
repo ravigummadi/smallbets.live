@@ -3,7 +3,7 @@
  * Extracted from RoomPage to reduce component size
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BetTimer from '@/components/BetTimer';
 import type { Bet, UserBet } from '@/types';
 
@@ -52,6 +52,11 @@ export default function BetCard({
 }: BetCardProps) {
   const hasPlacedBet = !!userBet;
   const [isChanging, setIsChanging] = useState(false);
+
+  // Close "change" UI when the bet selection updates (async operation completed)
+  useEffect(() => {
+    if (isChanging && userBet) setIsChanging(false);
+  }, [userBet?.selectedOption]);
 
   return (
     <div className="bet-card">
@@ -143,7 +148,7 @@ export default function BetCard({
                         key={option}
                         className={`btn btn-secondary bet-card-option ${option === userBet.selectedOption ? 'bet-card-option--selected' : ''}`}
                         disabled={isPlacing || option === userBet.selectedOption}
-                        onClick={() => { onPlaceBet(bet.betId, option); setIsChanging(false); }}
+                        onClick={() => onPlaceBet(bet.betId, option)}
                       >
                         {option}{option === userBet.selectedOption ? ' (current)' : ''}
                       </button>
