@@ -374,7 +374,15 @@ export default function RoomPage() {
     return new Date() < new Date(bet.canUndoUntil);
   };
 
-  if (roomLoading || userLoading) {
+  // Treat as loading if we have a valid session for this room but user data hasn't
+  // arrived yet. This prevents a flash of "Room not found" after session restore,
+  // when useEffect for Firestore subscriptions hasn't fired yet.
+  // Don't wait if room loading finished and room is null (room genuinely doesn't exist).
+  const awaitingUserData = !roomLoading && localRoom && !user
+    && session && session.roomCode === code;
+  const stillLoading = roomLoading || userLoading || awaitingUserData;
+
+  if (stillLoading) {
     return (
       <div className="container container-padded-top">
         <div className="spinner" />
