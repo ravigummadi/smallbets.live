@@ -4,7 +4,7 @@
  */
 
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useSession } from '@/hooks/useSession';
 import { useRoom } from '@/hooks/useRoom';
 import { useUser } from '@/hooks/useUser';
@@ -410,14 +410,23 @@ export default function RoomPage() {
   const isMatch = displayRoom.roomType === 'match';
   const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
 
-  const openBets = bets.filter(bet => bet.status === 'open');
-  const lockedBets = bets.filter(bet => bet.status === 'locked');
-  const pendingBets = bets.filter(bet => bet.status === 'pending');
-  const resolvedBets = bets.filter(bet => bet.status === 'resolved');
-  const tournamentBets = bets.filter(bet => bet.betType === 'tournament');
-  const matchBets = bets.filter(bet => bet.betType !== 'tournament');
+  const openBets = useMemo(() => bets.filter(bet => bet.status === 'open'), [bets]);
+  const lockedBets = useMemo(() => bets.filter(bet => bet.status === 'locked'), [bets]);
+  const pendingBets = useMemo(() => bets.filter(bet => bet.status === 'pending'), [bets]);
+  const resolvedBets = useMemo(() => bets.filter(bet => bet.status === 'resolved'), [bets]);
+  const tournamentBets = useMemo(() => bets.filter(bet => bet.betType === 'tournament'), [bets]);
+  const matchBets = useMemo(() => bets.filter(bet => bet.betType !== 'tournament'), [bets]);
 
-  const userBetMap = new Map(userBets.map(ub => [ub.betId, ub]));
+  const openTournamentBetsCount = useMemo(
+    () => tournamentBets.filter(b => b.status === 'open').length,
+    [tournamentBets]
+  );
+  const openMatchBetsCount = useMemo(
+    () => matchBets.filter(b => b.status === 'open').length,
+    [matchBets]
+  );
+
+  const userBetMap = useMemo(() => new Map(userBets.map(ub => [ub.betId, ub])), [userBets]);
 
   const renderBetCard = (bet: Bet) => (
     <BetCard
@@ -533,7 +542,7 @@ export default function RoomPage() {
           )}
 
           {isTournament && tournamentBets.length > 0 && (
-            <CollapsibleSection title="Season Bets" badge={tournamentBets.filter(b => b.status === 'open').length}>
+            <CollapsibleSection title="Season Bets" badge={openTournamentBetsCount}>
               <div className="bet-list">{tournamentBets.map(renderBetCard)}</div>
             </CollapsibleSection>
           )}
@@ -555,7 +564,7 @@ export default function RoomPage() {
           )}
 
           {isMatch && matchBets.length > 0 && (
-            <CollapsibleSection title="Match Bets" badge={`${matchBets.filter(b => b.status === 'open').length} open`}>
+            <CollapsibleSection title="Match Bets" badge={`${openMatchBetsCount} open`}>
               <div className="bet-list">{matchBets.map(renderBetCard)}</div>
             </CollapsibleSection>
           )}

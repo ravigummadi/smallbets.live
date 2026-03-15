@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -16,6 +16,7 @@ export default function CollapsibleSection({
   className = '',
 }: CollapsibleSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const contentId = useId();
 
   return (
     <div className={`collapsible-section ${className}`}>
@@ -23,6 +24,8 @@ export default function CollapsibleSection({
         className={`collapsible-section-header ${expanded ? 'collapsible-section-header--expanded' : ''}`}
         onClick={() => setExpanded(!expanded)}
         type="button"
+        aria-expanded={expanded}
+        aria-controls={contentId}
       >
         <span className="collapsible-section-title">
           {title}
@@ -35,7 +38,7 @@ export default function CollapsibleSection({
         </span>
       </button>
       {expanded && (
-        <div className="collapsible-section-body">
+        <div id={contentId} className="collapsible-section-body">
           {children}
         </div>
       )}

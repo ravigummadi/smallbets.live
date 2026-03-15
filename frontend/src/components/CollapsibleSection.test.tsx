@@ -55,6 +55,26 @@ describe('CollapsibleSection', () => {
     expect(screen.getByText('Toggleable content')).toBeInTheDocument();
   });
 
+  it('sets aria-expanded and aria-controls attributes', async () => {
+    const user = userEvent.setup();
+    render(
+      <CollapsibleSection title="Aria Test">
+        <p>Aria content</p>
+      </CollapsibleSection>
+    );
+
+    const button = screen.getByRole('button', { name: /Aria Test/i });
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+    expect(button).toHaveAttribute('aria-controls');
+
+    const contentId = button.getAttribute('aria-controls')!;
+    expect(document.getElementById(contentId)).toBeInTheDocument();
+
+    await user.click(button);
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(document.getElementById(contentId)).not.toBeInTheDocument();
+  });
+
   it('renders string badge', () => {
     render(
       <CollapsibleSection title="Match Bets" badge="3 open">
