@@ -2,7 +2,7 @@
  * AppHeader - Persistent top navigation bar
  */
 
-import { Link, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 
 export default function AppHeader() {
   const location = useLocation();
@@ -22,18 +22,23 @@ export default function AppHeader() {
           </div>
         </Link>
         <nav className="app-header-nav">
-          <Link
+          <NavLink
             to="/"
-            className={`app-header-link ${location.pathname === '/' ? 'app-header-link--active' : ''}`}
+            end
+            className={({ isActive }) =>
+              `app-header-link ${isActive ? 'app-header-link--active' : ''}`
+            }
           >
             Home
-          </Link>
-          <Link
+          </NavLink>
+          <NavLink
             to="/create"
-            className={`app-header-link ${location.pathname === '/create' ? 'app-header-link--active' : ''}`}
+            className={({ isActive }) =>
+              `app-header-link ${isActive ? 'app-header-link--active' : ''}`
+            }
           >
             Create Room
-          </Link>
+          </NavLink>
         </nav>
       </div>
     </header>

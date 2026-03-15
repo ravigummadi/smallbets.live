@@ -14,7 +14,7 @@ function App() {
   return (
     <BrowserRouter>
       <AppHeader />
-      <main style={{ flex: 1 }}>
+      <main className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/create" element={<CreateRoomPage />} />
