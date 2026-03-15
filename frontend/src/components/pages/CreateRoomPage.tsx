@@ -24,7 +24,7 @@ export default function CreateRoomPage() {
   const [nickname, setNickname] = useState('');
   const [isTournament, setIsTournament] = useState(false);
   const [eventTemplate, setEventTemplate] = useState('grammys-2026');
-  const [eventName, setEventName] = useState('');
+  const [eventName, setEventName] = useState('Grammy Awards 2026');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -41,13 +41,8 @@ export default function CreateRoomPage() {
       return;
     }
 
-    if (eventTemplate === 'custom' && !eventName.trim()) {
-      setError(isTournament ? 'Please enter a tournament name' : 'Please enter a name for your custom event');
-      return;
-    }
-
-    if (isTournament && !eventName.trim()) {
-      setError('Please enter a tournament name');
+    if (!eventName.trim()) {
+      setError(isTournament ? 'Please enter a tournament name' : 'Please enter an event name');
       return;
     }
 
@@ -68,7 +63,7 @@ export default function CreateRoomPage() {
         // Create regular event room (4-char code, 24h expiry)
         response = await roomApi.createRoom({
           event_template: eventTemplate,
-          event_name: eventTemplate === 'custom' ? eventName.trim() : undefined,
+          event_name: eventName.trim() || undefined,
           host_nickname: nickname.trim(),
         });
       }
@@ -80,9 +75,7 @@ export default function CreateRoomPage() {
         nickname: nickname.trim(),
       });
 
-      const displayName = eventTemplate === 'custom' || isTournament
-        ? eventName.trim()
-        : templates.find((t) => t.id === eventTemplate)?.name || eventTemplate;
+      const displayName = eventName.trim() || templates.find((t) => t.id === eventTemplate)?.name || eventTemplate;
 
       // Save to localStorage for "My Rooms" recovery
       if (response.user_key) {
@@ -148,7 +141,7 @@ export default function CreateRoomPage() {
               onClick={() => {
                 setIsTournament(false);
                 setEventTemplate(CEREMONY_TEMPLATES[0].id);
-                setEventName('');
+                setEventName(CEREMONY_TEMPLATES[0].name);
               }}
             >
               Single Event
@@ -159,7 +152,7 @@ export default function CreateRoomPage() {
               onClick={() => {
                 setIsTournament(true);
                 setEventTemplate(TOURNAMENT_TEMPLATES[0].id);
-                setEventName('');
+                setEventName(TOURNAMENT_TEMPLATES[0].name);
               }}
             >
               Tournament
@@ -176,7 +169,16 @@ export default function CreateRoomPage() {
           <h4 className="mb-md">{isTournament ? 'Tournament Template' : 'Event Template'}</h4>
           <select
             value={eventTemplate}
-            onChange={(e) => setEventTemplate(e.target.value)}
+            onChange={(e) => {
+              const id = e.target.value;
+              setEventTemplate(id);
+              if (id !== 'custom') {
+                const name = templates.find((t) => t.id === id)?.name || '';
+                setEventName(name);
+              } else {
+                setEventName('');
+              }
+            }}
             className="mb-md"
           >
             {templates.map((template) => (
@@ -187,24 +189,22 @@ export default function CreateRoomPage() {
           </select>
         </div>
 
-        {(eventTemplate === 'custom' || isTournament) && (
-          <div className="card mb-lg">
-            <h4 className="mb-md">{isTournament ? 'Tournament Name' : 'Event Name'}</h4>
-            <input
-              type="text"
-              placeholder={isTournament ? 'e.g., IPL 2026 Friends League' : 'Enter your event name'}
-              value={eventName}
-              onChange={(e) => setEventName(e.target.value)}
-              maxLength={50}
-              className="mb-md"
-            />
-            <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-              {isTournament
-                ? 'Give your tournament a name to share with friends'
-                : 'Give your custom event a name (e.g., "Family Game Night", "March Madness 2026")'}
-            </p>
-          </div>
-        )}
+        <div className="card mb-lg">
+          <h4 className="mb-md">{isTournament ? 'Tournament Name' : 'Event Name'}</h4>
+          <input
+            type="text"
+            placeholder={isTournament ? 'e.g., IPL 2026 Friends League' : 'Enter your event name'}
+            value={eventName}
+            onChange={(e) => setEventName(e.target.value)}
+            maxLength={50}
+            className="mb-md"
+          />
+          <p className="text-muted" style={{ fontSize: '0.875rem' }}>
+            {isTournament
+              ? 'Give your tournament a name to share with friends'
+              : 'Name your event (pre-filled from template, feel free to customize)'}
+          </p>
+        </div>
 
         {error && (
           <div className="card mb-lg" style={{ borderColor: 'var(--color-error)' }}>
@@ -215,7 +215,7 @@ export default function CreateRoomPage() {
         <button
           type="submit"
           className="btn btn-primary btn-full btn-lg"
-          disabled={loading || !nickname.trim() || ((eventTemplate === 'custom' || isTournament) && !eventName.trim())}
+          disabled={loading || !nickname.trim() || !eventName.trim()}
         >
           {loading
             ? (isTournament ? 'Creating Tournament...' : 'Creating Room...')
