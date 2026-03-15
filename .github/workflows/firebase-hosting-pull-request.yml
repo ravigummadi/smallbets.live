@@ -13,7 +13,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: "cd frontend && npm ci && npm run build  "
+      # These VITE_ values are Firebase client-side config — they are publicly
+      # embedded in the built JS bundle served to every browser. They are NOT
+      # secrets; Firebase security comes from Firestore rules and backend auth,
+      # not from hiding these keys. Safe to commit per Firebase docs:
+      # https://firebase.google.com/docs/projects/api-keys#api-keys-for-firebase-are-different
+      - name: Build frontend with production env
+        run: cd frontend && npm ci && npm run build
+        env:
+          VITE_USE_FIREBASE_EMULATOR: "false"
+          VITE_FIREBASE_API_KEY: AIzaSyAVQ0Lq6OH5_cUThU3yxUVimM3WoXtTP7g
+          VITE_FIREBASE_AUTH_DOMAIN: smallbets-app.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: smallbets-app
+          VITE_FIREBASE_STORAGE_BUCKET: smallbets-app.firebasestorage.app
+          VITE_FIREBASE_MESSAGING_SENDER_ID: "834253671355"
+          VITE_FIREBASE_APP_ID: "1:834253671355:web:a776cc1022a71b505fd29e"
+          VITE_API_URL: https://smallbets-api-834253671355.us-west2.run.app
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
