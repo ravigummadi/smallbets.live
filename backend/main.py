@@ -804,9 +804,15 @@ async def toggle_betting_lock(
     This freezes/unfreezes user bets without closing the bet for resolution.
     """
     try:
+        bet_check = await bet_service.get_bet(bet_id)
+        if not bet_check or bet_check.room_code != code:
+            raise HTTPException(status_code=404, detail="Bet not found in this room")
+
         bet = await bet_service.toggle_betting_locked(bet_id, request.locked)
         return bet.to_dict()
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

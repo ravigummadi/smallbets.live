@@ -143,6 +143,7 @@ class Bet(BaseModel):
         """Return new Bet instance with betting_locked toggled"""
         return self.model_copy(update={
             "betting_locked": locked,
+            "version": self.version + 1,
         })
 
     def undo_resolve(self) -> "Bet":
