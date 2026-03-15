@@ -352,6 +352,7 @@ export default function RoomPage() {
   const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
 
   const openBets = bets.filter(bet => bet.status === 'open');
+  const lockedBets = bets.filter(bet => bet.status === 'locked');
   const pendingBets = bets.filter(bet => bet.status === 'pending');
   const resolvedBets = bets.filter(bet => bet.status === 'resolved');
   const tournamentBets = bets.filter(bet => bet.betType === 'tournament');
@@ -477,7 +478,7 @@ export default function RoomPage() {
 
           {betsLoading ? (
             <div className="card mb-md text-center"><p className="text-secondary">Loading bets...</p></div>
-          ) : openBets.length === 0 && (!isTournament || matchBets.length === 0) ? (
+          ) : openBets.length === 0 && lockedBets.length === 0 && (!isTournament || matchBets.length === 0) ? (
             <div className="card mb-md text-center"><p className="text-secondary">No open bets. Waiting for next bet...</p></div>
           ) : !isTournament && openBets.length > 0 ? (
             <div className="card mb-md">
@@ -485,6 +486,13 @@ export default function RoomPage() {
               <div className="bet-list">{openBets.map(renderBetCard)}</div>
             </div>
           ) : null}
+
+          {lockedBets.length > 0 && (
+            <div className="card mb-md">
+              <h4 className="mb-md">{isHost ? 'Resolve Bets' : 'Locked Bets'} <span className="bet-count-badge">{lockedBets.length}</span></h4>
+              <div className="bet-list">{lockedBets.map(renderBetCard)}</div>
+            </div>
+          )}
 
           {isMatch && matchBets.length > 0 && (
             <div className="card mb-md">

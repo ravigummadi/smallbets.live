@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { API_URL } from '@/services/api';
 
 interface TranscriptEntry {
   text: string;
@@ -43,7 +44,7 @@ export default function LiveFeedPanel({
   const [history, setHistory] = useState<TranscriptEntry[]>([]);
 
   useEffect(() => {
-    fetch(`/api/rooms/${roomCode}/transcript`)
+    fetch(`${API_URL}/api/rooms/${roomCode}/transcript`)
       .then((res) => res.ok ? res.json() : Promise.reject('Failed to fetch'))
       .then((data) => setHistory(data.entries || []))
       .catch(() => {/* ignore – history is best-effort */});
@@ -61,7 +62,7 @@ export default function LiveFeedPanel({
     setError(null);
 
     try {
-      const response = await fetch(`/api/rooms/${roomCode}/transcript`, {
+      const response = await fetch(`${API_URL}/api/rooms/${roomCode}/transcript`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: transcriptText, source: 'manual' }),
@@ -88,7 +89,7 @@ export default function LiveFeedPanel({
 
   const handleToggleAutomation = async () => {
     try {
-      await fetch(`/api/rooms/${roomCode}/automation/toggle`, {
+      await fetch(`${API_URL}/api/rooms/${roomCode}/automation/toggle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

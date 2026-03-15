@@ -108,7 +108,7 @@ describe('LiveFeedPanel', () => {
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          '/api/rooms/ABC123/transcript',
+          expect.stringContaining('/api/rooms/ABC123/transcript'),
           expect.objectContaining({
             method: 'POST',
             body: JSON.stringify({ text: 'And the winner is Beyonce!', source: 'manual' }),
@@ -261,7 +261,7 @@ describe('LiveFeedPanel', () => {
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          '/api/rooms/ABC123/automation/toggle',
+          expect.stringContaining('/api/rooms/ABC123/automation/toggle'),
           expect.objectContaining({
             method: 'POST',
             headers: expect.objectContaining({ 'X-Host-Id': 'host-123' }),
