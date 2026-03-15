@@ -24,6 +24,7 @@ import BetCard from '@/components/BetCard';
 import BetUsersModal from '@/components/BetUsersModal';
 import RoomHeader, { EVENT_TEMPLATE_NAMES } from '@/components/RoomHeader';
 import HostActionBar from '@/components/HostActionBar';
+import CollapsibleSection from '@/components/CollapsibleSection';
 import SessionRestoreFlow from '@/components/SessionRestoreFlow';
 import { betApi, roomApi } from '@/services/api';
 import type { Room, Bet, ParticipantWithLink } from '@/types';
@@ -532,10 +533,9 @@ export default function RoomPage() {
           )}
 
           {isTournament && tournamentBets.length > 0 && (
-            <div className="card mb-md">
-              <h4 className="mb-md">Season Bets <span className="bet-count-badge">{tournamentBets.filter(b => b.status === 'open').length}</span></h4>
+            <CollapsibleSection title="Season Bets" badge={tournamentBets.filter(b => b.status === 'open').length}>
               <div className="bet-list">{tournamentBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           )}
 
           {betsLoading ? (
@@ -543,39 +543,37 @@ export default function RoomPage() {
           ) : openBets.length === 0 && lockedBets.length === 0 && (!isTournament || matchBets.length === 0) ? (
             <div className="card mb-md text-center"><p className="text-secondary">No open bets. Waiting for next bet...</p></div>
           ) : !isTournament && openBets.length > 0 ? (
-            <div className="card mb-md">
-              <h4 className="mb-md">Open Bets <span className="bet-count-badge">{openBets.length}</span></h4>
+            <CollapsibleSection title="Open Bets" badge={openBets.length}>
               <div className="bet-list">{openBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           ) : null}
 
           {lockedBets.length > 0 && (
-            <div className="card mb-md">
-              <h4 className="mb-md">{isHost ? 'Resolve Bets' : 'Locked Bets'} <span className="bet-count-badge">{lockedBets.length}</span></h4>
+            <CollapsibleSection title={isHost ? 'Resolve Bets' : 'Locked Bets'} badge={lockedBets.length}>
               <div className="bet-list">{lockedBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           )}
 
           {isMatch && matchBets.length > 0 && (
-            <div className="card mb-md">
-              <h4 className="mb-md">Match Bets <span className="bet-count-badge">{matchBets.filter(b => b.status === 'open').length} open</span></h4>
+            <CollapsibleSection title="Match Bets" badge={`${matchBets.filter(b => b.status === 'open').length} open`}>
               <div className="bet-list">{matchBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           )}
         </>
       )}
 
       {displayRoom.status === 'finished' && (
-        <div className="card mb-md text-center">
-          <h4 className="mb-md">{isTournament ? 'Tournament Finished' : 'Event Finished'}</h4>
-          <p className="text-secondary">Check the leaderboard below to see final standings</p>
+        <>
+          <div className="card mb-md text-center">
+            <h4 className="mb-md">{isTournament ? 'Tournament Finished' : 'Event Finished'}</h4>
+            <p className="text-secondary">Check the leaderboard below to see final standings</p>
+          </div>
           {resolvedBets.length > 0 && (
-            <div className="mt-md" style={{ textAlign: 'left' }}>
-              <h4 className="mb-md">Results</h4>
+            <CollapsibleSection title="Results" badge={resolvedBets.length} defaultExpanded={false}>
               <div className="bet-list">{resolvedBets.map(renderBetCard)}</div>
-            </div>
+            </CollapsibleSection>
           )}
-        </div>
+        </>
       )}
 
       <AnimatedLeaderboard

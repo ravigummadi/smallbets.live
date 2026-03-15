@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import CollapsibleSection from '@/components/CollapsibleSection';
 import type { User, ParticipantWithLink } from '@/types';
 
 interface AnimatedLeaderboardProps {
@@ -82,8 +83,7 @@ export default function AnimatedLeaderboard({
   };
 
   return (
-    <div className="card">
-      <h4 className="mb-md">Leaderboard ({participants.length})</h4>
+    <CollapsibleSection title="Leaderboard" badge={participants.length}>
       <div style={{ display: 'grid', gap: '0.5rem' }}>
         {rankedParticipants.map((participant) => {
           const linkData = participantLinks.find(p => p.userId === participant.userId);
@@ -207,6 +207,6 @@ export default function AnimatedLeaderboard({
           );
         })}
       </div>
-    </div>
+    </CollapsibleSection>
   );
 }

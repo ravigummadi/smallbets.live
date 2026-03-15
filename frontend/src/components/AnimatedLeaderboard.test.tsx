@@ -209,7 +209,9 @@ describe('AnimatedLeaderboard', () => {
         />
       );
 
-      expect(screen.getByText('Leaderboard (3)')).toBeInTheDocument();
+      const header = screen.getByRole('button', { name: /Leaderboard/i });
+      expect(header).toBeInTheDocument();
+      expect(header).toHaveTextContent('3');
     });
   });
 
