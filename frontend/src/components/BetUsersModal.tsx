@@ -3,7 +3,7 @@
  * Users who haven't placed a bet are shown as "No bet placed".
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { betApi } from '@/services/api';
 import type { Bet, User, UserBet } from '@/types';
 
@@ -32,7 +32,7 @@ export default function BetUsersModal({
     betApi
       .getBetUserBets(roomCode, bet.betId)
       .then((res) => {
-        setUserBets(res.userBets as UserBetWithNickname[]);
+        setUserBets(res.userBets);
       })
       .catch((err) => {
         setError(err.detail || 'Failed to load bets');
@@ -40,21 +40,23 @@ export default function BetUsersModal({
       .finally(() => setLoading(false));
   }, [roomCode, bet.betId]);
 
-  // Group user bets by selected option
-  const betsByOption = new Map<string, UserBetWithNickname[]>();
-  for (const option of bet.options) {
-    betsByOption.set(option, []);
-  }
-  for (const ub of userBets) {
-    const list = betsByOption.get(ub.selectedOption);
-    if (list) {
-      list.push(ub);
+  const { betsByOption, noBetUsers } = useMemo(() => {
+    const grouped = new Map<string, UserBetWithNickname[]>();
+    for (const option of bet.options) {
+      grouped.set(option, []);
     }
-  }
+    for (const ub of userBets) {
+      const list = grouped.get(ub.selectedOption);
+      if (list) {
+        list.push(ub);
+      }
+    }
 
-  // Find participants who haven't placed a bet
-  const bettorIds = new Set(userBets.map((ub) => ub.userId));
-  const noBetUsers = participants.filter((p) => !bettorIds.has(p.userId));
+    const bettorIds = new Set(userBets.map((ub) => ub.userId));
+    const noBet = participants.filter((p) => !bettorIds.has(p.userId));
+
+    return { betsByOption: grouped, noBetUsers: noBet };
+  }, [bet.options, userBets, participants]);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
