@@ -68,6 +68,12 @@ export default function RoomPage() {
   const prevBetsRef = useRef<Map<string, Bet>>(new Map());
   const autoLockingRef = useRef<Set<string>>(new Set());
 
+  // Compute effective host ID early so event handlers and effects can use it
+  // Primary host uses hostId, co-hosts use their userId
+  const effectiveHostId = session?.hostId || (
+    session?.userId && localRoom?.coHostIds?.includes(session.userId) ? session.userId : undefined
+  );
+
   // Match room creation state
   const [showCreateMatch, setShowCreateMatch] = useState(false);
   const [matchTitle, setMatchTitle] = useState('');
@@ -378,8 +384,6 @@ export default function RoomPage() {
   const isCoHost = !!(session?.userId && displayRoom?.coHostIds?.includes(session.userId));
   const isHost = user.isAdmin || isCoHost;
   const isPrimaryHost = user.isAdmin;
-  // Co-hosts use their own userId as the X-Host-Id header value
-  const effectiveHostId = session?.hostId || (isCoHost ? session?.userId : undefined);
   const isTournament = displayRoom.roomType === 'tournament';
   const isMatch = displayRoom.roomType === 'match';
   const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
