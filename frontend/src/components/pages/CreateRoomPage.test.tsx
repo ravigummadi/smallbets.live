@@ -620,16 +620,6 @@ describe('CreateRoomPage', () => {
       expect(nameInput.value).toBe('IPL 2026');
     });
 
-    it('should pre-fill tournament name from template', async () => {
-      const user = userEvent.setup();
-      render(<CreateRoomPage />);
-
-      await user.click(screen.getByRole('button', { name: /tournament/i }));
-
-      const nameInput = screen.getByPlaceholderText(/e\.g\., IPL 2026 Friends League/i) as HTMLInputElement;
-      expect(nameInput.value).toBe('IPL 2026');
-    });
-
     it('should require tournament name for submit when cleared', async () => {
       const user = userEvent.setup();
       render(<CreateRoomPage />);

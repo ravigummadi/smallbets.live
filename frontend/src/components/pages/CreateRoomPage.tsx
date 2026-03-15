@@ -56,14 +56,14 @@ export default function CreateRoomPage() {
         // Create tournament room (6-char code, no expiry)
         response = await roomApi.createTournament({
           event_template: eventTemplate,
-          event_name: eventName.trim() || undefined,
+          event_name: eventName.trim(),
           host_nickname: nickname.trim(),
         });
       } else {
         // Create regular event room (4-char code, 24h expiry)
         response = await roomApi.createRoom({
           event_template: eventTemplate,
-          event_name: eventName.trim() || undefined,
+          event_name: eventName.trim(),
           host_nickname: nickname.trim(),
         });
       }
@@ -75,7 +75,7 @@ export default function CreateRoomPage() {
         nickname: nickname.trim(),
       });
 
-      const displayName = eventName.trim() || templates.find((t) => t.id === eventTemplate)?.name || eventTemplate;
+      const displayName = eventName.trim();
 
       // Save to localStorage for "My Rooms" recovery
       if (response.user_key) {
