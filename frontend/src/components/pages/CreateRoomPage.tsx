@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { roomApi } from '@/services/api';
 import { useSession } from '@/hooks/useSession';
+import { useMyRooms } from '@/hooks/useMyRooms';
 
 const CEREMONY_TEMPLATES = [
   { id: 'grammys-2026', name: 'Grammy Awards 2026' },
@@ -28,6 +29,7 @@ export default function CreateRoomPage() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { saveSession } = useSession();
+  const { saveRoom } = useMyRooms();
 
   const templates = isTournament ? TOURNAMENT_TEMPLATES : CEREMONY_TEMPLATES;
 
@@ -78,9 +80,33 @@ export default function CreateRoomPage() {
         nickname: nickname.trim(),
       });
 
-      // Navigate to unique user URL so the host has a bookmarkable/shareable link
+      const displayName = eventTemplate === 'custom' || isTournament
+        ? eventName.trim()
+        : templates.find((t) => t.id === eventTemplate)?.name || eventTemplate;
+
+      // Save to localStorage for "My Rooms" recovery
       if (response.user_key) {
-        navigate(`/room/${response.room_code}/u/${response.user_key}`);
+        saveRoom({
+          roomCode: response.room_code,
+          userKey: response.user_key,
+          hostLink: `${window.location.origin}/room/${response.room_code}/u/${response.user_key}`,
+          joinLink: `${window.location.origin}/join/${response.room_code}`,
+          eventName: displayName,
+          isTournament,
+          isHost: true,
+          createdAt: Date.now(),
+        });
+      }
+
+      // Navigate to confirmation page with share options
+      if (response.user_key) {
+        const params = new URLSearchParams({
+          code: response.room_code,
+          uk: response.user_key,
+          name: displayName,
+          ...(isTournament ? { type: 'tournament' } : {}),
+        });
+        navigate(`/room-created?${params.toString()}`);
       } else {
         navigate(`/room/${response.room_code}`);
       }

@@ -119,7 +119,15 @@ smallbets.live/
 - For complex problems, throw more compute at it via subagents
 - One tack per subagent for focused execution
 
-### 3. Push Gate
+### 3. Test Requirements
+- **Every feature change MUST include corresponding tests.** No exceptions.
+- New components get a `*.test.tsx` file covering rendering, interactions, and edge cases
+- New hooks get a `*.test.ts` file covering state management, persistence, and error cases
+- Modified components must have their existing tests updated to cover the new behavior
+- Follow existing test patterns: vitest + @testing-library/react + userEvent + vitest-axe
+- Run `npx vitest run` and verify all tests pass before committing
+
+### 4. Push Gate
 - A `PreToolUse` hook (`.claude/hooks/test-gate-push.sh`) gates `git push` — frontend and backend unit tests must pass before pushing
 - If tests fail, fix them before pushing. Don't skip the hook.
 

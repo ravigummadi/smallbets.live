@@ -31,6 +31,16 @@ vi.mock('@/hooks/useSession', () => ({
   }),
 }));
 
+// Mock useMyRooms hook
+const mockSaveRoom = vi.fn();
+vi.mock('@/hooks/useMyRooms', () => ({
+  useMyRooms: () => ({
+    rooms: [],
+    saveRoom: mockSaveRoom,
+    removeRoom: vi.fn(),
+  }),
+}));
+
 // Mock useNavigate
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -355,6 +365,102 @@ describe('CreateRoomPage', () => {
         room_code: 'BLUE42',
         user_id: 'user-123',
         host_id: 'host-123',
+      });
+    });
+  });
+
+  describe('Room creation with user_key (confirmation page flow)', () => {
+    it('should navigate to confirmation page when user_key is returned', async () => {
+      const user = userEvent.setup();
+      const mockResponse = {
+        room_code: 'BLUE42',
+        user_id: 'user-123',
+        host_id: 'host-123',
+        user_key: 'abcd1234',
+      };
+
+      vi.mocked(roomApi.createRoom).mockResolvedValueOnce(mockResponse);
+
+      render(<CreateRoomPage />);
+
+      const nicknameInput = screen.getByPlaceholderText(/enter your nickname/i);
+      await user.type(nicknameInput, 'TestHost');
+
+      const button = screen.getByRole('button', { name: /^create room$/i });
+      await user.click(button);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith(
+          expect.stringContaining('/room-created?')
+        );
+        expect(mockNavigate).toHaveBeenCalledWith(
+          expect.stringContaining('code=BLUE42')
+        );
+        expect(mockNavigate).toHaveBeenCalledWith(
+          expect.stringContaining('uk=abcd1234')
+        );
+      });
+    });
+
+    it('should save room to localStorage when user_key is returned', async () => {
+      const user = userEvent.setup();
+      const mockResponse = {
+        room_code: 'BLUE42',
+        user_id: 'user-123',
+        host_id: 'host-123',
+        user_key: 'abcd1234',
+      };
+
+      vi.mocked(roomApi.createRoom).mockResolvedValueOnce(mockResponse);
+
+      render(<CreateRoomPage />);
+
+      const nicknameInput = screen.getByPlaceholderText(/enter your nickname/i);
+      await user.type(nicknameInput, 'TestHost');
+
+      const button = screen.getByRole('button', { name: /^create room$/i });
+      await user.click(button);
+
+      await waitFor(() => {
+        expect(mockSaveRoom).toHaveBeenCalledWith(
+          expect.objectContaining({
+            roomCode: 'BLUE42',
+            userKey: 'abcd1234',
+            isHost: true,
+            isTournament: false,
+          })
+        );
+      });
+    });
+
+    it('should include tournament type in confirmation URL for tournaments', async () => {
+      const user = userEvent.setup();
+      const mockResponse = {
+        room_code: 'TOUR42',
+        user_id: 'user-123',
+        host_id: 'host-123',
+        user_key: 'abcd1234',
+      };
+
+      vi.mocked(roomApi.createTournament).mockResolvedValueOnce(mockResponse);
+
+      render(<CreateRoomPage />);
+
+      const nicknameInput = screen.getByPlaceholderText(/enter your nickname/i);
+      await user.type(nicknameInput, 'TestHost');
+
+      await user.click(screen.getByRole('button', { name: /tournament/i }));
+
+      const nameInput = screen.getByPlaceholderText(/e\.g\., IPL 2026 Friends League/i);
+      await user.type(nameInput, 'My Tournament');
+
+      const submitButton = screen.getByRole('button', { name: /create tournament/i });
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith(
+          expect.stringContaining('type=tournament')
+        );
       });
     });
   });
