@@ -40,21 +40,19 @@ export function useMyRooms() {
   const [rooms, setRooms] = useState<SavedRoom[]>(loadRooms);
 
   const saveRoom = useCallback((room: SavedRoom) => {
-    setRooms((prev) => {
-      // Replace if same roomCode exists, otherwise prepend
-      const filtered = prev.filter((r) => r.roomCode !== room.roomCode);
-      const updated = [room, ...filtered].slice(0, MAX_ROOMS);
-      persistRooms(updated);
-      return updated;
-    });
+    // Write to localStorage synchronously before any navigation can unmount the component
+    const currentRooms = loadRooms();
+    const filtered = currentRooms.filter((r) => r.roomCode !== room.roomCode);
+    const updated = [room, ...filtered].slice(0, MAX_ROOMS);
+    persistRooms(updated);
+    setRooms(updated);
   }, []);
 
   const removeRoom = useCallback((roomCode: string) => {
-    setRooms((prev) => {
-      const updated = prev.filter((r) => r.roomCode !== roomCode);
-      persistRooms(updated);
-      return updated;
-    });
+    const currentRooms = loadRooms();
+    const updated = currentRooms.filter((r) => r.roomCode !== roomCode);
+    persistRooms(updated);
+    setRooms(updated);
   }, []);
 
   return { rooms, saveRoom, removeRoom };
