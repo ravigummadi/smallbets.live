@@ -368,6 +368,26 @@ export default function RoomPage() {
     && session && session.roomCode === code;
   const stillLoading = roomLoading || userLoading || awaitingUserData;
 
+  // All useMemo hooks MUST be called before any early returns to maintain consistent
+  // hook ordering across renders (React error #310).
+  const openBets = useMemo(() => bets.filter(bet => bet.status === 'open'), [bets]);
+  const lockedBets = useMemo(() => bets.filter(bet => bet.status === 'locked'), [bets]);
+  const pendingBets = useMemo(() => bets.filter(bet => bet.status === 'pending'), [bets]);
+  const resolvedBets = useMemo(() => bets.filter(bet => bet.status === 'resolved'), [bets]);
+  const tournamentBets = useMemo(() => bets.filter(bet => bet.betType === 'tournament'), [bets]);
+  const matchBets = useMemo(() => bets.filter(bet => bet.betType !== 'tournament'), [bets]);
+
+  const openTournamentBetsCount = useMemo(
+    () => tournamentBets.filter(b => b.status === 'open').length,
+    [tournamentBets]
+  );
+  const openMatchBetsCount = useMemo(
+    () => matchBets.filter(b => b.status === 'open').length,
+    [matchBets]
+  );
+
+  const userBetMap = useMemo(() => new Map(userBets.map(ub => [ub.betId, ub])), [userBets]);
+
   // Session restore must be rendered AFTER all hooks to avoid "rendered more hooks" error
   if (needsRestore) {
     return (
@@ -409,24 +429,6 @@ export default function RoomPage() {
   const isTournament = displayRoom.roomType === 'tournament';
   const isMatch = displayRoom.roomType === 'match';
   const eventName = displayRoom.eventName || EVENT_TEMPLATE_NAMES[displayRoom.eventTemplate] || 'Event';
-
-  const openBets = useMemo(() => bets.filter(bet => bet.status === 'open'), [bets]);
-  const lockedBets = useMemo(() => bets.filter(bet => bet.status === 'locked'), [bets]);
-  const pendingBets = useMemo(() => bets.filter(bet => bet.status === 'pending'), [bets]);
-  const resolvedBets = useMemo(() => bets.filter(bet => bet.status === 'resolved'), [bets]);
-  const tournamentBets = useMemo(() => bets.filter(bet => bet.betType === 'tournament'), [bets]);
-  const matchBets = useMemo(() => bets.filter(bet => bet.betType !== 'tournament'), [bets]);
-
-  const openTournamentBetsCount = useMemo(
-    () => tournamentBets.filter(b => b.status === 'open').length,
-    [tournamentBets]
-  );
-  const openMatchBetsCount = useMemo(
-    () => matchBets.filter(b => b.status === 'open').length,
-    [matchBets]
-  );
-
-  const userBetMap = useMemo(() => new Map(userBets.map(ub => [ub.betId, ub])), [userBets]);
 
   const renderBetCard = (bet: Bet) => (
     <BetCard
