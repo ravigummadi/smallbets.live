@@ -191,7 +191,6 @@ Test custom React hooks:
 - `useSession.test.ts` - **CRITICAL**: corrupted sessionStorage JSON, missing keys, recovery
 - `useRoom.test.ts` - Firestore subscription lifecycle, cleanup on unmount
 - `useUser.test.ts` - User state management, loading states
-- `useBet.test.ts` - Single bet subscription
 - `useBets.test.ts` - All bets subscription
 - `useUserBets.test.ts` - User's bets, filtering
 - `useParticipants.test.ts` - Room participants, count
@@ -214,7 +213,6 @@ Test page and admin components with user interactions:
 - `RoomPage.test.tsx` - Room state rendering, real-time updates, disconnection handling
 - `AdminPanel.test.tsx` - Admin controls visibility, unauthorized access
 - `BetCreationForm.test.tsx` - Bet creation form, validation, submission errors
-- `BetListPanel.test.tsx` - Bet list rendering, empty state, loading skeleton
 - `LiveFeedPanel.test.tsx` - Transcript feed, auto-scroll
 
 **Accessibility testing (with vitest-axe):**

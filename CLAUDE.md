@@ -57,7 +57,7 @@ smallbets.live/
 │   ├── src/
 │   │   ├── components/          # Shared components (BetCard, RoomHeader, HostActionBar, SessionRestoreFlow)
 │   │   ├── components/pages/    # Page components (Home, CreateRoom, JoinRoom, Room)
-│   │   ├── hooks/               # React hooks (useRoom, useUser, useBet, useSession)
+│   │   ├── hooks/               # React hooks (useRoom, useUser, useBets, useSession)
 │   │   ├── services/            # API client and Firestore listeners
 │   │   ├── types/               # TypeScript type definitions
 │   │   ├── config/              # Firebase configuration

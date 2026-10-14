@@ -45,16 +45,6 @@ export interface User {
   joinedAt: Date;
 }
 
-export interface RoomUser {
-  id: string;
-  roomCode: string;
-  userId: string;
-  nickname: string;
-  points: number;
-  joinedAt: Date;
-  isHost: boolean;
-}
-
 export interface Bet {
   betId: string;
   roomCode: string;
