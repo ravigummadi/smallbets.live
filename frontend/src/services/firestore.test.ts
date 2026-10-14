@@ -224,101 +224,6 @@ describe('Firestore Service', () => {
     });
   });
 
-  describe('subscribeToBet', () => {
-    it('should subscribe to bet and return data', () => {
-      const callback = vi.fn();
-      const mockBetData = {
-        betId: 'bet-123',
-        roomCode: 'ABC123',
-        question: 'Who will win?',
-        options: ['Team A', 'Team B'],
-        status: 'OPEN',
-        openedAt: Timestamp.now(),
-        lockedAt: null,
-        resolvedAt: null,
-        winningOption: null,
-        pointsValue: 100,
-      };
-
-      onSnapshotMock.mockImplementation((ref, callback) => {
-        callback({
-          exists: () => true,
-          data: () => mockBetData,
-        });
-        return mockUnsubscribe;
-      });
-
-      firestoreService.subscribeToBet('bet-123', callback);
-
-      expect(callback).toHaveBeenCalledWith(
-        expect.objectContaining({
-          betId: 'bet-123',
-          question: 'Who will win?',
-          status: 'OPEN',
-        })
-      );
-    });
-
-    it('should handle null timestamps correctly', () => {
-      const callback = vi.fn();
-      const mockBetData = {
-        betId: 'bet-123',
-        roomCode: 'ABC123',
-        question: 'Who will win?',
-        options: ['Team A', 'Team B'],
-        status: 'PENDING',
-        openedAt: null,
-        lockedAt: null,
-        resolvedAt: null,
-        pointsValue: 100,
-      };
-
-      onSnapshotMock.mockImplementation((ref, callback) => {
-        callback({
-          exists: () => true,
-          data: () => mockBetData,
-        });
-        return mockUnsubscribe;
-      });
-
-      firestoreService.subscribeToBet('bet-123', callback);
-
-      const callArg = callback.mock.calls[0][0];
-      expect(callArg.openedAt).toBeNull();
-      expect(callArg.lockedAt).toBeNull();
-      expect(callArg.resolvedAt).toBeNull();
-    });
-
-    it('should handle missing optional fields with defaults', () => {
-      const callback = vi.fn();
-      const mockBetData = {
-        betId: 'bet-123',
-        roomCode: 'ABC123',
-        question: 'Who will win?',
-        options: ['Team A', 'Team B'],
-        status: 'PENDING',
-        // Missing: winningOption, pointsValue
-      };
-
-      onSnapshotMock.mockImplementation((ref, callback) => {
-        callback({
-          exists: () => true,
-          data: () => mockBetData,
-        });
-        return mockUnsubscribe;
-      });
-
-      firestoreService.subscribeToBet('bet-123', callback);
-
-      expect(callback).toHaveBeenCalledWith(
-        expect.objectContaining({
-          winningOption: null,
-          pointsValue: 100,
-        })
-      );
-    });
-  });
-
   describe('subscribeToBets', () => {
     it('should subscribe to all bets in room', () => {
       const callback = vi.fn();
@@ -374,6 +279,38 @@ describe('Firestore Service', () => {
       firestoreService.subscribeToBets('ABC123', callback);
 
       expect(callback).toHaveBeenCalledWith([]);
+    });
+
+    it('should handle missing optional fields with defaults', () => {
+      const callback = vi.fn();
+      const mockBetData = {
+        betId: 'bet-123',
+        roomCode: 'ABC123',
+        question: 'Who will win?',
+        options: ['Team A', 'Team B'],
+        status: 'PENDING',
+        // Missing: winningOption, pointsValue, bettingLocked, timestamps
+      };
+
+      onSnapshotMock.mockImplementation((query, callback) => {
+        callback({
+          docs: [{ data: () => mockBetData }],
+        });
+        return mockUnsubscribe;
+      });
+
+      firestoreService.subscribeToBets('ABC123', callback);
+
+      expect(callback).toHaveBeenCalledWith([
+        expect.objectContaining({
+          winningOption: null,
+          pointsValue: 100,
+          bettingLocked: false,
+          openedAt: null,
+          lockedAt: null,
+          resolvedAt: null,
+        }),
+      ]);
     });
   });
 
@@ -431,81 +368,6 @@ describe('Firestore Service', () => {
       firestoreService.subscribeToParticipants('ABC123', callback);
 
       expect(callback).toHaveBeenCalledWith([]);
-    });
-  });
-
-  describe('subscribeToUserBet', () => {
-    it('should subscribe to user bet and return data', () => {
-      const callback = vi.fn();
-      const mockUserBetData = {
-        userId: 'user-123',
-        betId: 'bet-123',
-        roomCode: 'ABC123',
-        selectedOption: 'Team A',
-        placedAt: Timestamp.now(),
-        pointsWon: null,
-      };
-
-      onSnapshotMock.mockImplementation((ref, callback) => {
-        callback({
-          exists: () => true,
-          data: () => mockUserBetData,
-        });
-        return mockUnsubscribe;
-      });
-
-      firestoreService.subscribeToUserBet('user-123', 'bet-123', callback);
-
-      expect(callback).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: 'user-123',
-          betId: 'bet-123',
-          selectedOption: 'Team A',
-        })
-      );
-    });
-
-    it('should call callback with null when user bet does not exist', () => {
-      const callback = vi.fn();
-
-      onSnapshotMock.mockImplementation((ref, callback) => {
-        callback({
-          exists: () => false,
-        });
-        return mockUnsubscribe;
-      });
-
-      firestoreService.subscribeToUserBet('user-123', 'bet-123', callback);
-
-      expect(callback).toHaveBeenCalledWith(null);
-    });
-
-    it('should handle missing pointsWon with default null', () => {
-      const callback = vi.fn();
-      const mockUserBetData = {
-        userId: 'user-123',
-        betId: 'bet-123',
-        roomCode: 'ABC123',
-        selectedOption: 'Team A',
-        placedAt: Timestamp.now(),
-        // Missing: pointsWon
-      };
-
-      onSnapshotMock.mockImplementation((ref, callback) => {
-        callback({
-          exists: () => true,
-          data: () => mockUserBetData,
-        });
-        return mockUnsubscribe;
-      });
-
-      firestoreService.subscribeToUserBet('user-123', 'bet-123', callback);
-
-      expect(callback).toHaveBeenCalledWith(
-        expect.objectContaining({
-          pointsWon: null,
-        })
-      );
     });
   });
 

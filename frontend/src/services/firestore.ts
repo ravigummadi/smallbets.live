@@ -14,7 +14,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
-import type { Room, User, Bet, UserBet, RoomUser } from '@/types';
+import type { Room, User, Bet, UserBet } from '@/types';
 
 /**
  * Convert Firestore Timestamp to Date
@@ -97,46 +97,6 @@ export function subscribeToUser(
 }
 
 /**
- * Subscribe to bet updates
- */
-export function subscribeToBet(
-  betId: string,
-  callback: (bet: Bet | null) => void
-): Unsubscribe {
-  const betRef = doc(db, 'bets', betId);
-
-  return onSnapshot(betRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback(null);
-      return;
-    }
-
-    const data = snapshot.data();
-    const bet: Bet = {
-      betId: data.betId,
-      roomCode: data.roomCode,
-      question: data.question,
-      options: data.options,
-      status: data.status,
-      bettingLocked: data.bettingLocked ?? false,
-      openedAt: data.openedAt ? timestampToDate(data.openedAt) : null,
-      lockedAt: data.lockedAt ? timestampToDate(data.lockedAt) : null,
-      resolvedAt: data.resolvedAt ? timestampToDate(data.resolvedAt) : null,
-      winningOption: data.winningOption ?? null,
-      pointsValue: data.pointsValue ?? 100,
-      betType: data.betType ?? 'in-game',
-      createdFrom: data.createdFrom ?? 'custom',
-      templateId: data.templateId ?? null,
-      timerDuration: data.timerDuration ?? 60,
-      canUndoUntil: data.canUndoUntil ? timestampToDate(data.canUndoUntil) : null,
-      version: data.version ?? 1,
-    };
-
-    callback(bet);
-  });
-}
-
-/**
  * Subscribe to all bets in a room
  */
 export function subscribeToBets(
@@ -206,36 +166,6 @@ export function subscribeToParticipants(
 }
 
 /**
- * Subscribe to user's bet for a specific bet
- */
-export function subscribeToUserBet(
-  userId: string,
-  betId: string,
-  callback: (userBet: UserBet | null) => void
-): Unsubscribe {
-  const userBetRef = doc(db, 'userBets', `${betId}_${userId}`);
-
-  return onSnapshot(userBetRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback(null);
-      return;
-    }
-
-    const data = snapshot.data();
-    const userBet: UserBet = {
-      userId: data.userId,
-      betId: data.betId,
-      roomCode: data.roomCode,
-      selectedOption: data.selectedOption,
-      placedAt: timestampToDate(data.placedAt),
-      pointsWon: data.pointsWon ?? null,
-    };
-
-    callback(userBet);
-  });
-}
-
-/**
  * Subscribe to all user bets for a user in a room
  */
 export function subscribeToUserBets(
@@ -263,35 +193,5 @@ export function subscribeToUserBets(
     });
 
     callback(userBets);
-  });
-}
-
-/**
- * Subscribe to all room users (for tournament/match rooms)
- */
-export function subscribeToRoomUsers(
-  roomCode: string,
-  callback: (roomUsers: RoomUser[]) => void
-): Unsubscribe {
-  const roomUsersQuery = query(
-    collection(db, 'roomUsers'),
-    where('roomCode', '==', roomCode)
-  );
-
-  return onSnapshot(roomUsersQuery, (snapshot) => {
-    const roomUsers: RoomUser[] = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: data.id,
-        roomCode: data.roomCode,
-        userId: data.userId,
-        nickname: data.nickname,
-        points: data.points,
-        joinedAt: timestampToDate(data.joinedAt),
-        isHost: data.isHost ?? false,
-      };
-    });
-
-    callback(roomUsers);
   });
 }
